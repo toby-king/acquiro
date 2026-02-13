@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
+import { ChatActionButtons } from './ChatActionButtons';
 import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { SelectionSummary } from '../advisor/SelectionSummary';
 import { ThemeToggle } from '../layout/ThemeToggle';
@@ -24,6 +25,7 @@ export function ChatContainer() {
   const [isTyping, setIsTyping] = useState(false);
   const [isAskingForUserName, setIsAskingForUserName] = useState(false);
   const [isAskingForEmail, setIsAskingForEmail] = useState(false);
+  const [showActionButtons, setShowActionButtons] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false);
   
@@ -189,13 +191,15 @@ export function ChatContainer() {
         // Acknowledge the email
         setTimeout(() => {
           setIsTyping(false);
+          const messageId = (Date.now() + 1).toString();
           const advisorMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            text: "Perfect! Now, how can I help you with your acquisition today?",
+            id: messageId,
+            text: "Perfect! Let's get started.\n\nNow, to give you the best guidance, I'd like to start with a quick discovery conversation — about 10-15 minutes where I learn about your background, goals, and what you're looking for in an acquisition.\n\nThink of it as us getting properly introduced.\n\nHow would you prefer to do this?",
             isUser: false,
             timestamp: new Date(),
           };
           setMessages(prev => [...prev, advisorMessage]);
+          setShowActionButtons(true);
         }, 750);
       } else {
         // Invalid email, ask to try again
@@ -214,6 +218,11 @@ export function ChatContainer() {
       return;
     }
     
+    // Hide action buttons if user sends a message after seeing them
+    if (showActionButtons) {
+      setShowActionButtons(false);
+    }
+    
     setIsTyping(true);
     
     // Simulate advisor response
@@ -222,6 +231,73 @@ export function ChatContainer() {
       const advisorMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: "I understand. Let me help you analyze this further. What specific aspect would you like to explore?",
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, advisorMessage]);
+    }, 750);
+  };
+
+  const handleCallClick = () => {
+    setShowActionButtons(false);
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: "Let's Call!",
+      isUser: true,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    // TODO: Handle call scheduling logic
+    setIsTyping(true);
+    setTimeout(() => {
+      setIsTyping(false);
+      const advisorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "Great! I'll reach out to schedule a call. What time works best for you?",
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, advisorMessage]);
+    }, 750);
+  };
+
+  const handleMessageClick = () => {
+    setShowActionButtons(false);
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: "Let's Message Here",
+      isUser: true,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setIsTyping(true);
+    setTimeout(() => {
+      setIsTyping(false);
+      const advisorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "Perfect! Let's dive in. To start, can you tell me a bit about your background and what brings you to acquisitions?",
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, advisorMessage]);
+    }, 750);
+  };
+
+  const handleRemindClick = () => {
+    setShowActionButtons(false);
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: "Remind Me Later",
+      isUser: true,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setIsTyping(true);
+    setTimeout(() => {
+      setIsTyping(false);
+      const advisorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "No problem! I'll be here whenever you're ready. Feel free to come back anytime to continue our conversation.",
         isUser: false,
         timestamp: new Date(),
       };
@@ -271,6 +347,14 @@ export function ChatContainer() {
               />
             ))}
           </AnimatePresence>
+          
+          {showActionButtons && (
+            <ChatActionButtons
+              onCall={handleCallClick}
+              onMessage={handleMessageClick}
+              onRemind={handleRemindClick}
+            />
+          )}
           
           {isTyping && (
             <ChatMessage

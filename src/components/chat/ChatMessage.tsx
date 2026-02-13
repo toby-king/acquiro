@@ -46,7 +46,7 @@ export function ChatMessage({ message, isUser, showAvatar = false, isTyping = fa
             : 'bg-[var(--bg-card)] text-[var(--text-primary)] rounded-tl-sm'
         }`}
       >
-        <p className="text-sm leading-relaxed">{message}</p>
+        <p className="text-sm leading-relaxed whitespace-pre-line">{message}</p>
       </div>
     </motion.div>
   );

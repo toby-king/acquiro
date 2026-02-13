@@ -2,6 +2,7 @@ import { useStepNavigation } from '../../hooks/useStepNavigation';
 import { ProgressBar } from '../ui/ProgressBar';
 import { ThemeToggle } from './ThemeToggle';
 import { motion } from 'framer-motion';
+import logo from '../../assets/logo.png';
 
 const STEP_LABELS = ['Type', 'Personality', 'Traits', 'Style', 'Voice'];
 
@@ -14,11 +15,11 @@ export function Header() {
         <div className="flex items-center justify-between gap-6">
           {/* Logo and Title */}
           <div className="flex items-center gap-3 flex-shrink-0">
-            <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
-              <span className="text-[var(--bg-primary)] font-bold text-xl">A</span>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center">
+              <img src={logo} alt="Acquiro Logo" className="w-full h-full rounded-full" />
             </div>
             <h1 className="text-xl font-semibold text-[var(--text-primary)]">
-              Acquiro Advisor Builder
+              Acquiro Agents
             </h1>
           </div>
           
