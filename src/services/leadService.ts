@@ -7,8 +7,12 @@ interface CreateLeadPayload {
   email: string;
 }
 
-const API_URL = 'https://toby-85612.bubbleapps.io/version-test/api/1.1/wf/create_lead';
-const API_TOKEN = '65e1b0545a3747cebcfda16ac6e294f8';
+const API_URL = `${import.meta.env.VITE_BUBBLE_API_BASE_URL}/create_lead`;
+const API_TOKEN = import.meta.env.VITE_BUBBLE_API_TOKEN;
+
+if (!API_TOKEN || !import.meta.env.VITE_BUBBLE_API_BASE_URL) {
+  console.error('Missing required environment variables: VITE_BUBBLE_API_TOKEN and/or VITE_BUBBLE_API_BASE_URL');
+}
 
 interface CreateLeadResponse {
   status: string;

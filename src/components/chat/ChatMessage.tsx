@@ -1,4 +1,3 @@
-import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { motion } from 'framer-motion';
 
 interface ChatMessageProps {
@@ -8,7 +7,7 @@ interface ChatMessageProps {
   isTyping?: boolean;
 }
 
-export function ChatMessage({ message, isUser, showAvatar = false, isTyping = false }: ChatMessageProps) {
+export function ChatMessage({ message, isUser, isTyping = false }: ChatMessageProps) {
   if (isTyping) {
     return (
       <div className="flex items-start gap-3">
