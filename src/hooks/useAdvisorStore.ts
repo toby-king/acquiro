@@ -7,9 +7,9 @@ interface AdvisorStore {
   currentStep: WizardStep;
   isComplete: boolean;
   isActivated: boolean;
-  advisorName: string | null;
   userName: string | null;
   userEmail: string | null;
+  leadId: string | null;
   
   // Actions
   setType: (type: AdvisorConfig['type']) => void;
@@ -23,6 +23,7 @@ interface AdvisorStore {
   setAdvisorName: (name: string) => void;
   setUserName: (name: string) => void;
   setUserEmail: (email: string) => void;
+  setLeadId: (leadId: string) => void;
   
   goToStep: (step: WizardStep) => void;
   nextStep: () => void;
@@ -46,6 +47,7 @@ const initialConfig: AdvisorConfig = {
   challengeLevel: 50,
   voice: null,
   allowProfanity: false,
+  advisorName: null,
 };
 
 export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
@@ -53,9 +55,9 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
   currentStep: 'type',
   isComplete: false,
   isActivated: false,
-  advisorName: null,
   userName: null,
   userEmail: null,
+  leadId: null,
   
   setType: (type) => set((state) => ({ config: { ...state.config, type } })),
   
@@ -97,11 +99,13 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
     config: { ...state.config, allowProfanity } 
   })),
   
-  setAdvisorName: (name) => set({ advisorName: name }),
+  setAdvisorName: (name) => set((state) => ({ config: { ...state.config, advisorName: name } })),
   
   setUserName: (name) => set({ userName: name }),
   
   setUserEmail: (email) => set({ userEmail: email }),
+  
+  setLeadId: (leadId) => set({ leadId }),
   
   goToStep: (step) => set({ currentStep: step }),
   
@@ -131,15 +135,27 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
     }
   },
   
-  activateAdvisor: () => set({ isActivated: true }),
+  activateAdvisor: () => {
+    const state = get();
+    console.log('=== Agent Created - Current States ===');
+    console.log('Config:', state.config);
+    console.log('Advisor Name:', state.config.advisorName);
+    console.log('User Name:', state.userName);
+    console.log('User Email:', state.userEmail);
+    console.log('Current Step:', state.currentStep);
+    console.log('Is Complete:', state.isComplete);
+    console.log('Full State:', state);
+    console.log('======================================');
+    set({ isActivated: true });
+  },
   
   reset: () => set({ 
     config: initialConfig, 
     currentStep: 'type', 
     isComplete: false, 
     isActivated: false,
-    advisorName: null,
     userName: null,
     userEmail: null,
+    leadId: null,
   }),
 }));

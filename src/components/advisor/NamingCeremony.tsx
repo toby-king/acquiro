@@ -11,7 +11,7 @@ interface NamingCeremonyProps {
 type CeremonyPhase = 'waiting' | 'input' | 'recognition' | 'celebration' | 'settling' | 'transition';
 
 export function NamingCeremony({ onComplete }: NamingCeremonyProps) {
-  const { setAdvisorName, advisorName } = useAdvisorStore();
+  const { setAdvisorName } = useAdvisorStore();
   const [phase, setPhase] = useState<CeremonyPhase>('waiting');
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');

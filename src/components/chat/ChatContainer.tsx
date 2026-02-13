@@ -9,6 +9,7 @@ import { Settings } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { isValidEmail } from '../../utils/emailValidation';
 import { createLead } from '../../services/leadService';
+import { createAgent } from '../../services/agentService'; 
 
 interface Message {
   id: string;
@@ -18,7 +19,7 @@ interface Message {
 }
 
 export function ChatContainer() {
-  const { config, advisorName, userName, userEmail, setUserName, setUserEmail } = useAdvisorStore();
+  const { config, userName, userEmail, setUserName, setUserEmail, setLeadId } = useAdvisorStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isAskingForUserName, setIsAskingForUserName] = useState(false);
@@ -33,7 +34,7 @@ export function ChatContainer() {
     
     // Generate initial message based on personality
     const generateIntroMessage = () => {
-      const name = advisorName || 'your advisor';
+      const name = config.advisorName || 'your advisor';
       if (config.personality) {
         return `Hello, I'm ${name}. ${config.personality.quote} Time to find you the perfect acquisition.`;
       } else if (config.customStats) {
@@ -85,7 +86,7 @@ export function ChatContainer() {
         }, 500);
       }
     }, 1000);
-  }, [advisorName, config.personality, config.customStats, userName, userEmail]);
+  }, [config.advisorName, config.personality, config.customStats, userName, userEmail]);
   
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -165,6 +166,21 @@ export function ChatContainer() {
           createLead({
             name: userName,
             email: email,
+          }).then((response) => {
+            // Only proceed if lead was created successfully and we have a lead_id
+            if (response && response.lead_id) {
+              setLeadId(response.lead_id);
+              
+              // Create agent after lead is created successfully
+              if (config.advisorName) {
+                createAgent(response.lead_id, config);
+              }
+            } else {
+              console.warn('Lead creation did not return a valid lead_id');
+            }
+          }).catch((error) => {
+            // Handle any unexpected errors (though createLead catches internally)
+            console.error('Unexpected error in lead creation flow:', error);
           });
         }
         
@@ -222,7 +238,7 @@ export function ChatContainer() {
             <AdvisorOrb intensity={100} isActivated size={48} />
             <div>
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-                {advisorName || 'Your Advisor'}
+                {config.advisorName || 'Your Advisor'}
               </h2>
               <div className="text-xs -mt-1">
                 <SelectionSummary showTraits={false} textColor="secondary"/>

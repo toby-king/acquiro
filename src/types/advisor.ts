@@ -43,6 +43,7 @@ export interface AdvisorConfig {
   challengeLevel: number; // 0-100
   voice: VoiceOption | null;
   allowProfanity: boolean;
+  advisorName: string | null;
 }
 
 export type WizardStep = 'type' | 'personality' | 'traits' | 'style' | 'voice';
