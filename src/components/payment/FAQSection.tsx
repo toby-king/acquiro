@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { FAQ_ITEMS } from '../../constants/pricing';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Card } from '../ui/Card';
 
 export function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -14,9 +15,9 @@ export function FAQSection() {
       
       <div className="space-y-3">
         {FAQ_ITEMS.map((item, index) => (
-          <div 
+          <Card 
             key={index} 
-            className="border border-gray-800 rounded-lg overflow-hidden bg-gray-900/30"
+            className="overflow-hidden p-0"
           >
             <button
               onClick={() => setOpenIndex(openIndex === index ? null : index)}
@@ -45,7 +46,7 @@ export function FAQSection() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+          </Card>
         ))}
       </div>
     </div>

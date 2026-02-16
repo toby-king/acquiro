@@ -1,6 +1,7 @@
 import { Check, X } from 'lucide-react';
 import { PricingPlan } from '../../constants/pricing';
 import { motion } from 'framer-motion';
+import { Card } from '../ui/Card';
 
 interface PricingCardProps {
   plan: PricingPlan;
@@ -10,25 +11,14 @@ interface PricingCardProps {
 
 export function PricingCard({ plan, billingPeriod, onSelect }: PricingCardProps) {
   const price = billingPeriod === 'monthly' ? plan.monthlyPrice : plan.annualMonthlyPrice;
-  const isHighlighted = plan.highlighted;
   
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={`relative flex flex-col p-6 rounded-2xl border transition-all hover:scale-[1.02] ${
-        isHighlighted 
-          ? 'border-accent bg-accent/5 scale-105' 
-          : 'border-gray-800 bg-gray-900/50'
-      }`}
     >
-      {/* Popular badge */}
-      {isHighlighted && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-accent text-black text-xs font-bold rounded-full">
-          Most Popular
-        </div>
-      )}
+      <Card selected className="flex flex-col">
       
       {/* Plan name & description */}
       <h3 className="text-xl font-semibold text-white">{plan.name}</h3>
@@ -50,11 +40,7 @@ export function PricingCard({ plan, billingPeriod, onSelect }: PricingCardProps)
       {/* CTA Button */}
       <button
         onClick={() => onSelect(plan.id)}
-        className={`mt-6 w-full py-3 rounded-lg font-medium transition-all ${
-          isHighlighted
-            ? 'bg-accent text-black hover:bg-accent/90'
-            : 'bg-gray-800 text-white hover:bg-gray-700'
-        }`}
+        className="mt-6 w-full py-3 rounded-full font-medium transition-all bg-accent text-black hover:bg-accent/90"
       >
         {plan.ctaText}
       </button>
@@ -74,6 +60,7 @@ export function PricingCard({ plan, billingPeriod, onSelect }: PricingCardProps)
           </li>
         ))}
       </ul>
+      </Card>
     </motion.div>
   );
 }

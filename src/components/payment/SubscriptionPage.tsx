@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
 import { PRICING_PLANS } from '../../constants/pricing';
 import { BillingToggle } from './BillingToggle';
 import { PricingCard } from './PricingCard';
@@ -16,7 +17,7 @@ interface SubscriptionPageProps {
 }
 
 export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, onBack }: SubscriptionPageProps) {
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('annual');
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   
   const handleSelectPlan = (planId: string) => {
     onSelectPlan(planId, billingPeriod);
@@ -74,15 +75,15 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
         </motion.div>
       </section>
       
-      {/* Pricing Cards */}
+      {/* Pricing Card */}
       <section className="pb-16 px-4">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6 items-start">
-          {PRICING_PLANS.map((plan, index) => (
+        <div className="max-w-md mx-auto">
+          {PRICING_PLANS.map((plan) => (
             <motion.div
               key={plan.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 + index * 0.1 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
             >
               <PricingCard
                 plan={plan}
@@ -124,20 +125,22 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.8 }}
-          className="max-w-xl mx-auto p-8 rounded-2xl bg-gray-900/50 border border-gray-800"
+          className="max-w-xl mx-auto"
         >
-          <h3 className="text-xl font-semibold text-white">Still have questions?</h3>
-          <p className="mt-2 text-gray-400">
-            {advisorName ? `${advisorName} is` : 'Your advisor is'} here to help you choose the right plan.
-          </p>
-          {onTalkToAdvisor && (
-            <button
-              onClick={onTalkToAdvisor}
-              className="mt-6 px-6 py-3 bg-accent text-black font-medium rounded-lg hover:bg-accent/90 transition-colors"
-            >
-              Talk to {advisorName || 'Your Advisor'}
-            </button>
-          )}
+          <Card className="p-8">
+            <h3 className="text-xl font-semibold text-white">Still have questions?</h3>
+            <p className="mt-2 text-gray-400">
+              {advisorName ? `${advisorName} is` : 'Your advisor is'} here to help.
+            </p>
+            {onTalkToAdvisor && (
+              <button
+                onClick={onTalkToAdvisor}
+                className="mt-6 px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-colors"
+              >
+                Talk to {advisorName || 'Your Advisor'}
+              </button>
+            )}
+          </Card>
         </motion.div>
       </section>
     </div>

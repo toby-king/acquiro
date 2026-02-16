@@ -22,8 +22,8 @@ export function BillingToggle({ billingPeriod, onChange }: BillingToggleProps) {
         }`}
       >
         <span 
-          className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-transform ${
-            billingPeriod === 'annual' ? 'translate-x-8' : 'translate-x-1'
+          className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${
+            billingPeriod === 'annual' ? 'translate-x-[28px]' : 'translate-x-0'
           }`}
         />
       </button>

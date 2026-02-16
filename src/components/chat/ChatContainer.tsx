@@ -8,7 +8,7 @@ import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { SelectionSummary } from '../advisor/SelectionSummary';
 import { ThemeToggle } from '../layout/ThemeToggle';
 import { SubscriptionPage } from '../payment/SubscriptionPage';
-import { Settings } from 'lucide-react';
+import { Settings, Phone } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { isValidEmail } from '../../utils/emailValidation';
 import { createLead } from '../../services/leadService';
@@ -439,6 +439,13 @@ export function ChatContainer() {
           
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <button
+              onClick={handleCallClick}
+              className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200"
+              aria-label="Start Call"
+            >
+              <Phone size={18} />
+            </button>
             <button
               className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200"
               aria-label="Settings"

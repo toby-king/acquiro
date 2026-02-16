@@ -1,7 +1,7 @@
-import { Calendar, ShieldCheck, Lock, RefreshCcw } from 'lucide-react';
+import { ShieldCheck, Lock, RefreshCcw, CheckCircle } from 'lucide-react';
 
 const TRUST_ITEMS = [
-  { icon: Calendar, text: '14-day free trial', subtext: 'No credit card required' },
+  { icon: CheckCircle, text: 'Instant access', subtext: 'Start using immediately' },
   { icon: ShieldCheck, text: 'Money-back guarantee', subtext: '30 days, no questions asked' },
   { icon: Lock, text: 'Secure payments', subtext: 'Powered by Stripe' },
   { icon: RefreshCcw, text: 'Cancel anytime', subtext: 'No long-term contracts' },
