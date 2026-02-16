@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { AdvisorConfig, WizardStep } from '../types/advisor';
 import { CHALLENGE_STYLES } from '../constants/challengeStyles';
+import { InterstitialId, getInterstitialAfterStep, getInterstitialBeforeStep } from '../constants/interstitials';
 
 interface AdvisorStore {
   config: AdvisorConfig;
@@ -10,6 +11,8 @@ interface AdvisorStore {
   userName: string | null;
   userEmail: string | null;
   leadId: string | null;
+  showInterstitial: boolean;
+  currentInterstitial: InterstitialId | null;
   
   // Actions
   setType: (type: AdvisorConfig['type']) => void;
@@ -58,6 +61,8 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
   userName: null,
   userEmail: null,
   leadId: null,
+  showInterstitial: false,
+  currentInterstitial: null,
   
   setType: (type) => set((state) => ({ config: { ...state.config, type } })),
   
@@ -110,28 +115,92 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
   goToStep: (step) => set({ currentStep: step }),
   
   nextStep: () => {
-    const { currentStep } = get();
-    const currentIndex = STEP_ORDER.indexOf(currentStep);
-    if (currentIndex < STEP_ORDER.length - 1) {
-      set({ currentStep: STEP_ORDER[currentIndex + 1] });
+    const { currentStep, showInterstitial } = get();
+    
+    if (showInterstitial) {
+      // Currently on interstitial, advance to next main step
+      const currentIndex = STEP_ORDER.indexOf(currentStep);
+      if (currentIndex < STEP_ORDER.length - 1) {
+        set({ 
+          showInterstitial: false, 
+          currentInterstitial: null,
+          currentStep: STEP_ORDER[currentIndex + 1] 
+        });
+      } else {
+        // Last step - check completion
+        const { config } = get();
+        const isComplete = !!(
+          config.type &&
+          (config.personality || config.customStats) &&
+          config.challengeStyle &&
+          config.voice
+        );
+        set({ 
+          showInterstitial: false,
+          currentInterstitial: null,
+          isComplete 
+        });
+      }
     } else {
-      // Check if all required fields are set
-      const { config } = get();
-      const isComplete = !!(
-        config.type &&
-        (config.personality || config.customStats) &&
-        config.challengeStyle &&
-        config.voice
-      );
-      set({ isComplete });
+      // Currently on main step, check if there's an interstitial after
+      const interstitialId = getInterstitialAfterStep(currentStep);
+      
+      if (interstitialId) {
+        // Show interstitial before advancing to next step
+        set({ 
+          showInterstitial: true, 
+          currentInterstitial: interstitialId 
+        });
+      } else {
+        // No interstitial (after Voice step), proceed to completion check
+        const currentIndex = STEP_ORDER.indexOf(currentStep);
+        if (currentIndex < STEP_ORDER.length - 1) {
+          set({ currentStep: STEP_ORDER[currentIndex + 1] });
+        } else {
+          // Check if all required fields are set
+          const { config } = get();
+          const isComplete = !!(
+            config.type &&
+            (config.personality || config.customStats) &&
+            config.challengeStyle &&
+            config.voice
+          );
+          set({ isComplete });
+        }
+      }
     }
   },
   
   prevStep: () => {
-    const { currentStep } = get();
-    const currentIndex = STEP_ORDER.indexOf(currentStep);
-    if (currentIndex > 0) {
-      set({ currentStep: STEP_ORDER[currentIndex - 1] });
+    const { currentStep, showInterstitial } = get();
+    
+    if (showInterstitial) {
+      // Go back to the main step before this interstitial
+      // User's selection is preserved since we don't change currentStep
+      set({ 
+        showInterstitial: false, 
+        currentInterstitial: null 
+      });
+    } else {
+      // Normal previous behavior - go to previous step
+      const currentIndex = STEP_ORDER.indexOf(currentStep);
+      if (currentIndex > 0) {
+        const prevStep = STEP_ORDER[currentIndex - 1];
+        // Check if there's an interstitial after the previous step
+        const prevInterstitial = getInterstitialAfterStep(prevStep);
+        
+        if (prevInterstitial) {
+          // Show the interstitial that comes after the previous step
+          set({ 
+            showInterstitial: true,
+            currentInterstitial: prevInterstitial,
+            currentStep: prevStep
+          });
+        } else {
+          // No interstitial after previous step, just go to it
+          set({ currentStep: prevStep });
+        }
+      }
     }
   },
   
@@ -157,5 +226,7 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
     userName: null,
     userEmail: null,
     leadId: null,
+    showInterstitial: false,
+    currentInterstitial: null,
   }),
 }));

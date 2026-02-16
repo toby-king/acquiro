@@ -4,13 +4,21 @@ import { WizardStep } from '../types/advisor';
 const STEP_ORDER: WizardStep[] = ['type', 'personality', 'traits', 'style', 'voice'];
 
 export function useStepNavigation() {
-  const { currentStep, nextStep, prevStep, goToStep } = useAdvisorStore();
+  const { currentStep, nextStep, prevStep, goToStep, showInterstitial } = useAdvisorStore();
   
   const currentStepIndex = STEP_ORDER.indexOf(currentStep);
-  const isFirstStep = currentStepIndex === 0;
-  const isLastStep = currentStepIndex === STEP_ORDER.length - 1;
+  // During interstitials, we're between steps, so don't show step indicator
+  // The step index is still based on currentStep for internal logic
+  const displayStepIndex = currentStepIndex + 1; // 1-indexed for display
+  const isFirstStep = currentStepIndex === 0 && !showInterstitial;
+  const isLastStep = currentStepIndex === STEP_ORDER.length - 1 && !showInterstitial;
   
   const canProceed = () => {
+    // Interstitials always allow proceeding (no selection required)
+    if (showInterstitial) {
+      return true;
+    }
+    
     const { config } = useAdvisorStore.getState();
     switch (currentStep) {
       case 'type':
@@ -30,7 +38,7 @@ export function useStepNavigation() {
   
   return {
     currentStep,
-    currentStepIndex: currentStepIndex + 1,
+    currentStepIndex: displayStepIndex,
     totalSteps: STEP_ORDER.length,
     isFirstStep,
     isLastStep,
@@ -38,5 +46,6 @@ export function useStepNavigation() {
     nextStep,
     prevStep,
     goToStep,
+    showInterstitial,
   };
 }

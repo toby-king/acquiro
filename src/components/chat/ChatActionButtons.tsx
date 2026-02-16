@@ -1,13 +1,12 @@
 import { motion } from 'framer-motion';
-import { Phone, MessageSquare, Clock } from 'lucide-react';
+import { Phone, MessageSquare } from 'lucide-react';
 
 interface ChatActionButtonsProps {
   onCall: () => void;
   onMessage: () => void;
-  onRemind: () => void;
 }
 
-export function ChatActionButtons({ onCall, onMessage, onRemind }: ChatActionButtonsProps) {
+export function ChatActionButtons({ onCall, onMessage }: ChatActionButtonsProps) {
   const buttons = [
     {
       id: 'call',
@@ -20,12 +19,6 @@ export function ChatActionButtons({ onCall, onMessage, onRemind }: ChatActionBut
       label: "Let's Message Here",
       icon: MessageSquare,
       onClick: onMessage,
-    },
-    {
-      id: 'remind',
-      label: 'Remind Me Later',
-      icon: Clock,
-      onClick: onRemind,
     },
   ];
 

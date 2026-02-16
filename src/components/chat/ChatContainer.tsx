@@ -398,27 +398,6 @@ export function ChatContainer() {
     });
   };
 
-  const handleRemindClick = () => {
-    setShowActionButtons(false);
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: "Remind Me Later",
-      isUser: true,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMessage]);
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      const advisorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: "No problem! I'll be here whenever you're ready. Feel free to come back anytime to continue our conversation.",
-        isUser: false,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, advisorMessage]);
-    }, 750);
-  };
   
   return (
     <div className="flex flex-col h-screen bg-[var(--bg-primary)]">
@@ -473,7 +452,6 @@ export function ChatContainer() {
             <ChatActionButtons
               onCall={handleCallClick}
               onMessage={handleMessageClick}
-              onRemind={handleRemindClick}
             />
           )}
           

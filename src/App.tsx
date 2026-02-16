@@ -11,12 +11,14 @@ import { PersonalityStep } from './components/steps/PersonalityStep';
 import { TraitsStep } from './components/steps/TraitsStep';
 import { StyleStep } from './components/steps/StyleStep';
 import { VoiceStep } from './components/steps/VoiceStep';
+import { InterstitialContent } from './components/onboarding/InterstitialContent';
 import { useStepNavigation } from './hooks/useStepNavigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeIn } from './utils/animations';
 
 function StepContent() {
-  const { currentStep } = useStepNavigation();
+  const { currentStep, showInterstitial } = useStepNavigation();
+  const { currentInterstitial } = useAdvisorStore();
   
   const stepComponents = {
     type: TypeStep,
@@ -30,15 +32,27 @@ function StepContent() {
   
   return (
     <AnimatePresence mode="wait">
-      <motion.div
-        key={currentStep}
-        variants={fadeIn}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-      >
-        <StepComponent />
-      </motion.div>
+      {showInterstitial && currentInterstitial ? (
+        <motion.div
+          key={`interstitial-${currentInterstitial}`}
+          variants={fadeIn}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+        >
+          <InterstitialContent id={currentInterstitial} />
+        </motion.div>
+      ) : (
+        <motion.div
+          key={currentStep}
+          variants={fadeIn}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+        >
+          <StepComponent />
+        </motion.div>
+      )}
     </AnimatePresence>
   );
 }
