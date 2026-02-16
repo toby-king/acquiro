@@ -10,7 +10,8 @@ import { Settings } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { isValidEmail } from '../../utils/emailValidation';
 import { createLead } from '../../services/leadService';
-import { createAgent } from '../../services/agentService'; 
+import { createAgent } from '../../services/agentService';
+import { generateChatResponseStream } from '../../services/openaiService'; 
 
 interface Message {
   id: string;
@@ -26,6 +27,8 @@ export function ChatContainer() {
   const [isAskingForUserName, setIsAskingForUserName] = useState(false);
   const [isAskingForEmail, setIsAskingForEmail] = useState(false);
   const [showActionButtons, setShowActionButtons] = useState(false);
+  const [useLLM, setUseLLM] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false);
   
@@ -92,7 +95,7 @@ export function ChatContainer() {
   
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+  }, [messages, isTyping, streamingMessageId]);
   
   const handleSend = (text: string) => {
     const userMessage: Message = {
@@ -221,21 +224,84 @@ export function ChatContainer() {
     // Hide action buttons if user sends a message after seeing them
     if (showActionButtons) {
       setShowActionButtons(false);
+      // Enable LLM when user sends first message after discovery
+      setUseLLM(true);
     }
     
-    setIsTyping(true);
-    
-    // Simulate advisor response
-    setTimeout(() => {
-      setIsTyping(false);
-      const advisorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: "I understand. Let me help you analyze this further. What specific aspect would you like to explore?",
+    // Use LLM if enabled, otherwise use hardcoded response
+    if (useLLM) {
+      // Create placeholder message for streaming
+      const messageId = (Date.now() + 1).toString();
+      const placeholderMessage: Message = {
+        id: messageId,
+        text: '',
         isUser: false,
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, advisorMessage]);
-    }, 750);
+      
+      setMessages(prev => [...prev, placeholderMessage]);
+      setStreamingMessageId(messageId);
+      setIsTyping(true); // Show typing indicator until first chunk arrives
+      
+      let isFirstChunk = true;
+      
+      // Generate streaming response
+      generateChatResponseStream(
+        [...messages, userMessage],
+        config,
+        userName,
+        (chunk: string) => {
+          // Hide typing indicator when first chunk arrives
+          if (isFirstChunk) {
+            setIsTyping(false);
+            isFirstChunk = false;
+          }
+          
+          console.log('Received chunk:', chunk, 'for messageId:', messageId);
+          // Update message incrementally as chunks arrive
+          setMessages(prev => {
+            const updated = prev.map(msg => {
+              if (msg.id === messageId) {
+                const newText = msg.text + chunk;
+                console.log('Updating message', messageId, 'from', msg.text, 'to', newText);
+                return { ...msg, text: newText };
+              }
+              return msg;
+            });
+            console.log('Updated messages:', updated);
+            return updated;
+          });
+        }
+      ).then(() => {
+        // Stream completed
+        setStreamingMessageId(null);
+      }).catch((error) => {
+        // Handle error - update message with fallback
+        console.error('Streaming error:', error);
+        setIsTyping(false); // Hide typing indicator on error
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === messageId 
+              ? { ...msg, text: msg.text || "I apologize, but I'm having trouble responding right now. Could you try again?" }
+              : msg
+          )
+        );
+        setStreamingMessageId(null);
+      });
+    } else {
+      // Fallback to hardcoded response if LLM is not enabled
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        const advisorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: "I understand. Let me help you analyze this further. What specific aspect would you like to explore?",
+          isUser: false,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, advisorMessage]);
+      }, 750);
+    }
   };
 
   const handleCallClick = () => {
@@ -263,6 +329,7 @@ export function ChatContainer() {
 
   const handleMessageClick = () => {
     setShowActionButtons(false);
+    setUseLLM(true); // Enable LLM when user chooses to message
     const userMessage: Message = {
       id: Date.now().toString(),
       text: "Let's Message Here",
@@ -270,17 +337,65 @@ export function ChatContainer() {
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, userMessage]);
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      const advisorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: "Perfect! Let's dive in. To start, can you tell me a bit about your background and what brings you to acquisitions?",
-        isUser: false,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, advisorMessage]);
-    }, 750);
+    
+    // Create placeholder message for streaming
+    const messageId = (Date.now() + 1).toString();
+    const placeholderMessage: Message = {
+      id: messageId,
+      text: '',
+      isUser: false,
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, placeholderMessage]);
+    setStreamingMessageId(messageId);
+    setIsTyping(true); // Show typing indicator until first chunk arrives
+    
+    let isFirstChunk = true;
+    
+    // Generate streaming response
+    generateChatResponseStream(
+      [...messages, userMessage],
+      config,
+      userName,
+      (chunk: string) => {
+        // Hide typing indicator when first chunk arrives
+        if (isFirstChunk) {
+          setIsTyping(false);
+          isFirstChunk = false;
+        }
+        
+        console.log('Received chunk:', chunk, 'for messageId:', messageId);
+        // Update message incrementally as chunks arrive
+        setMessages(prev => {
+          const updated = prev.map(msg => {
+            if (msg.id === messageId) {
+              const newText = msg.text + chunk;
+              console.log('Updating message', messageId, 'from', msg.text, 'to', newText);
+              return { ...msg, text: newText };
+            }
+            return msg;
+          });
+          console.log('Updated messages:', updated);
+          return updated;
+        });
+      }
+    ).then(() => {
+      // Stream completed
+      setStreamingMessageId(null);
+    }).catch((error) => {
+      // Handle error - update message with fallback
+      console.error('Streaming error:', error);
+      setIsTyping(false); // Hide typing indicator on error
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === messageId 
+            ? { ...msg, text: msg.text || "Perfect! Let's dive in. To start, can you tell me a bit about your background and what brings you to acquisitions?" }
+            : msg
+        )
+      );
+      setStreamingMessageId(null);
+    });
   };
 
   const handleRemindClick = () => {
@@ -338,14 +453,20 @@ export function ChatContainer() {
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <div className="max-w-4xl mx-auto space-y-4">
           <AnimatePresence>
-            {messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                message={message.text}
-                isUser={message.isUser}
-                showAvatar={!message.isUser && message.id === messages[0]?.id}
-              />
-            ))}
+            {messages.map((message) => {
+              // Hide empty streaming messages while typing indicator is showing
+              if (!message.isUser && !message.text.trim() && isTyping && streamingMessageId === message.id) {
+                return null;
+              }
+              return (
+                <ChatMessage
+                  key={message.id}
+                  message={message.text}
+                  isUser={message.isUser}
+                  showAvatar={!message.isUser && message.id === messages[0]?.id}
+                />
+              );
+            })}
           </AnimatePresence>
           
           {showActionButtons && (
