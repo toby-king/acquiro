@@ -388,9 +388,8 @@ export function ChatContainer() {
 
   const handleSelectPlan = (planId: string, billingPeriod: 'monthly' | 'annual') => {
     console.log(`Selected plan: ${planId} with ${billingPeriod} billing`);
-    // TODO: Integrate with payment processing API
-    // For now, just log and navigate back to chat
-    setShowSubscriptionPage(false);
+    // The SubscriptionPage component handles opening the checkout modal
+    // We don't need to do anything here - the modal will open automatically
   };
 
   const handleTalkToAdvisor = () => {

@@ -3,11 +3,13 @@ import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { PRICING_PLANS } from '../../constants/pricing';
 import { BillingToggle } from './BillingToggle';
 import { PricingCard } from './PricingCard';
 import { GuaranteeSection } from './GuaranteeSection';
 import { FAQSection } from './FAQSection';
+import { CheckoutModal } from './CheckoutModal';
 
 interface SubscriptionPageProps {
   advisorName?: string;
@@ -17,10 +19,17 @@ interface SubscriptionPageProps {
 }
 
 export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, onBack }: SubscriptionPageProps) {
+  const { leadId, userEmail } = useAdvisorStore();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [showCheckout, setShowCheckout] = useState(false);
   
   const handleSelectPlan = (planId: string) => {
-    onSelectPlan(planId, billingPeriod);
+    // Open checkout modal instead of calling onSelectPlan directly
+    setShowCheckout(true);
+    // Still call onSelectPlan for backwards compatibility if needed
+    if (onSelectPlan) {
+      onSelectPlan(planId, billingPeriod);
+    }
   };
   
   return (
@@ -143,6 +152,16 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
           </Card>
         </motion.div>
       </section>
+      
+      {/* Checkout Modal */}
+      {showCheckout && (
+        <CheckoutModal
+          billingPeriod={billingPeriod}
+          userId={leadId || undefined}
+          userEmail={userEmail || undefined}
+          onClose={() => setShowCheckout(false)}
+        />
+      )}
     </div>
   );
 }
