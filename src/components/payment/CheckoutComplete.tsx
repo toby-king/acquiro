@@ -1,39 +1,57 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { getSessionStatus } from '../../services/checkoutService';
+import { createUser } from '../../services/userService';
+import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { motion } from 'framer-motion';
 
-interface CheckoutCompleteProps {
-  sessionId: string;
-  onComplete?: () => void;
-  onError?: () => void;
-}
-
-export function CheckoutComplete({ sessionId, onComplete, onError }: CheckoutCompleteProps) {
+export function CheckoutComplete() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { leadId, setUserId } = useAdvisorStore();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
 
   useEffect(() => {
+    const sessionId = searchParams.get('session_id');
+    
     if (!sessionId) {
       setStatus('error');
       return;
     }
 
     getSessionStatus(sessionId)
-      .then((data) => {
-        setStatus(data.status === 'complete' ? 'success' : 'error');
-        if (data.status === 'complete' && onComplete) {
-          onComplete();
-        } else if (onError) {
-          onError();
+      .then(async (data) => {
+        if (data.status === 'complete') {
+          // Create user in Bubble API if we have a leadId
+          if (leadId) {
+            try {
+              const userResult = await createUser(leadId);
+              if (userResult?.user_id) {
+                setUserId(userResult.user_id);
+                console.log('User ID set:', userResult.user_id);
+              } else {
+                console.warn('Failed to create user, but payment was successful');
+              }
+            } catch (error) {
+              console.error('Error creating user:', error);
+              // Don't fail the whole flow if user creation fails
+            }
+          }
+          
+          setStatus('success');
+          // Redirect to dashboard after 2 seconds
+          setTimeout(() => {
+            navigate('/dashboard', { replace: true });
+          }, 2000);
+        } else {
+          setStatus('error');
         }
       })
       .catch(() => {
         setStatus('error');
-        if (onError) {
-          onError();
-        }
       });
-  }, [sessionId, onComplete, onError]);
+  }, [searchParams, navigate, leadId, setUserId]);
 
   if (status === 'loading') {
     return (
@@ -63,14 +81,12 @@ export function CheckoutComplete({ sessionId, onComplete, onError }: CheckoutCom
           <p className="text-[var(--text-secondary)] mb-8">
             We couldn't verify your subscription. Please contact support if you were charged.
           </p>
-          {onError && (
-            <button
-              onClick={onError}
-              className="px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-colors"
-            >
-              Go Back
-            </button>
-          )}
+          <button
+            onClick={() => navigate('/')}
+            className="px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-colors"
+          >
+            Go Back
+          </button>
         </motion.div>
       </div>
     );
@@ -86,16 +102,11 @@ export function CheckoutComplete({ sessionId, onComplete, onError }: CheckoutCom
         <CheckCircle className="w-16 h-16 text-accent mx-auto mb-6" />
         <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">Welcome aboard!</h1>
         <p className="text-[var(--text-secondary)] mb-8">
-          Your subscription is now active. You can start using all features immediately.
+          Your subscription is now active. Redirecting you to your dashboard...
         </p>
-        {onComplete && (
-          <button
-            onClick={onComplete}
-            className="px-8 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-colors"
-          >
-            Continue
-          </button>
-        )}
+        <div className="flex justify-center">
+          <Loader2 className="w-6 h-6 text-accent animate-spin" />
+        </div>
       </motion.div>
     </div>
   );

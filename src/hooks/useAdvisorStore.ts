@@ -11,6 +11,7 @@ interface AdvisorStore {
   userName: string | null;
   userEmail: string | null;
   leadId: string | null;
+  userId: string | null;
   showInterstitial: boolean;
   currentInterstitial: InterstitialId | null;
   
@@ -27,6 +28,7 @@ interface AdvisorStore {
   setUserName: (name: string) => void;
   setUserEmail: (email: string) => void;
   setLeadId: (leadId: string) => void;
+  setUserId: (userId: string) => void;
   
   goToStep: (step: WizardStep) => void;
   nextStep: () => void;
@@ -61,6 +63,7 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
   userName: null,
   userEmail: null,
   leadId: null,
+  userId: null,
   showInterstitial: false,
   currentInterstitial: null,
   
@@ -111,6 +114,8 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
   setUserEmail: (email) => set({ userEmail: email }),
   
   setLeadId: (leadId) => set({ leadId }),
+  
+  setUserId: (userId) => set({ userId }),
   
   goToStep: (step) => set({ currentStep: step }),
   
@@ -226,6 +231,7 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
     userName: null,
     userEmail: null,
     leadId: null,
+    userId: null,
     showInterstitial: false,
     currentInterstitial: null,
   }),
