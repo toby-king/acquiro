@@ -3,9 +3,11 @@ import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ChatActionButtons } from './ChatActionButtons';
+import { CallScreen } from './CallScreen';
 import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { SelectionSummary } from '../advisor/SelectionSummary';
 import { ThemeToggle } from '../layout/ThemeToggle';
+import { SubscriptionPage } from '../payment/SubscriptionPage';
 import { Settings } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { isValidEmail } from '../../utils/emailValidation';
@@ -29,6 +31,8 @@ export function ChatContainer() {
   const [showActionButtons, setShowActionButtons] = useState(false);
   const [useLLM, setUseLLM] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [showCallScreen, setShowCallScreen] = useState(false);
+  const [showSubscriptionPage, setShowSubscriptionPage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false);
   
@@ -306,25 +310,7 @@ export function ChatContainer() {
 
   const handleCallClick = () => {
     setShowActionButtons(false);
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: "Let's Call!",
-      isUser: true,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMessage]);
-    // TODO: Handle call scheduling logic
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      const advisorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: "Great! I'll reach out to schedule a call. What time works best for you?",
-        isUser: false,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, advisorMessage]);
-    }, 750);
+    setShowCallScreen(true);
   };
 
   const handleMessageClick = () => {
@@ -399,6 +385,41 @@ export function ChatContainer() {
   };
 
   
+
+  const handleSelectPlan = (planId: string, billingPeriod: 'monthly' | 'annual') => {
+    console.log(`Selected plan: ${planId} with ${billingPeriod} billing`);
+    // TODO: Integrate with payment processing API
+    // For now, just log and navigate back to chat
+    setShowSubscriptionPage(false);
+  };
+
+  const handleTalkToAdvisor = () => {
+    setShowSubscriptionPage(false);
+    // User can continue chatting
+  };
+
+  // Show subscription page if user clicked continue after call
+  if (showSubscriptionPage) {
+    return (
+      <SubscriptionPage
+        advisorName={config.advisorName || undefined}
+        onSelectPlan={handleSelectPlan}
+        onTalkToAdvisor={handleTalkToAdvisor}
+        onBack={() => setShowSubscriptionPage(false)}
+      />
+    );
+  }
+
+  // Show call screen if user clicked call button
+  if (showCallScreen) {
+    return (
+      <CallScreen
+        onBack={() => setShowCallScreen(false)}
+        onContinue={() => setShowSubscriptionPage(true)}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-[var(--bg-primary)]">
       {/* Chat Header */}

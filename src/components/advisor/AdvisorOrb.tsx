@@ -7,8 +7,11 @@ interface AdvisorOrbProps {
   className?: string;
   size?: number; // Size in pixels, defaults to 200
   allowProfanity?: boolean;
-  glowMultiplier?: number; // Multiplier for glow intensity
+  glowMultiplier?: number; // Multiplier for glow intensity (deprecated, use isSpeaking)
   particleSpeed?: number; // Multiplier for particle speed (1 = normal, 2-3 = faster)
+  agentVolume?: number; // 0-1, real-time voice amplitude for reactive glow (optional)
+  isInCall?: boolean; // Whether a call is active
+  isSpeaking?: boolean; // Whether the agent is currently speaking
 }
 
 interface Particle {
@@ -20,7 +23,18 @@ interface Particle {
   size: number;
 }
 
-export function AdvisorOrb({ intensity = 0, isActivated = false, className = '', size = 200, allowProfanity = false, glowMultiplier = 1, particleSpeed = 1 }: AdvisorOrbProps) {
+export function AdvisorOrb({ 
+  intensity = 0, 
+  isActivated = false, 
+  className = '', 
+  size = 200, 
+  allowProfanity = false, 
+  glowMultiplier = 1, 
+  particleSpeed = 1,
+  agentVolume = 0,
+  isInCall = false,
+  isSpeaking = false
+}: AdvisorOrbProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
   const particlesRef = useRef<Particle[]>([]);
@@ -135,71 +149,73 @@ export function AdvisorOrb({ intensity = 0, isActivated = false, className = '',
     };
   }, [isActivated, particleSpeed]);
   
-  const glowIntensity = (isActivated ? 1 : 0.5 + (intensity / 100) * 0.5) * glowMultiplier;
-  const glowSize = (allowProfanity ? 60 : 20) * glowMultiplier;
+  // Calculate waveform-reactive glow properties
+  // Amplify the effect significantly for more intense, visible response
+  const amplifiedVolume = isInCall && agentVolume !== undefined 
+    ? Math.min(agentVolume * 2.5, 1) // Increased from 1.5x to 2.5x for more reactivity
+    : 0;
   
+  // Glow size range - increased for more dramatic effect
+  const minGlowSize = allowProfanity ? 20 : 20;
+  const maxGlowSize = allowProfanity ? 100 : 90; // Increased from 70 to 90 for more intensity
+  const glowSize = isInCall && agentVolume !== undefined
+    ? minGlowSize + (amplifiedVolume * (maxGlowSize - minGlowSize))
+    : (allowProfanity ? 60 : 20) * glowMultiplier;
+  
+  // Glow opacity range - reduced intensity
+  const minGlowOpacity = 0.25;
+  const maxGlowOpacity = 0.65; // Reduced from 1.0 to 0.65 for less intensity
+  const glowOpacity = isInCall && agentVolume !== undefined
+    ? minGlowOpacity + (amplifiedVolume * (maxGlowOpacity - minGlowOpacity))
+    : (isActivated ? 1 : 0.5 + (intensity / 100) * 0.5) * glowMultiplier * 0.6;
+  
+  // Secondary outer glow - reduced intensity
+  const outerGlowSize = glowSize * 2.5; // Increased from 2x to 2.5x
+  const outerGlowOpacity = glowOpacity * 0.35; // Reduced from 0.5 to 0.35
+
   return (
     <div className={`relative ${className}`} data-orb>
-      <motion.div
+      {/* Static container - NO animations, NO scaling */}
+      <div
         className="relative mx-auto"
         style={{ width: `${ORB_SIZE}px`, height: `${ORB_SIZE}px` }}
-        animate={{
-          scale: isActivated ? [1, 1.05, 1] : 1,
-        }}
-        transition={{
-          duration: 3,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
       >
-        {/* Outer ring */}
-        <motion.div
+        {/* Outer ring - static, no pulsing */}
+        <div
           className="absolute inset-0 rounded-full border-2"
           style={{
             borderColor: allowProfanity ? '#ef4444' : '#C6FF4A',
-          }}
-          animate={{
-            opacity: allowProfanity ? [0.8, 1, 0.8] : [0.7, 1, 0.7],
-          }}
-          transition={{
-            duration: allowProfanity ? 1.5 : 2,
-            repeat: Infinity,
-            ease: 'easeInOut',
+            opacity: 0.8, // Static opacity, no animation
           }}
         >
-          {/* Base glow */}
+          {/* Base glow - waveform-reactive when in call */}
           <div
-            className="absolute inset-0 rounded-full"
+            className="absolute inset-0 rounded-full pointer-events-none"
             style={{
-              boxShadow: `0 0 ${glowSize * glowIntensity}px rgba(198, 255, 74, ${0.6 * glowIntensity}), inset 0 0 ${30 * glowIntensity}px rgba(198, 255, 74, ${0.2 * glowIntensity})`,
+              boxShadow: `0 0 ${glowSize}px ${glowSize * 0.6}px rgba(198, 255, 74, ${glowOpacity}), 
+                         0 0 ${outerGlowSize}px ${glowSize * 1.2}px rgba(198, 255, 74, ${outerGlowOpacity}),
+                         0 0 ${glowSize * 3}px ${glowSize * 1.5}px rgba(198, 255, 74, ${glowOpacity * 0.2}),
+                         inset 0 0 ${30 * glowOpacity}px rgba(198, 255, 74, ${0.2 * glowOpacity})`,
+              transition: 'box-shadow 0.2s ease-out', // Smooth transition for smoother pulses
             }}
           />
-          {/* Red glow overlay when profanity is allowed */}
+          {/* Red glow overlay when profanity is allowed - waveform-reactive */}
           {allowProfanity && (
-            <motion.div
-              className="absolute inset-0 rounded-full"
+            <div
+              className="absolute inset-0 rounded-full pointer-events-none"
               style={{
-                boxShadow: `0 0 ${glowSize * glowIntensity * 1.2}px rgba(239, 68, 68, ${0.7 * glowIntensity}), 0 0 ${glowSize * glowIntensity * 2}px rgba(239, 68, 68, ${0.4 * glowIntensity}), 0 0 ${glowSize * glowIntensity * 3}px rgba(239, 68, 68, ${0.2 * glowIntensity})`,
-              mixBlendMode: 'screen',
-              opacity: 0.9,
-              filter: 'blur(2px)',
-              transform: 'scale(1.1)',
-              transformOrigin: 'center',
-              pointerEvents: 'none',
-              zIndex: -1,
-            }}
-              animate={{
-                opacity: [0.7, 1, 0.7],
-                scale: [1.05, 1.15, 1.05],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: 'easeInOut',
+                boxShadow: `0 0 ${glowSize * 1.3}px rgba(239, 68, 68, ${glowOpacity * 0.8}), 
+                           0 0 ${glowSize * 2.5}px rgba(239, 68, 68, ${glowOpacity * 0.5}), 
+                           0 0 ${glowSize * 4}px rgba(239, 68, 68, ${glowOpacity * 0.3})`,
+                mixBlendMode: 'screen',
+                opacity: glowOpacity * 1.0, // Increased from 0.9 to 1.0
+                filter: 'blur(2px)',
+                zIndex: -1,
+                // NO transition - immediate response to waveform
               }}
             />
           )}
-        </motion.div>
+        </div>
         
         {/* Canvas for particles */}
         <canvas
@@ -208,7 +224,7 @@ export function AdvisorOrb({ intensity = 0, isActivated = false, className = '',
           style={{ mixBlendMode: 'screen' }}
         />
         
-        {/* Ripple effect */}
+        {/* Ripple effect - one-time animation only, triggered externally */}
         {isRippling && (
           <motion.div
             className="absolute inset-0 rounded-full border-2 border-accent"
@@ -218,7 +234,7 @@ export function AdvisorOrb({ intensity = 0, isActivated = false, className = '',
             onAnimationComplete={() => setIsRippling(false)}
           />
         )}
-      </motion.div>
+      </div>
       
       {/* CSS class for external ripple trigger */}
       <style>{`
