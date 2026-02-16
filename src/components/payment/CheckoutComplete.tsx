@@ -4,13 +4,15 @@ import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { getSessionStatus } from '../../services/checkoutService';
 import { createUser } from '../../services/userService';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
+import { WhatsNextScreen } from '../onboarding/WhatsNextScreen';
 import { motion } from 'framer-motion';
 
 export function CheckoutComplete() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { leadId, setUserId } = useAdvisorStore();
+  const { leadId, setUserId, userName, config } = useAdvisorStore();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [showWhatsNext, setShowWhatsNext] = useState(false);
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
@@ -40,9 +42,9 @@ export function CheckoutComplete() {
           }
           
           setStatus('success');
-          // Redirect to dashboard after 2 seconds
+          // Show "What's Next" screen after brief success message
           setTimeout(() => {
-            navigate('/dashboard', { replace: true });
+            setShowWhatsNext(true);
           }, 2000);
         } else {
           setStatus('error');
@@ -52,6 +54,17 @@ export function CheckoutComplete() {
         setStatus('error');
       });
   }, [searchParams, navigate, leadId, setUserId]);
+
+  // Show "What's Next" screen after successful payment
+  if (showWhatsNext && status === 'success') {
+    return (
+      <WhatsNextScreen
+        userName={userName || undefined}
+        advisorName={config.advisorName || undefined}
+        onContinue={() => navigate('/dashboard', { replace: true })}
+      />
+    );
+  }
 
   if (status === 'loading') {
     return (

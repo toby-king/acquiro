@@ -1,130 +1,104 @@
+import { MatchesList } from './MatchesList';
+import { AdvisorPanel } from './AdvisorPanel';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
-import { AdvisorOrb } from '../advisor/AdvisorOrb';
-import { SelectionSummary } from '../advisor/SelectionSummary';
-import { Card } from '../ui/Card';
-import { CheckCircle, Sparkles, TrendingUp, MessageSquare } from 'lucide-react';
+import { ThemeToggle } from '../layout/ThemeToggle';
 import { motion } from 'framer-motion';
+import { Phone, Settings, LogOut } from 'lucide-react';
+import logo from '../../assets/logo.png';
 
 export function Dashboard() {
-  const { config, userName } = useAdvisorStore();
+  const { userName } = useAdvisorStore();
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <AdvisorOrb intensity={100} isActivated size={48} />
-            <div>
-              <h1 className="text-xl font-semibold text-[var(--text-primary)]">
-                {config.advisorName || 'Your Advisor'}
-              </h1>
-              <div className="text-xs -mt-1">
-                <SelectionSummary showTraits={false} textColor="secondary" />
-              </div>
+    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">
+      {/* Header - Full Width */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full px-4 sm:px-6 py-4 flex items-center justify-between border-b border-[var(--border)]"
+      >
+        <div className="flex items-center gap-3">
+          {/* Logo */}
+          <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden">
+            <img src={logo} alt="Acquiro Logo" className="w-full h-full object-cover" />
+          </div>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">
+            Welcome back, {userName || 'there'}.
+          </h1>
+        </div>
+
+        {/* Right side - Actions and Avatar */}
+        <div className="flex items-center gap-2">
+          {/* Settings Button */}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
+            aria-label="Settings"
+            title="Settings"
+          >
+            <Settings size={18} />
+          </motion.button>
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
+          {/* Logout Button */}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
+            aria-label="Logout"
+            title="Logout"
+            onClick={() => {
+              // TODO: Implement logout functionality
+              console.log('Logout clicked');
+            }}
+          >
+            <LogOut size={18} />
+          </motion.button>
+
+          {/* User Avatar */}
+          <div className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden ml-2">
+            {/* Placeholder avatar - replace with actual user image */}
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-gray-400 text-sm font-semibold">
+                {userName ? userName.charAt(0).toUpperCase() : 'U'}
+              </span>
             </div>
           </div>
         </div>
-      </header>
+      </motion.div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Welcome Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-8"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <CheckCircle className="w-6 h-6 text-accent" />
-            <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-              Welcome{userName ? `, ${userName}` : ''}!
-            </h2>
-          </div>
-          <p className="text-[var(--text-secondary)]">
-            Your subscription is now active. You have full access to all features.
-          </p>
-        </motion.div>
-
-        {/* Feature Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <Card className="p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
-                  <MessageSquare className="w-6 h-6 text-accent" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-[var(--text-primary)]">Unlimited Conversations</h3>
-                  <p className="text-sm text-[var(--text-secondary)]">Chat with your advisor anytime</p>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Card className="p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-accent" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-[var(--text-primary)]">Deal Flow</h3>
-                  <p className="text-sm text-[var(--text-secondary)]">50 matches per month</p>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <Card className="p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-accent" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-[var(--text-primary)]">Priority Support</h3>
-                  <p className="text-sm text-[var(--text-secondary)]">Email & chat support</p>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
+      {/* Main Content - 50/50 Split */}
+      <div className="flex-1 flex flex-col lg:flex-row relative">
+        {/* Left - Matches (50%) */}
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto pb-20 md:pb-8 relative">
+          {/* Divider - 70% height */}
+          <div className="hidden lg:block absolute right-0 top-[15%] bottom-[15%] w-px bg-[var(--border)]" />
+          
+          {/* Matches Section */}
+          <MatchesList />
         </div>
 
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
+        {/* Right Panel - Advisor (50%, centered vertically) */}
+        <div className="flex-1 flex items-center justify-center lg:block">
+          <AdvisorPanel />
+        </div>
+      </div>
+
+      {/* Mobile: Floating Call Button */}
+      <div className="lg:hidden fixed bottom-20 right-6 z-50">
+        <motion.button
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="w-14 h-14 bg-accent rounded-full flex items-center justify-center shadow-lg hover:bg-accent/90 transition-colors"
+          title="Call Agent"
         >
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Get Started</h3>
-            <p className="text-[var(--text-secondary)] mb-6">
-              Start a conversation with {config.advisorName || 'your advisor'} to begin finding your perfect acquisition.
-            </p>
-            <a
-              href="/#chat"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-colors"
-            >
-              <MessageSquare className="w-5 h-5" />
-              Start Chatting
-            </a>
-          </Card>
-        </motion.div>
-      </main>
+          <Phone className="w-6 h-6 text-black" />
+        </motion.button>
+      </div>
     </div>
   );
 }
