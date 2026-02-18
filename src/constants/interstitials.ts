@@ -10,23 +10,23 @@ export interface InterstitialContent {
 export const INTERSTITIALS: InterstitialContent[] = [
   {
     id: 'after-type',
-    headline: "You're building something powerful",
-    body: "Placeholder content about what makes Acquiro's advisors different. This will be replaced with actual sales copy later.",
+    headline: "You're building something powerful.",
+    body: "Most people search blind. By telling us what you're looking for, your advisor can filter tens of thousands of live listings down to only the ones worth your attention.",
   },
   {
     id: 'after-personality',
-    headline: "Personality matters",
-    body: "Placeholder content about why a personalized advisor is more effective than generic tools. Sales copy TBD.",
+    headline: "Your advisor. Your rules.",
+    body: "Whether you want to be challenged or guided, your advisor adapts to how you think — so every conversation moves you closer to the right deal, not just any deal.",
   },
   {
     id: 'after-traits',
-    headline: "Tailored to you",
-    body: "Placeholder content about the value of customization. Maybe stats about user success rates. Sales copy TBD.",
+    headline: "This is what having a personal advisor feels like.",
+    body: "Available 24/7, backed by real acquisition expertise, and built around your unique criteria. It's not just about finding deals, it's about finding the right deal for you.",
   },
   {
     id: 'after-style',
-    headline: "Almost there",
-    body: "Placeholder content building anticipation for the final step. Maybe mention what happens after creation. Sales copy TBD.",
+    headline: "You're already ahead of most buyers.",
+    body: "Your advisor is almost ready. You're about to save yourself a lot of time and effort by having your advisor do the heavy lifting for you.",
   },
 ];
 

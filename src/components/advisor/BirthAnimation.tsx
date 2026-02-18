@@ -44,7 +44,7 @@ type Particle = GatherParticle | BurstParticle;
 // ─── Constants ──────────────────────────────────────────────
 
 const DEFAULT_PALETTE = ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#fb923c', '#c6ff4a'];
-const PHASE_DURATIONS = [1.8, 2.8, 1.8, 2.5, 1.0, Infinity, 1.5, 0.8, 2.0];
+const PHASE_DURATIONS = [1.8, 2.8, 1.8, 2.5, 1.0, Infinity, 1.5, 1.5, 2.0];
 //                        void gather ignite coalesce settle naming celebration transition fly-to-header
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -499,8 +499,20 @@ export function BirthAnimation({ onComplete, palette = DEFAULT_PALETTE }: BirthA
 
       // ─── Phase 7: TRANSITION (text fades)
       if (phase === 7) {
-        s.nameAlpha = Math.max(0, s.nameAlpha - 0.04);
-        s.subtitleAlpha = Math.max(0, s.subtitleAlpha - 0.04);
+        // Keep text visible for first 0.8s, then fade over remaining 0.7s
+        const holdTime = 0.8;
+        const fadeTime = PHASE_DURATIONS[7] - holdTime;
+        const fadeProgress = clamp((pt - holdTime) / fadeTime);
+        
+        if (pt < holdTime) {
+          // Keep text at full opacity during hold period
+          s.nameAlpha = 1;
+          s.subtitleAlpha = 1;
+        } else {
+          // Fade out text smoothly
+          s.nameAlpha = Math.max(0, 1 - fadeProgress);
+          s.subtitleAlpha = Math.max(0, 1 - fadeProgress);
+        }
       }
 
       // ─── Phase 8: FLY TO HEADER
