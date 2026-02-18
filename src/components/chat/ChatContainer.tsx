@@ -4,6 +4,7 @@ import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ChatActionButtons } from './ChatActionButtons';
 import { CallScreen } from './CallScreen';
+import { OrbTransition } from './OrbTransition';
 import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { SelectionSummary } from '../advisor/SelectionSummary';
 import { ThemeToggle } from '../layout/ThemeToggle';
@@ -33,8 +34,10 @@ export function ChatContainer() {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [showCallScreen, setShowCallScreen] = useState(false);
   const [showSubscriptionPage, setShowSubscriptionPage] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false);
+  const headerOrbRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     // Only run once on mount
@@ -310,6 +313,11 @@ export function ChatContainer() {
 
   const handleCallClick = () => {
     setShowActionButtons(false);
+    setIsTransitioning(true);
+  };
+
+  const handleTransitionComplete = () => {
+    setIsTransitioning(false);
     setShowCallScreen(true);
   };
 
@@ -409,13 +417,45 @@ export function ChatContainer() {
     );
   }
 
-  // Show call screen if user clicked call button
-  if (showCallScreen) {
+  // Show transition animation with CallScreen behind it
+  if (isTransitioning || showCallScreen) {
     return (
-      <CallScreen
-        onBack={() => setShowCallScreen(false)}
-        onContinue={() => setShowSubscriptionPage(true)}
-      />
+      <>
+        {/* Render CallScreen immediately but hide orb during transition */}
+        <div style={{ opacity: isTransitioning ? 0 : 1, pointerEvents: isTransitioning ? 'none' : 'auto' }}>
+          <CallScreen
+            onBack={() => {
+              setShowCallScreen(false);
+              setIsTransitioning(false);
+            }}
+            onContinue={() => setShowSubscriptionPage(true)}
+          />
+        </div>
+        
+        {/* Transition overlay - only show during transition */}
+        {isTransitioning && (
+          <>
+            {/* Render hidden header for orb position reference */}
+            <div className="fixed inset-0 pointer-events-none opacity-0 z-[101]">
+              <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
+                <div className="flex items-center justify-between max-w-4xl mx-auto">
+                  <div className="flex items-center gap-3">
+                    <div ref={headerOrbRef}>
+                      <AdvisorOrb intensity={100} isActivated size={48} />
+                    </div>
+                  </div>
+                </div>
+              </header>
+            </div>
+            
+            {/* Transition overlay */}
+            <OrbTransition
+              headerOrbRef={headerOrbRef}
+              onComplete={handleTransitionComplete}
+            />
+          </>
+        )}
+      </>
     );
   }
 
@@ -425,7 +465,9 @@ export function ChatContainer() {
       <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
         <div className="flex items-center justify-between max-w-4xl mx-auto">
           <div className="flex items-center gap-3">
-            <AdvisorOrb intensity={100} isActivated size={48} />
+            <div ref={headerOrbRef}>
+              <AdvisorOrb intensity={100} isActivated size={48} />
+            </div>
             <div>
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                 {config.advisorName || 'Your Advisor'}
