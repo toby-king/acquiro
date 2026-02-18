@@ -16,6 +16,7 @@ import { useStepNavigation } from './hooks/useStepNavigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeIn } from './utils/animations';
 import { AbsorptionCanvas } from './components/advisor/AbsorptionCanvas';
+import { getOrbPalette } from './utils/orbPalette';
 
 function StepContent() {
   const { currentStep, showInterstitial } = useStepNavigation();
@@ -82,7 +83,7 @@ function WizardView() {
 }
 
 function App() {
-  const { isActivated, activateAdvisor, isComplete } = useAdvisorStore();
+  const { isActivated, activateAdvisor, isComplete, config } = useAdvisorStore();
   const [showBirthAnimation, setShowBirthAnimation] = useState(false);
   
   useEffect(() => {
@@ -98,9 +99,11 @@ function App() {
     activateAdvisor();
   };
 
+  // Get consistent palette based on config
+  const birthPalette = getOrbPalette(config.allowProfanity || false);
   
   if (showBirthAnimation) {
-    return <BirthAnimation onComplete={handleBirthComplete} />;
+    return <BirthAnimation onComplete={handleBirthComplete} palette={birthPalette} allowProfanity={config.allowProfanity || false} />;
   }
   
   if (isActivated) {
@@ -111,7 +114,7 @@ function App() {
     <>
       <AbsorptionCanvas />
       {showBirthAnimation ? (
-        <BirthAnimation onComplete={handleBirthComplete} />
+        <BirthAnimation onComplete={handleBirthComplete} palette={birthPalette} allowProfanity={config.allowProfanity || false} />
       ) : isActivated ? (
         <ChatContainer />
       ) : (

@@ -113,6 +113,7 @@ export function OrbTransition({
           isActivated
           size={centerSize}
           allowProfanity={config.allowProfanity}
+          paletteIndex={1}
         />
       </motion.div>
     </motion.div>

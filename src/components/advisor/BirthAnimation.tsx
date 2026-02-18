@@ -19,6 +19,7 @@ import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 interface BirthAnimationProps {
   onComplete: () => void;
   palette?: string[];
+  allowProfanity?: boolean;
 }
 
 // ─── Particle types ─────────────────────────────────────────
@@ -43,7 +44,9 @@ type Particle = GatherParticle | BurstParticle;
 
 // ─── Constants ──────────────────────────────────────────────
 
-const DEFAULT_PALETTE = ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#fb923c', '#c6ff4a'];
+// Default palette matches PALETTE_SETS[1] for consistency
+const DEFAULT_PALETTE = ['#6366f1', '#a855f7', '#ec4899', '#f43f5e'];
+const PROFANITY_PALETTE = ['#ef4444', '#dc2626', '#f97316', '#fbbf24'];
 const PHASE_DURATIONS = [1.8, 2.8, 1.8, 2.5, 1.0, Infinity, 1.5, 1.5, 2.0];
 //                        void gather ignite coalesce settle naming celebration transition fly-to-header
 
@@ -150,8 +153,11 @@ function renderOrb(
 
 // ─── Main Component ─────────────────────────────────────────
 
-export function BirthAnimation({ onComplete, palette = DEFAULT_PALETTE }: BirthAnimationProps) {
+export function BirthAnimation({ onComplete, palette, allowProfanity = false }: BirthAnimationProps) {
   const { setAdvisorName } = useAdvisorStore();
+  
+  // Use provided palette, or determine based on allowProfanity
+  const finalPalette = palette || (allowProfanity ? PROFANITY_PALETTE : DEFAULT_PALETTE);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const orbOffRef = useRef<HTMLCanvasElement | null>(null);
   const animRef = useRef<number>(0);
@@ -184,11 +190,11 @@ export function BirthAnimation({ onComplete, palette = DEFAULT_PALETTE }: BirthA
   onCompleteRef.current = onComplete;
 
   // Stable color array — only recompute if palette identity changes
-  const paletteKey = palette.join(',');
-  const colorsRgb = useRef<[number, number, number][]>(palette.map(hexToRgb) as [number, number, number][]);
+  const paletteKey = finalPalette.join(',');
+  const colorsRgb = useRef<[number, number, number][]>(finalPalette.map(hexToRgb) as [number, number, number][]);
   useEffect(() => {
-    colorsRgb.current = palette.map(hexToRgb) as [number, number, number][];
-  }, [paletteKey]);
+    colorsRgb.current = finalPalette.map(hexToRgb) as [number, number, number][];
+  }, [paletteKey, finalPalette]);
 
   // Advance to naming phase (called from canvas loop)
   const enterNamingRef = useRef(() => {

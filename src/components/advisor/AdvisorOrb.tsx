@@ -111,7 +111,7 @@ export function AdvisorOrb({
   agentVolume = 0,
   isInCall = false,
   isSpeaking = false,
-  paletteIndex = 1,
+  paletteIndex = 6,
 }: AdvisorOrbProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);

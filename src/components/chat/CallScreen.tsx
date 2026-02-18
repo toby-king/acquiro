@@ -150,8 +150,9 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
       }
 
       // Start the conversation with dynamic variables
+      const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_0401kfask9wye6dt9cymkzbcxdg3';
       await conversation.startSession({
-        agentId: 'agent_0401kfask9wye6dt9cymkzbcxdg3',
+        agentId,
         connectionType: 'webrtc' as const,
         ...(Object.keys(dynamicVariables).length > 0 && { dynamicVariables }),
       });
@@ -220,6 +221,7 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
               isActivated={orbIsActivated}
               size={400}
               allowProfanity={config.allowProfanity}
+              paletteIndex={1}
               particleSpeed={orbParticleSpeed}
               agentVolume={speechPulse}
               isInCall={callStatus === 'connected'}

@@ -229,8 +229,9 @@ export function AdvisorPanel() {
 
       // Start the conversation with dynamic variables
       try {
+        const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_0401kfask9wye6dt9cymkzbcxdg3';
         await conversation.startSession({
-          agentId: 'agent_0401kfask9wye6dt9cymkzbcxdg3',
+          agentId,
           connectionType: 'webrtc' as const,
           ...(Object.keys(dynamicVariables).length > 0 && { dynamicVariables }),
         });
@@ -328,6 +329,7 @@ export function AdvisorPanel() {
           isActivated={orbIsActivated}
           size={280}
           allowProfanity={config.allowProfanity}
+          paletteIndex={1}
           particleSpeed={callStatus === 'connected' ? 1.2 : 1.0}
           agentVolume={speechPulse}
           isInCall={callStatus === 'connected'}
