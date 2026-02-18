@@ -106,15 +106,41 @@ export async function generateChatResponseStream(
         const { done, value } = await reader.read();
         
         if (done) {
+          // Process any remaining buffer before finishing
+          if (buffer.trim()) {
+            const lines = buffer.split('\n');
+            for (const line of lines) {
+              if (line.trim() === '') continue;
+              if (!line.startsWith('data: ')) continue;
+              
+              const data = line.slice(6);
+              if (data === '[DONE]') break;
+              
+              try {
+                const json = JSON.parse(data);
+                if (json.type === 'response.output_text.delta' && json.delta) {
+                  accumulatedText += json.delta;
+                  onChunk(json.delta);
+                }
+              } catch (e) {
+                // Ignore parse errors for final buffer
+              }
+            }
+          }
           break;
         }
 
-        buffer += decoder.decode(value, { stream: true });
+        // Decode chunk immediately
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+        
+        // Process complete lines immediately
         const lines = buffer.split('\n');
         
         // Keep the last incomplete line in the buffer
         buffer = lines.pop() || '';
 
+        // Process each complete line immediately
         for (const line of lines) {
           if (line.trim() === '') continue;
           
@@ -132,10 +158,15 @@ export async function generateChatResponseStream(
             const json = JSON.parse(data);
             
             // Responses API format: response.output_text.delta events
-            // The delta is a string directly in the json.delta field
-            if (json.type === 'response.output_text.delta' && json.delta) {
-              accumulatedText += json.delta;
-              onChunk(json.delta);
+            // Process deltas immediately for smooth streaming
+            // Handle both json.delta (string) and json.delta as a field
+            if (json.type === 'response.output_text.delta') {
+              const deltaText = typeof json.delta === 'string' ? json.delta : (json.delta || '');
+              if (deltaText) {
+                accumulatedText += deltaText;
+                // Emit chunk immediately without batching
+                onChunk(deltaText);
+              }
               continue;
             }
             

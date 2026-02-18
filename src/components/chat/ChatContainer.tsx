@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
@@ -38,6 +39,7 @@ export function ChatContainer() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false);
   const headerOrbRef = useRef<HTMLDivElement>(null);
+  const streamingTextRefs = useRef<Record<string, string>>({});
   
   useEffect(() => {
     // Only run once on mount
@@ -252,6 +254,9 @@ export function ChatContainer() {
       
       let isFirstChunk = true;
       
+      // Initialize streaming text ref for this message
+      streamingTextRefs.current[messageId] = '';
+      
       // Generate streaming response
       generateChatResponseStream(
         [...messages, userMessage],
@@ -264,22 +269,24 @@ export function ChatContainer() {
             isFirstChunk = false;
           }
           
-          console.log('Received chunk:', chunk, 'for messageId:', messageId);
-          // Update message incrementally as chunks arrive
-          setMessages(prev => {
-            const updated = prev.map(msg => {
-              if (msg.id === messageId) {
-                const newText = msg.text + chunk;
-                console.log('Updating message', messageId, 'from', msg.text, 'to', newText);
-                return { ...msg, text: newText };
-              }
-              return msg;
+          // Accumulate text in ref for immediate access
+          streamingTextRefs.current[messageId] += chunk;
+          
+          // Force immediate update using flushSync for smooth streaming
+          flushSync(() => {
+            setMessages(prev => {
+              return prev.map(msg => {
+                if (msg.id === messageId) {
+                  return { ...msg, text: streamingTextRefs.current[messageId] };
+                }
+                return msg;
+              });
             });
-            console.log('Updated messages:', updated);
-            return updated;
           });
         }
       ).then(() => {
+        // Clear ref when streaming completes
+        delete streamingTextRefs.current[messageId];
         // Stream completed
         setStreamingMessageId(null);
       }).catch((error) => {
@@ -347,6 +354,9 @@ export function ChatContainer() {
     
     let isFirstChunk = true;
     
+    // Initialize streaming text ref for this message
+    streamingTextRefs.current[messageId] = '';
+    
     // Generate streaming response
     generateChatResponseStream(
       [...messages, userMessage],
@@ -359,22 +369,24 @@ export function ChatContainer() {
           isFirstChunk = false;
         }
         
-        console.log('Received chunk:', chunk, 'for messageId:', messageId);
-        // Update message incrementally as chunks arrive
-        setMessages(prev => {
-          const updated = prev.map(msg => {
-            if (msg.id === messageId) {
-              const newText = msg.text + chunk;
-              console.log('Updating message', messageId, 'from', msg.text, 'to', newText);
-              return { ...msg, text: newText };
-            }
-            return msg;
+        // Accumulate text in ref for immediate access
+        streamingTextRefs.current[messageId] += chunk;
+        
+        // Force immediate update using flushSync for smooth streaming
+        flushSync(() => {
+          setMessages(prev => {
+            return prev.map(msg => {
+              if (msg.id === messageId) {
+                return { ...msg, text: streamingTextRefs.current[messageId] };
+              }
+              return msg;
+            });
           });
-          console.log('Updated messages:', updated);
-          return updated;
         });
       }
     ).then(() => {
+      // Clear ref when streaming completes
+      delete streamingTextRefs.current[messageId];
       // Stream completed
       setStreamingMessageId(null);
     }).catch((error) => {
