@@ -13,13 +13,6 @@ export function Hero() {
       <div className="relative z-10 max-w-[1200px] mx-auto px-12 py-[120px] flex flex-col lg:flex-row items-center gap-12">
         {/* Left Column - Content */}
         <div className="flex-1 flex flex-col items-start gap-8">
-          {/* Pill Tag */}
-          <Reveal delay={0}>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-pill bg-[var(--bg-card)] border border-[var(--border)]">
-              <span className="text-[var(--text-secondary)] text-sm">AI-Powered M&A Advisory</span>
-              <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-            </div>
-          </Reveal>
 
           {/* Headline */}
           <Reveal delay={100}>
@@ -37,33 +30,26 @@ export function Hero() {
 
           {/* CTA Buttons */}
           <Reveal delay={300}>
-            <div className="flex flex-wrap items-center gap-4">
-              <Link to="/builder">
-                <Button variant="primary" arrow>
-                  Create Your Agent
-                </Button>
-              </Link>
-              <Link to="#demo">
-                <Button variant="secondary">
-                  Watch Demo
-                </Button>
-              </Link>
-            </div>
+            <Link to="/builder">
+              <Button variant="primary" arrow>
+                Create Your Agent
+              </Button>
+            </Link>
           </Reveal>
 
           {/* Stats */}
           <Reveal delay={400}>
             <div className="flex flex-wrap items-center gap-8 mt-4">
               <div className="flex flex-col">
-                <span className="text-3xl font-bold text-[var(--text-primary)]">30,000+</span>
-                <span className="text-sm text-[var(--text-secondary)]">Businesses</span>
+                <span className="text-3xl font-bold text-[var(--text-primary)]">25,000+</span>
+                <span className="text-sm text-[var(--text-secondary)]">Listings scanned daily</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-3xl font-bold text-[var(--text-primary)]">24/7</span>
                 <span className="text-sm text-[var(--text-secondary)]">Availability</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-3xl font-bold text-[var(--text-primary)]">&lt; 5 min</span>
+                <span className="text-3xl font-bold text-[var(--text-primary)]">15 min</span>
                 <span className="text-sm text-[var(--text-secondary)]">Setup Time</span>
               </div>
             </div>

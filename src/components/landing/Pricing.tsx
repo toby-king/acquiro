@@ -8,46 +8,15 @@ import { cn } from '../../utils/cn';
 
 const plans = [
   {
-    name: 'Explorer',
-    price: 'Free',
-    period: '',
-    description: 'Perfect for getting started',
-    features: [
-      '1 AI agent',
-      'Weekly email alerts',
-      'Basic filters',
-      'Chat interface',
-    ],
-    featured: false,
-  },
-  {
-    name: 'Acquirer',
-    price: '£49',
+    name: 'Professional',
+    price: '£10',
     period: '/mo',
     description: 'For serious acquirers',
     features: [
-      'Unlimited agents',
-      'Daily alerts',
-      'Voice calls',
-      'Advanced scoring',
-      'Priority support',
+      
     ],
     featured: true,
-  },
-  {
-    name: 'Portfolio',
-    price: '£149',
-    period: '/mo',
-    description: 'For teams and portfolios',
-    features: [
-      'Everything in Acquirer',
-      'Team collaboration',
-      'Priority access',
-      'API access',
-      'Custom integrations',
-    ],
-    featured: false,
-  },
+  }
 ];
 
 export function Pricing() {
@@ -59,16 +28,16 @@ export function Pricing() {
             <SectionLabel>Pricing</SectionLabel>
           </Reveal>
           <Reveal delay={100}>
-            <SectionTitle>Choose Your Plan</SectionTitle>
+            <SectionTitle>Pricing</SectionTitle>
           </Reveal>
           <Reveal delay={200}>
             <SectionDesc className="mx-auto">
-              Start free and upgrade as your needs grow. All plans include core features.
+              Traditional M&A advisors charge £10,000+ upfront. Your advisor costs less than lunch.
             </SectionDesc>
           </Reveal>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-1 gap-6 px-80">
           {plans.map((plan, index) => (
             <Reveal key={plan.name} delay={300 + index * 100}>
               <Card

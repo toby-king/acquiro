@@ -1,4 +1,4 @@
-import { MessageSquare, CreditCard, CheckCircle2, Mail, Shield, MessageSquare as MessagesSquare } from 'lucide-react';
+import { MessageSquare, CreditCard, Mail, Gauge } from 'lucide-react';
 import { Section, SectionLabel, SectionTitle, SectionDesc } from '../ui/Section';
 import { Card } from '../ui/Card';
 import { IconBadge } from '../ui/IconBadge';
@@ -13,28 +13,18 @@ const features = [
   {
     icon: CreditCard,
     title: 'Multi-Platform Aggregation',
-    description: 'Search across multiple business marketplaces and platforms simultaneously from one interface.',
-  },
-  {
-    icon: CheckCircle2,
-    title: 'Smart Match Scoring',
-    description: 'AI-powered scoring algorithm evaluates each opportunity against your specific criteria.',
+    description: 'Your Advisor searches across all major UK business marketplaces and platforms daily, so you don\'t have to.',
   },
   {
     icon: Mail,
     title: 'Email Alerts & Reports',
-    description: 'Receive daily or weekly summaries of new matches and detailed analysis reports.',
+    description: 'Receive daily summaries of new opportunities and discuss them with your advisor via email.',
   },
   {
-    icon: Shield,
-    title: 'Confidential & Secure',
-    description: 'Your data and search criteria are encrypted and never shared with third parties.',
-  },
-  {
-    icon: MessagesSquare,
-    title: 'Discovery Calls',
-    description: 'Schedule voice calls with your advisor for deeper discussions and strategy sessions.',
-  },
+    icon: Gauge,
+    title: 'Automated Acquisition',
+    description: 'Speed up your acquisiton process by taking the legwork out of finding the right business for you.',
+  }
 ];
 
 export function Features() {
