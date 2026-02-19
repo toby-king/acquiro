@@ -34,7 +34,7 @@ export function TypeStep() {
       className="space-y-6"
     >
       <div className="text-center">
-        <h2 className="text-3xl font-bold mb-2 text-[var(--text-primary)]">
+        <h2 className="text-3xl font-display font-bold mb-2 text-[var(--text-primary)]">
           Choose Your Advisor Type
         </h2>
         <p className="text-[var(--text-secondary)]">

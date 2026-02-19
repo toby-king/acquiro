@@ -35,7 +35,7 @@ export function EfficiencySection() {
       <Card className="max-w-[600px] w-full border-none" style={{ background: 'transparent', border: 'none' }}>
         <div className="space-y-8">
           {/* Headline */}
-          <h2 className="text-3xl font-medium text-[var(--text-primary)] text-center">
+          <h2 className="text-3xl font-display font-medium text-[var(--text-primary)] text-center">
             You're building something powerful.
           </h2>
           

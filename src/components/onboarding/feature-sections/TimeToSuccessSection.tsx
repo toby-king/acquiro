@@ -476,7 +476,7 @@ export function TimeToSuccessSection() {
       <Card className="max-w-[600px] w-full border-none" style={{ background: 'transparent', border: 'none', overflow: 'visible' }}>
         <div className="space-y-8" style={{ overflow: 'visible' }}>
           {/* Headline */}
-          <h2 className="text-3xl font-medium text-[var(--text-primary)] text-center">
+          <h2 className="text-3xl font-display font-medium text-[var(--text-primary)] text-center">
             You could close your ideal acquisition by{' '}
             <RollingDate startDate={startDate} endDate={endDate} />
           </h2>

@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import App from './App.tsx'
+import { LandingPage } from './components/landing/LandingPage.tsx'
 import { Dashboard } from './components/dashboard/Dashboard.tsx'
 import { CheckoutComplete } from './components/payment/CheckoutComplete.tsx'
 import { SubscriptionPage } from './components/payment/SubscriptionPage.tsx'
@@ -11,7 +12,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<App />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/builder" element={<App />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/subscription/complete" element={<CheckoutComplete />} />
         <Route 

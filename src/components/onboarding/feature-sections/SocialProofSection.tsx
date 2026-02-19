@@ -60,7 +60,7 @@ export function SocialProofSection() {
       <Card className="max-w-[700px] w-full border-none overflow-visible py-10" style={{ background: 'transparent', border: 'none', overflow: 'visible' }}>
         <div className="space-y-8 overflow-visible">
           {/* Headline */}
-          <h2 className="text-3xl font-medium text-[var(--text-primary)] text-center">
+          <h2 className="text-3xl font-display font-medium text-[var(--text-primary)] text-center">
             3 acquisitions. 11 months. 1 advisor.
           </h2>
           

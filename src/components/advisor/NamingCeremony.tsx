@@ -60,7 +60,7 @@ export function NamingCeremony({ onComplete }: NamingCeremonyProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[var(--bg-primary)] flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] bg-[var(--bg-primary)] flex items-center justify-center font-sans">
       {/* Subtle vignette */}
       <div
         className="absolute inset-0 pointer-events-none"

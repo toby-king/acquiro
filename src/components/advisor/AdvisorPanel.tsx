@@ -23,7 +23,7 @@ export function AdvisorPanel() {
   return (
     <div className="bg-[var(--bg-card)] rounded-2xl p-4 sm:p-6 border border-[var(--border)]">
       <div className="flex flex-col items-center">
-        <h2 className="text-2xl font-medium mb-2 text-[var(--text-primary)] text-center">
+        <h2 className="text-2xl font-display font-medium mb-2 text-[var(--text-primary)] text-center">
           Your AI Advisor
         </h2>
         <div className="w-full mb-4">
