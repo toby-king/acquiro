@@ -66,6 +66,7 @@ interface RollingDateProps {
 
 function RollingDate({ startDate, endDate }: RollingDateProps) {
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isSettled, setIsSettled] = useState(false);
   const startDay = startDate.getDate();
   const endDay = endDate.getDate();
   const startMonth = startDate.getMonth();
@@ -111,7 +112,15 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
       setIsAnimating(true);
     }, 500);
 
-    return () => clearTimeout(timer);
+    // Mark as settled after animation completes (1.8s duration + 0.5s delay + buffer)
+    const settleTimer = setTimeout(() => {
+      setIsSettled(true);
+    }, 500 + 1800 + 300); // delay + duration + small buffer
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(settleTimer);
+    };
   }, []);
 
   // Day digit columns - always use 2 digits for consistent odometer effect
@@ -313,22 +322,31 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
   };
 
   return (
-    <span className="inline-flex items-baseline">
+    <motion.span 
+      className="inline-flex items-baseline"
+      initial={{
+        gap: '0.5em', // Wider spacing during counter animation
+      }}
+      animate={isSettled ? {
+        gap: '0.05em', // Very tight spacing - minimal gap
+      } : {
+        gap: '0.5em', // Keep wider spacing during counter animation
+      }}
+      transition={{
+        duration: 0.6,
+        ease: [0.16, 1, 0.3, 1],
+        delay: 0, // No delay, animates when isSettled changes
+      }}
+    >
       {/* Day digits */}
       {renderDayDigits()}
-      
-      {/* Space */}
-      <span className="inline-block" style={{ width: '0.25em' }} />
       
       {/* Month */}
       {renderMonth()}
       
-      {/* Space */}
-      <span className="inline-block" style={{ width: '0.25em' }} />
-      
       {/* Year digits */}
       {renderYearDigits()}
-    </span>
+    </motion.span>
   );
 }
 
@@ -346,8 +364,8 @@ export function TimeToSuccessSection() {
   const countdownIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Calculate initial and final dates - memoize to prevent infinite loops
-  // Start: 8 months ahead (stays in same year), End: 4 months ahead
-  const startDate = useMemo(() => getDateMonthsAhead(8), []);
+  // Start: 12 months ahead, End: 4 months ahead
+  const startDate = useMemo(() => getDateMonthsAhead(12), []);
   const endDate = useMemo(() => getDateMonthsAhead(4), []);
 
   // Timeline center is at 32px from top
@@ -364,7 +382,7 @@ export function TimeToSuccessSection() {
 
     // Start countdown when bar reaches 100%
     const countdownTimer = setTimeout(() => {
-      let currentMonth = 12;
+      let currentMonth = 12; // Start at 12 months (matches startDate)
       const totalSteps = 8; // 12 months - 4 months = 8 steps
       let step = 0;
 
@@ -381,8 +399,8 @@ export function TimeToSuccessSection() {
         const progress = step / totalSteps;
         const easedProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease-out
         
-        const baseDelay = 100;
-        const maxDelay = 400;
+        const baseDelay = 60; // Reduced from 100 for faster animation
+        const maxDelay = 250; // Reduced from 400 for faster animation
         const delay = baseDelay + (maxDelay - baseDelay) * easedProgress;
 
         const stepTimer = setTimeout(() => {
@@ -460,7 +478,7 @@ export function TimeToSuccessSection() {
           {/* Headline */}
           <h2 className="text-3xl font-medium text-[var(--text-primary)] text-center">
             Close your ideal acquisition by{' '}
-            <RollingDate startDate={startDate} endDate={endDate} />.
+            <RollingDate startDate={startDate} endDate={endDate} />
           </h2>
           
           {/* Subtext */}
