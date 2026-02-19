@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Afacad:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif:ital@0;1&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -14,6 +15,7 @@
   --bg-card: rgba(26, 26, 26, .5);
   --text-primary: #e5e5e5;
   --text-secondary: #a3a3a3;
+  --text-tertiary: #666666;
   --border: #2a2a2a;
 }
 
