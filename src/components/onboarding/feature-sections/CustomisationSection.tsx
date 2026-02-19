@@ -18,16 +18,16 @@ export function CustomisationSection() {
     // Start with user message
     setChatState('user');
 
-    // After 1.5s, show typing indicator
+    // After 0.5s, show typing indicator
     const typingTimer = setTimeout(() => {
       setChatState('typing');
-    }, 1500);
+    }, 500);
     timers.push(typingTimer);
 
-    // After 2.5s total (1s after typing starts), show agent message
+    // After 1.2s total (~0.7s typing), show agent message
     const agentTimer = setTimeout(() => {
       setChatState('agent');
-    }, 2500);
+    }, 1200);
     timers.push(agentTimer);
 
     return () => {
