@@ -328,7 +328,7 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
         gap: '0.5em', // Wider spacing during counter animation
       }}
       animate={isSettled ? {
-        gap: '0.05em', // Very tight spacing - minimal gap
+        gap: '0.02em', // Very tight spacing - minimal gap
       } : {
         gap: '0.5em', // Keep wider spacing during counter animation
       }}
@@ -364,8 +364,8 @@ export function TimeToSuccessSection() {
   const countdownIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Calculate initial and final dates - memoize to prevent infinite loops
-  // Start: 12 months ahead, End: 4 months ahead
-  const startDate = useMemo(() => getDateMonthsAhead(12), []);
+  // Start: 8 months ahead (stays in 2026), End: 4 months ahead (2026)
+  const startDate = useMemo(() => getDateMonthsAhead(8), []);
   const endDate = useMemo(() => getDateMonthsAhead(4), []);
 
   // Timeline center is at 32px from top
@@ -382,8 +382,8 @@ export function TimeToSuccessSection() {
 
     // Start countdown when bar reaches 100%
     const countdownTimer = setTimeout(() => {
-      let currentMonth = 12; // Start at 12 months (matches startDate)
-      const totalSteps = 8; // 12 months - 4 months = 8 steps
+      let currentMonth = 8; // Start at 8 months (matches startDate)
+      const totalSteps = 4; // 8 months - 4 months = 4 steps
       let step = 0;
 
       const animateCountdown = () => {

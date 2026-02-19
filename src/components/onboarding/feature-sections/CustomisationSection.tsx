@@ -52,8 +52,8 @@ export function CustomisationSection() {
               className="overflow-visible w-[140px] h-[140px] sm:w-[160px] sm:h-[160px]"
             >
               {fingerprintRidges.map((ridgePath, index) => {
-                const delay = index * 0.5; // Stagger each ridge by 0.5s
-                const duration = 2.5; // Each ridge draws in over 2.5s
+                const delay = index * 0.3; // Stagger each ridge by 0.3s (reduced from 0.5s)
+                const duration = 1.8; // Each ridge draws in over 1.8s (reduced from 2.5s)
                 
                 return (
                   <motion.path
