@@ -477,7 +477,7 @@ export function TimeToSuccessSection() {
         <div className="space-y-8" style={{ overflow: 'visible' }}>
           {/* Headline */}
           <h2 className="text-3xl font-medium text-[var(--text-primary)] text-center">
-            Close your ideal acquisition by{' '}
+            You could close your ideal acquisition by{' '}
             <RollingDate startDate={startDate} endDate={endDate} />
           </h2>
           
