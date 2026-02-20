@@ -5,6 +5,7 @@ import { ArrowLeft, Phone, PhoneOff, Loader2, ArrowRight } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { motion } from 'framer-motion';
 import { useConversation } from '@elevenlabs/react';
+import { buildSystemPrompt } from '../../prompts/advisorPrompt';
 
 interface CallScreenProps {
   onBack: () => void;
@@ -149,12 +150,22 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
         dynamicVariables.user_id = leadId;
       }
 
-      // Start the conversation with dynamic variables
+      // Build system prompt from advisorPrompt.ts
+      const systemPrompt = buildSystemPrompt(config, userName);
+
+      // Start the conversation with dynamic variables and system prompt override
       const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_0401kfask9wye6dt9cymkzbcxdg3';
       await conversation.startSession({
         agentId,
         connectionType: 'webrtc' as const,
         ...(Object.keys(dynamicVariables).length > 0 && { dynamicVariables }),
+        overrides: {
+          agent: {
+            prompt: {
+              prompt: systemPrompt,
+            },
+          },
+        },
       });
     } catch (error) {
       if (error instanceof DOMException && error.name === 'NotAllowedError') {

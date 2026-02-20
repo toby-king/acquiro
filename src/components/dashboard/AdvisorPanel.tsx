@@ -4,6 +4,7 @@ import { useConversation } from '@elevenlabs/react';
 import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { motion } from 'framer-motion';
+import { buildSystemPrompt } from '../../prompts/advisorPrompt';
 
 type CallStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
@@ -227,13 +228,23 @@ export function AdvisorPanel() {
       // This helps prevent AudioWorkletNode errors
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Start the conversation with dynamic variables
+      // Build system prompt from advisorPrompt.ts
+      const systemPrompt = buildSystemPrompt(config, userName);
+
+      // Start the conversation with dynamic variables and system prompt override
       try {
         const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_0401kfask9wye6dt9cymkzbcxdg3';
         await conversation.startSession({
           agentId,
           connectionType: 'webrtc' as const,
           ...(Object.keys(dynamicVariables).length > 0 && { dynamicVariables }),
+          overrides: {
+            agent: {
+              prompt: {
+                prompt: systemPrompt,
+              },
+            },
+          },
         });
         
         // Stop the test stream after session is established
