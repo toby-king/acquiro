@@ -15,7 +15,7 @@ interface CallScreenProps {
 type CallStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
 export function CallScreen({ onBack, onContinue }: CallScreenProps) {
-  const { config, userName, leadId } = useAdvisorStore();
+  const { config, userName, userId, leadId } = useAdvisorStore();
   const [callStatus, setCallStatus] = useState<CallStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -148,8 +148,10 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
       if (config.advisorName) {
         dynamicVariables.agent_name = config.advisorName;
       }
-      if (leadId) {
-        dynamicVariables.user_id = leadId;
+      // Use userId (after payment) when available, otherwise leadId
+      const userIdentifier = userId || leadId;
+      if (userIdentifier) {
+        dynamicVariables.user_id = userIdentifier;
       }
 
       // Build system prompt from advisorPrompt.ts

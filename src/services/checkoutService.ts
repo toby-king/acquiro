@@ -13,6 +13,8 @@ export interface CheckoutSessionResponse {
 export interface SessionStatusResponse {
   status: string;
   customerEmail?: string;
+  /** Lead ID stored in checkout session metadata (survives redirect from Stripe) */
+  leadId?: string;
 }
 
 /**

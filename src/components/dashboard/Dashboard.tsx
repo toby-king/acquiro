@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { MatchesList } from './MatchesList';
 import { AdvisorPanel } from './AdvisorPanel';
@@ -5,9 +6,22 @@ import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
 import { motion } from 'framer-motion';
 import { Phone, Settings, LogOut } from 'lucide-react';
+import { getUser } from '../../services/userService';
 
 export function Dashboard() {
-  const { userName } = useAdvisorStore();
+  const { userId, userName, userEmail, setUserName, setUserEmail } = useAdvisorStore();
+  const fetchedUserIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!userId || fetchedUserIdRef.current === userId) return;
+    fetchedUserIdRef.current = userId;
+    getUser(userId)
+      .then(({ name, email }) => {
+        if (name) setUserName(name);
+        if (email) setUserEmail(email);
+      })
+      .catch((err) => console.error('[Dashboard] Failed to fetch user profile:', err));
+  }, [userId, setUserName, setUserEmail]);
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">

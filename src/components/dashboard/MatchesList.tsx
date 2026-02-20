@@ -5,6 +5,7 @@ import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { Loader2 } from 'lucide-react';
 
 export function MatchesList() {
+  // Use userId (Bubble user id set after payment) for matches API – do not use leadId
   const { userId } = useAdvisorStore();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
