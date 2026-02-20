@@ -36,6 +36,7 @@ export function ChatContainer() {
   const [showCallScreen, setShowCallScreen] = useState(false);
   const [showSubscriptionPage, setShowSubscriptionPage] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [conversationStartIndex, setConversationStartIndex] = useState<number | null>(null); // Track where the real conversation starts
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false);
   const headerOrbRef = useRef<HTMLDivElement>(null);
@@ -257,9 +258,16 @@ export function ChatContainer() {
       // Initialize streaming text ref for this message
       streamingTextRefs.current[messageId] = '';
       
+      // Determine which messages to send to the LLM
+      // If conversationStartIndex is set, only include messages from that point onwards
+      // Otherwise, include all messages (fallback for safety)
+      const messagesToSend = conversationStartIndex !== null
+        ? [...messages.slice(conversationStartIndex), userMessage]
+        : [...messages, userMessage];
+      
       // Generate streaming response
       generateChatResponseStream(
-        [...messages, userMessage],
+        messagesToSend,
         config,
         userName,
         (chunk: string) => {
@@ -337,7 +345,16 @@ export function ChatContainer() {
       isUser: true,
       timestamp: new Date(),
     };
-    setMessages(prev => [...prev, userMessage]);
+    
+    // Mark this as the start of the real conversation
+    // The next message count will be where the conversation starts
+    setMessages(prev => {
+      const newMessages = [...prev, userMessage];
+      // Set conversation start index to the current length (before adding user message)
+      // This means we'll only include messages from this point forward
+      setConversationStartIndex(prev.length);
+      return newMessages;
+    });
     
     // Create placeholder message for streaming
     const messageId = (Date.now() + 1).toString();
@@ -357,9 +374,13 @@ export function ChatContainer() {
     // Initialize streaming text ref for this message
     streamingTextRefs.current[messageId] = '';
     
+    // Start fresh - don't send any previous messages, just the user's "Let's Message Here"
+    // This allows the agent to respond with the opening greeting from the prompt
+    const messagesToSend: Message[] = [userMessage];
+    
     // Generate streaming response
     generateChatResponseStream(
-      [...messages, userMessage],
+      messagesToSend,
       config,
       userName,
       (chunk: string) => {

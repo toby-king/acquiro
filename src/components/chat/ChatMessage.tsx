@@ -45,7 +45,7 @@ export function ChatMessage({ message, isUser, isTyping = false }: ChatMessagePr
             : 'bg-[var(--bg-card)] text-[var(--text-primary)] rounded-tl-sm'
         }`}
       >
-        <p className="text-sm leading-relaxed whitespace-pre-line">
+        <p className="text-base leading-relaxed whitespace-pre-line">
           {message || '\u00A0'}
         </p>
       </div>
