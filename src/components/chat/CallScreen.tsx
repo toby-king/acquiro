@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
-import { ArrowLeft, Phone, PhoneOff, Loader2, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Phone, PhoneOff, Loader2, ArrowRight, Send } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useConversation } from '@elevenlabs/react';
 import { buildSystemPrompt } from '../../prompts/advisorPrompt';
 
@@ -21,8 +21,10 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speechPulse, setSpeechPulse] = useState(0);
   const [wasConnected, setWasConnected] = useState(false); // Track if call was ever connected
+  const [textMessage, setTextMessage] = useState('');
   const pulseAnimationRef = useRef<number | null>(null);
   const pulseStartTimeRef = useRef<number | null>(null);
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -217,6 +219,19 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
     }
   };
 
+  const handleSendTextMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (textMessage.trim() && callStatus === 'connected') {
+      try {
+        conversation.sendUserMessage(textMessage.trim());
+        setTextMessage('');
+      } catch (error) {
+        console.error('Failed to send text message:', error);
+        setErrorMessage('Failed to send message. Please try again.');
+      }
+    }
+  };
+
   // Determine orb intensity and activation based on call status
   const orbIntensity = callStatus === 'connected' ? 80 : callStatus === 'connecting' ? 60 : 50;
   const orbIsActivated = callStatus === 'connected';
@@ -337,6 +352,58 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
           </div>
         </div>
       </div>
+
+      {/* Text Input for sending messages during call */}
+      <AnimatePresence>
+        {callStatus === 'connected' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className="sticky bottom-0 bg-[var(--bg-primary)]/95 backdrop-blur-md border-t border-[var(--border)] px-6 py-4"
+          >
+            <div className="max-w-2xl mx-auto">
+              <form onSubmit={handleSendTextMessage} className="flex items-end gap-3">
+                <textarea
+                  ref={textInputRef}
+                  value={textMessage}
+                  onChange={(e) => setTextMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendTextMessage(e);
+                    }
+                  }}
+                  placeholder="Type a message if you can't use your mic..."
+                  rows={2}
+                  className="flex-1 px-4 py-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent resize-none text-base"
+                />
+                <motion.button
+                  type="submit"
+                  disabled={!textMessage.trim()}
+                  className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] ${
+                    !textMessage.trim()
+                      ? 'bg-[var(--bg-card)] opacity-50 cursor-not-allowed'
+                      : 'bg-accent hover:bg-accent/90 cursor-pointer'
+                  }`}
+                  whileHover={!textMessage.trim() ? {} : { scale: 1.02 }}
+                  whileTap={!textMessage.trim() ? {} : { scale: 0.98 }}
+                >
+                  <Send 
+                    size={18} 
+                    strokeWidth={2.5} 
+                    className={textMessage.trim() ? "text-[var(--bg-primary)]" : "text-[var(--text-secondary)]"} 
+                  />
+                </motion.button>
+              </form>
+              <p className="mt-2 text-xs text-[var(--text-tertiary)] text-center">
+                Press Enter to send, Shift+Enter for new line
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
