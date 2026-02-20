@@ -231,6 +231,28 @@ export function AdvisorPanel() {
       // Build system prompt from advisorPrompt.ts
       const systemPrompt = buildSystemPrompt(config, userName);
 
+      // Build overrides object with camelCase properties for @elevenlabs/react v0.14
+      const overrides: any = {
+        agent: {
+          prompt: {
+            prompt: systemPrompt,
+          },
+          firstMessage: 'Hello',
+        },
+      };
+
+      // Add TTS voice override if voice is selected
+      if (config.voice?.id) {
+        overrides.tts = {
+          voiceId: config.voice.id,
+        };
+        console.log('[AdvisorPanel] Setting voice override:', config.voice.id);
+      } else {
+        console.log('[AdvisorPanel] No voice selected in config');
+      }
+      
+      console.log('[AdvisorPanel] Full overrides object:', JSON.stringify(overrides, null, 2));
+
       // Start the conversation with dynamic variables and system prompt override
       try {
         const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_0401kfask9wye6dt9cymkzbcxdg3';
@@ -238,13 +260,7 @@ export function AdvisorPanel() {
           agentId,
           connectionType: 'webrtc' as const,
           ...(Object.keys(dynamicVariables).length > 0 && { dynamicVariables }),
-          overrides: {
-            agent: {
-              prompt: {
-                prompt: systemPrompt,
-              },
-            },
-          },
+          overrides,
         });
         
         // Stop the test stream after session is established

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { VOICE_OPTIONS } from '../../constants/voices';
 import { Card } from '../ui/Card';
@@ -12,6 +12,7 @@ export function VoiceStep() {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const { triggerAbsorption } = useAbsorption();
   const cardRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   
   const handleSelect = (voiceId: string) => {
     const voice = VOICE_OPTIONS.find(v => v.id === voiceId);
@@ -25,14 +26,57 @@ export function VoiceStep() {
   };
   
   const handlePlay = (voiceId: string) => {
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+
     if (playingId === voiceId) {
+      // If clicking the same voice, stop it
       setPlayingId(null);
     } else {
-      setPlayingId(voiceId);
-      // In production, this would play audio preview
-      setTimeout(() => setPlayingId(null), 3000);
+      // Find the voice and play its audio sample
+      const voice = VOICE_OPTIONS.find(v => v.id === voiceId);
+      if (voice && voice.audioSample) {
+        setPlayingId(voiceId);
+        
+        // Create and play audio - using Vite's import.meta.url for dynamic asset loading
+        const audioPath = new URL(`../../assets/voices/${voice.audioSample}`, import.meta.url).href;
+        const audio = new Audio(audioPath);
+        audioRef.current = audio;
+        
+        audio.play().catch((error) => {
+          console.error('Error playing audio:', error);
+          setPlayingId(null);
+        });
+        
+        // Handle when audio ends
+        audio.onended = () => {
+          setPlayingId(null);
+          audioRef.current = null;
+        };
+        
+        // Handle errors
+        audio.onerror = () => {
+          console.error('Audio playback error');
+          setPlayingId(null);
+          audioRef.current = null;
+        };
+      }
     }
   };
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
   
   return (
     <motion.div
