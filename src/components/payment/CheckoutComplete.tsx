@@ -25,20 +25,31 @@ export function CheckoutComplete() {
     getSessionStatus(sessionId)
       .then(async (data) => {
         if (data.status === 'complete') {
-          // Create user in Bubble API if we have a leadId
+          // Create user account in Bubble API after successful payment
           if (leadId) {
             try {
+              console.log('[CheckoutComplete] Payment successful, creating user account in Bubble API for lead:', leadId);
               const userResult = await createUser(leadId);
+              
               if (userResult?.user_id) {
                 setUserId(userResult.user_id);
-                console.log('User ID set:', userResult.user_id);
+                console.log('[CheckoutComplete] ✅ User account created successfully in Bubble. User ID:', userResult.user_id);
               } else {
-                console.warn('Failed to create user, but payment was successful');
+                console.error('[CheckoutComplete] ❌ Failed to create user account - no user_id returned from Bubble API');
+                // Still proceed but log the error - user can contact support
               }
             } catch (error) {
-              console.error('Error creating user:', error);
-              // Don't fail the whole flow if user creation fails
+              console.error('[CheckoutComplete] ❌ Error creating user account in Bubble API:', error);
+              // Log detailed error for debugging
+              if (error instanceof Error) {
+                console.error('[CheckoutComplete] Error details:', error.message);
+                console.error('[CheckoutComplete] Stack trace:', error.stack);
+              }
+              // Still proceed to success screen - payment was successful
+              // User account creation can be retried manually if needed
             }
+          } else {
+            console.warn('[CheckoutComplete] ⚠️ Payment successful but no leadId found - cannot create user account in Bubble');
           }
           
           setStatus('success');
@@ -47,10 +58,12 @@ export function CheckoutComplete() {
             setShowWhatsNext(true);
           }, 2000);
         } else {
+          console.error('[CheckoutComplete] Payment session status is not complete:', data.status);
           setStatus('error');
         }
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('[CheckoutComplete] Error verifying payment session:', error);
         setStatus('error');
       });
   }, [searchParams, navigate, leadId, setUserId]);

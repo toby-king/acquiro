@@ -37,7 +37,7 @@ export function MatchesList() {
   if (loading) {
     return (
       <div>
-        <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Your Matches.</h2>
+        <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4 text-center">Your Matches.</h2>
         <div className="flex items-center justify-center py-12">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-accent" />
@@ -51,7 +51,7 @@ export function MatchesList() {
   if (error) {
     return (
       <div>
-        <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Your Matches.</h2>
+        <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4 text-center">Your Matches.</h2>
         <div className="flex items-center justify-center py-12">
           <div className="flex flex-col items-center gap-3 max-w-md text-center">
             <p className="text-red-400">{error}</p>
@@ -81,7 +81,7 @@ export function MatchesList() {
   if (matches.length === 0) {
     return (
       <div>
-        <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Your Matches.</h2>
+        <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4 text-center">Your Matches.</h2>
         <div className="flex items-center justify-center py-12">
           <div className="flex flex-col items-center gap-3 max-w-md text-center">
             <p className="text-[var(--text-secondary)]">
@@ -95,7 +95,7 @@ export function MatchesList() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Your Matches.</h2>
+      <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4 text-center">Your Matches.</h2>
 
       <div className="space-y-3">
         {matches.map((match, index) => (

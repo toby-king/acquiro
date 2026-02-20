@@ -1,10 +1,10 @@
+import { Link } from 'react-router-dom';
 import { MatchesList } from './MatchesList';
 import { AdvisorPanel } from './AdvisorPanel';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
 import { motion } from 'framer-motion';
 import { Phone, Settings, LogOut } from 'lucide-react';
-import logo from '../../assets/logo.png';
 
 export function Dashboard() {
   const { userName } = useAdvisorStore();
@@ -18,12 +18,12 @@ export function Dashboard() {
         transition={{ duration: 0.5 }}
         className="w-full px-4 sm:px-6 py-4 flex items-center justify-between border-b border-[var(--border)]"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-6">
           {/* Logo */}
-          <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden">
-            <img src={logo} alt="Acquiro Logo" className="w-full h-full object-cover" />
-          </div>
-          <h1 className="text-xl font-semibold text-[var(--text-primary)]">
+          <Link to="/" className="font-display font-bold text-[1.6rem] text-[var(--text-primary)]">
+            acquiro<span className="text-accent">.</span>
+          </Link>
+          <h1 className="font-display font-bold text-xl lg:text-2xl text-[var(--text-primary)] hidden sm:block">
             Welcome back, {userName || 'there'}.
           </h1>
         </div>
