@@ -8,7 +8,7 @@ interface SectionProps extends HTMLAttributes<HTMLElement> {
 export function Section({ children, className, ...props }: SectionProps) {
   return (
     <section
-      className={cn('py-[120px] px-12 max-w-[1200px] mx-auto border-t border-[var(--border)]', className)}
+      className={cn('py-16 md:py-24 lg:py-[120px] px-4 sm:px-6 md:px-8 lg:px-12 max-w-[1200px] mx-auto border-t border-[var(--border)]', className)}
       {...props}
     >
       {children}
@@ -53,7 +53,7 @@ interface SectionDescProps extends HTMLAttributes<HTMLParagraphElement> {
 export function SectionDesc({ children, className, ...props }: SectionDescProps) {
   return (
     <p
-      className={cn('text-[var(--text-secondary)] text-[1.05rem] leading-[1.7] font-light max-w-[520px]', className)}
+      className={cn('text-[var(--text-secondary)] text-[1.05rem] leading-[1.7] font-light w-full max-w-[520px]', className)}
       {...props}
     >
       {children}

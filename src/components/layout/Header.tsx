@@ -31,14 +31,14 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-        <div className="flex items-center justify-between gap-6">
+        <div className="flex items-center justify-between gap-2 sm:gap-6 min-w-0">
           {/* Logo */}
-          <Link to="/" className="font-display font-bold text-[1.6rem] text-[var(--text-primary)] flex-shrink-0">
+          <Link to="/" className="font-display font-bold text-lg sm:text-[1.6rem] text-[var(--text-primary)] flex-shrink-0 min-h-[44px] flex items-center">
             acquiro<span className="text-accent">.</span>
           </Link>
           
           {/* Progress Bar - centered and flexible */}
-          <div className="flex-1 flex justify-end">
+          <div className="flex-1 flex justify-end min-w-0 overflow-hidden">
             <ProgressBar
               steps={STEP_LABELS}
               currentStep={progressStepIndex}

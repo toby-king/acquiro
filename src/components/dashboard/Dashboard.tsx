@@ -25,7 +25,7 @@ export function Dashboard() {
   }, [userId, setUserName, setUserEmail]);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">
+    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col overflow-x-hidden">
       {/* Header - Full Width */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -33,9 +33,9 @@ export function Dashboard() {
         transition={{ duration: 0.5 }}
         className="w-full px-4 sm:px-6 py-4 flex items-center justify-between border-b border-[var(--border)]"
       >
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6 min-w-0">
           {/* Logo */}
-          <Link to="/" className="font-display font-bold text-[1.6rem] text-[var(--text-primary)]">
+          <Link to="/" className="font-display font-bold text-lg sm:text-[1.6rem] text-[var(--text-primary)] flex-shrink-0 min-h-[44px] flex items-center">
             acquiro<span className="text-accent">.</span>
           </Link>
           <h1 className="font-display font-bold text-xl lg:text-2xl text-[var(--text-primary)] hidden sm:block">
@@ -49,7 +49,7 @@ export function Dashboard() {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
+            className="min-h-[44px] min-w-[44px] rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
             aria-label="Settings"
             title="Settings"
           >
@@ -63,7 +63,7 @@ export function Dashboard() {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
+            className="min-h-[44px] min-w-[44px] rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
             aria-label="Logout"
             title="Logout"
             onClick={() => {
@@ -89,7 +89,7 @@ export function Dashboard() {
       {/* Main Content - 50/50 Split */}
       <div className="flex-1 flex flex-col lg:flex-row relative">
         {/* Left - Matches (50%) */}
-        <div className="flex-1 p-4 md:p-8 overflow-y-auto pb-20 md:pb-8 relative">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden pb-20 md:pb-8 relative min-w-0">
           {/* Divider - 70% height */}
           <div className="hidden lg:block absolute right-0 top-[15%] bottom-[15%] w-px bg-[var(--border)]" />
           

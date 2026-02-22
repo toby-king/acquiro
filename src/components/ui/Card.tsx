@@ -20,7 +20,7 @@ export function Card({
   className = '',
   ...props 
 }: CardProps) {
-  const baseStyles = 'relative rounded-card p-6 transition-all duration-300 overflow-hidden bg-[var(--bg-card)] border border-[var(--border)]';
+  const baseStyles = 'relative rounded-card p-4 sm:p-6 transition-all duration-300 overflow-hidden bg-[var(--bg-card)] border border-[var(--border)] min-w-0 max-w-full';
   const borderStyles = selected 
     ? 'border-2 border-accent' 
     : '';

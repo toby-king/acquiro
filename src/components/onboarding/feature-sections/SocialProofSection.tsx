@@ -56,11 +56,11 @@ export function SocialProofSection() {
   }, [isInView]);
 
   return (
-    <div ref={ref} className="flex flex-col items-center justify-center min-h-[400px] py-15 px-4" style={{ overflow: 'visible' }}>
-      <Card className="max-w-[700px] w-full border-none overflow-visible py-10" style={{ background: 'transparent', border: 'none', overflow: 'visible' }}>
-        <div className="space-y-8 overflow-visible">
+    <div ref={ref} className="flex flex-col items-center justify-center min-h-[400px] py-12 px-4 w-full min-w-0" style={{ overflow: 'visible' }}>
+      <Card className="max-w-[700px] w-full border-none overflow-visible py-10 min-w-0" style={{ background: 'transparent', border: 'none', overflow: 'visible' }}>
+        <div className="space-y-8 overflow-visible min-w-0">
           {/* Headline */}
-          <h2 className="text-3xl font-display font-medium text-[var(--text-primary)] text-center">
+          <h2 className="text-2xl md:text-3xl font-display font-medium text-[var(--text-primary)] text-center">
             3 acquisitions. 11 months. 1 advisor.
           </h2>
           

@@ -691,7 +691,7 @@ export function BirthAnimation({ onComplete, palette, allowProfanity = false }: 
                   onChange={(e) => setName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Escape') handleSubmit('Advisor'); }}
                   placeholder="Enter a name..."
-                  className="w-[300px] bg-transparent border-0 border-b-2 border-gray-600 focus:border-[#a855f7] outline-none text-white text-center text-lg pb-2 transition-colors duration-200 placeholder:text-gray-600"
+                  className="w-full max-w-[300px] bg-transparent border-0 border-b-2 border-gray-600 focus:border-[#a855f7] outline-none text-white text-center text-lg pb-2 transition-colors duration-200 placeholder:text-gray-600"
                   maxLength={30}
                 />
               </motion.form>

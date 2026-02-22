@@ -29,7 +29,7 @@ export function Sidebar() {
             <button
               key={item.id}
               onClick={() => setActiveItem(item.id)}
-              className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+              className={`min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center transition-all ${
                 isActive
                   ? 'bg-accent/20 text-accent'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
@@ -44,7 +44,7 @@ export function Sidebar() {
         {/* Settings at bottom */}
         <div className="mt-auto">
           <button
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-all"
+            className="min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-all"
             title="Settings"
           >
             <Settings className="w-5 h-5" />
@@ -62,7 +62,7 @@ export function Sidebar() {
             <button
               key={item.id}
               onClick={() => setActiveItem(item.id)}
-              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+              className={`flex flex-col items-center justify-center gap-1 min-h-[44px] min-w-[44px] py-2 px-3 rounded-lg transition-all ${
                 isActive
                   ? 'text-accent'
                   : 'text-[var(--text-secondary)]'

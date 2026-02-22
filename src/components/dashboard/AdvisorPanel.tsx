@@ -373,7 +373,7 @@ export function AdvisorPanel() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={startCall}
-            className="flex items-center gap-2 px-6 py-3 bg-white text-black font-medium rounded-full hover:bg-gray-100 transition-all"
+            className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-white text-black font-medium rounded-full hover:bg-gray-100 transition-all"
           >
             <Phone className="w-5 h-5" />
             Call Agent
@@ -385,7 +385,7 @@ export function AdvisorPanel() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             disabled
-            className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-gray-400 font-medium rounded-full cursor-not-allowed"
+            className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-gray-700 text-gray-400 font-medium rounded-full cursor-not-allowed"
           >
             <Loader2 className="w-5 h-5 animate-spin" />
             Connecting...
@@ -398,7 +398,7 @@ export function AdvisorPanel() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               onClick={endCall}
-              className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white font-medium rounded-full hover:bg-red-700 transition-all"
+              className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-red-600 text-white font-medium rounded-full hover:bg-red-700 transition-all"
             >
               <PhoneOff className="w-5 h-5" />
               End Call
@@ -425,7 +425,7 @@ export function AdvisorPanel() {
             </p>
             <button
               onClick={startCall}
-              className="flex items-center gap-2 px-6 py-3 bg-white text-black font-medium rounded-full hover:bg-gray-100 transition-all"
+              className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-white text-black font-medium rounded-full hover:bg-gray-100 transition-all"
             >
               <Phone className="w-5 h-5" />
               Retry Call

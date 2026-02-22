@@ -42,15 +42,15 @@ export function MatchesList() {
   }, [loadMatches]);
 
   const matchesHeader = (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4">
-      <div />
-      <h2 className="text-xl font-semibold text-[var(--text-primary)] text-center">Your Matches.</h2>
-      <div className="flex justify-end">
+    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4 min-w-0">
+      <div className="hidden sm:block" />
+      <h2 className="text-lg md:text-xl font-semibold text-[var(--text-primary)] text-center order-first sm:order-none">Your Matches.</h2>
+        <div className="flex justify-end sm:order-last">
         <button
           type="button"
           onClick={() => loadMatches(true)}
           disabled={loading || refreshing}
-          className="flex items-center gap-2 px-3 py-2 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors disabled:opacity-50 disabled:pointer-events-none text-sm"
+          className="flex items-center gap-2 min-h-[44px] px-3 py-2 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors disabled:opacity-50 disabled:pointer-events-none text-sm"
           aria-label="Refresh matches"
           title="Refresh matches"
         >
@@ -88,7 +88,7 @@ export function MatchesList() {
             <p className="text-red-400">{error}</p>
             <button
               onClick={() => loadMatches()}
-              className="px-4 py-2 bg-accent text-black rounded-full hover:bg-accent/90 transition-colors"
+              className="min-h-[44px] px-4 py-2 bg-accent text-black rounded-full hover:bg-accent/90 transition-colors"
             >
               Retry
             </button>

@@ -31,7 +31,7 @@ export function MatchCard({
           <img 
             src={thumbnail} 
             alt={companyName} 
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover max-w-full"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">

@@ -60,11 +60,11 @@ function StepContent() {
 
 function WizardView() {
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
+    <div className="min-h-screen bg-[var(--bg-primary)] overflow-x-hidden">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="grid lg:grid-cols-[400px_1fr] gap-6 lg:gap-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full">
+        <div className="grid lg:grid-cols-[400px_1fr] gap-6 lg:gap-8 min-w-0">
           {/* Left Panel */}
           <div className="lg:sticky lg:top-24 h-fit order-2 lg:order-1">
             <AdvisorPanel />

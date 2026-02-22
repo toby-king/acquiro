@@ -37,7 +37,7 @@ export function Pricing() {
           </Reveal>
         </div>
 
-        <div className="grid md:grid-cols-1 gap-6 px-80">
+        <div className="grid grid-cols-1 gap-6">
           {plans.map((plan, index) => (
             <Reveal key={plan.name} delay={300 + index * 100}>
               <Card
@@ -61,7 +61,7 @@ export function Pricing() {
                   </div>
 
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-[var(--text-primary)]">{plan.price}</span>
+                    <span className="text-3xl md:text-4xl font-bold text-[var(--text-primary)]">{plan.price}</span>
                     {plan.period && (
                       <span className="text-[var(--text-secondary)]">{plan.period}</span>
                     )}

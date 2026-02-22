@@ -470,7 +470,7 @@ export function ChatContainer() {
           <>
             {/* Render hidden header for orb position reference */}
             <div className="fixed inset-0 pointer-events-none opacity-0 z-[101]">
-              <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
+              <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-4 md:px-6 py-4">
                 <div className="flex items-center justify-between max-w-4xl mx-auto">
                   <div className="flex items-center gap-3">
                     <div ref={headerOrbRef}>
@@ -493,10 +493,10 @@ export function ChatContainer() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[var(--bg-primary)]">
+    <div className="flex flex-col h-screen bg-[var(--bg-primary)] overflow-x-hidden">
       {/* Chat Header */}
-      <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
+      <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-4 md:px-6 py-4">
+        <div className="flex items-center justify-between max-w-4xl mx-auto min-w-0">
           <div className="flex items-center gap-3">
             <div ref={headerOrbRef}>
               <AdvisorOrb 
@@ -521,13 +521,13 @@ export function ChatContainer() {
             <ThemeToggle />
             <button
               onClick={handleCallClick}
-              className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200"
+              className="min-h-[44px] min-w-[44px] rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200"
               aria-label="Start Call"
             >
               <Phone size={18} />
             </button>
             <button
-              className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200"
+              className="min-h-[44px] min-w-[44px] rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200"
               aria-label="Settings"
             >
               <Settings size={18} />
@@ -537,8 +537,8 @@ export function ChatContainer() {
       </header>
       
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="max-w-4xl mx-auto space-y-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-6 py-6">
+        <div className="max-w-4xl mx-auto space-y-4 min-w-0 w-full">
           <AnimatePresence>
             {messages.map((message) => {
               // Hide empty streaming messages while typing indicator is showing
@@ -577,8 +577,8 @@ export function ChatContainer() {
       </div>
       
       {/* Input Area - disabled until agent asks for name, then for email, then until user picks Let's call or Let's message */}
-      <div className="sticky bottom-0 bg-[var(--bg-primary)]/80 backdrop-blur-md border-t border-[var(--border)] px-6 py-4">
-        <div className="max-w-4xl mx-auto">
+      <div className="sticky bottom-0 bg-[var(--bg-primary)]/80 backdrop-blur-md border-t border-[var(--border)] px-4 md:px-6 py-4">
+        <div className="max-w-4xl mx-auto min-w-0">
           <ChatInput
             onSend={handleSend}
             disabled={

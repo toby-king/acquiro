@@ -15,7 +15,7 @@ const steps = [
     number: '02',
     icon: Search,
     title: 'Automated Search',
-    description: 'Your agent continuously scans multiple platforms, filters opportunities, and scores matches based on your preferences.',
+    description: 'Your agent continuously scans multiple platforms, filters opportunities, and finds matches based on your preferences.',
   },
   {
     number: '03',
@@ -43,7 +43,7 @@ export function HowItWorks() {
           </Reveal>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {steps.map((step, index) => {
             const Icon = step.icon;
             return (
@@ -59,8 +59,8 @@ export function HowItWorks() {
                       <Icon size={24} className="text-accent" />
                     </IconBadge>
 
-                    <div className="space-y-2">
-                      <h3 className="text-xl font-semibold text-[var(--text-primary)]">{step.title}</h3>
+                    <div className="space-y-2 min-w-0">
+                      <h3 className="text-lg md:text-xl font-semibold text-[var(--text-primary)]">{step.title}</h3>
                       <p className="text-text-secondary leading-relaxed">{step.description}</p>
                     </div>
                   </div>

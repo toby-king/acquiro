@@ -111,7 +111,7 @@ export function CheckoutComplete() {
           className="text-center max-w-md"
         >
           <XCircle className="w-16 h-16 text-red-500 mx-auto mb-6" />
-          <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Something went wrong</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-[var(--text-primary)] mb-2">Something went wrong</h1>
           <p className="text-[var(--text-secondary)] mb-8">
             We couldn't verify your subscription. Please contact support if you were charged.
           </p>
@@ -134,7 +134,7 @@ export function CheckoutComplete() {
         className="text-center max-w-md"
       >
         <CheckCircle className="w-16 h-16 text-accent mx-auto mb-6" />
-        <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">Welcome aboard!</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)] mb-2">Welcome aboard!</h1>
         <p className="text-[var(--text-secondary)] mb-8">
           Your subscription is now active. Redirecting you to your dashboard...
         </p>

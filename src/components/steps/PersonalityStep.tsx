@@ -52,8 +52,8 @@ export function PersonalityStep() {
       animate="animate"
       className="space-y-6"
     >
-      <div className="text-center">
-        <h2 className="text-3xl font-display font-bold mb-2 text-[var(--text-primary)]">
+      <div className="text-center min-w-0">
+        <h2 className="text-2xl md:text-3xl font-display font-bold mb-2 text-[var(--text-primary)]">
           Choose Your Personality
         </h2>
         <p className="text-[var(--text-secondary)]">

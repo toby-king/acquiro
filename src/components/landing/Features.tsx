@@ -45,7 +45,7 @@ export function Features() {
           </Reveal>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
@@ -55,8 +55,8 @@ export function Features() {
                     <IconBadge size="sm">
                       <Icon size={20} className="text-accent" />
                     </IconBadge>
-                    <div className="flex-1 space-y-2">
-                      <h3 className="text-lg font-semibold text-[var(--text-primary)]">{feature.title}</h3>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <h3 className="text-base md:text-lg font-semibold text-[var(--text-primary)]">{feature.title}</h3>
                       <p className="text-text-secondary leading-relaxed">{feature.description}</p>
                     </div>
                   </div>

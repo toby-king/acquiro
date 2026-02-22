@@ -67,8 +67,8 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
       {/* Header with back button */}
-      <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-4 md:px-6 py-4">
+        <div className="max-w-6xl mx-auto flex items-center justify-between min-w-0">
           <Button
             variant="ghost"
             onClick={handleBack}
@@ -81,7 +81,7 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
       </header>
       
       {/* NEW Hero Section — Narrative Opening */}
-      <section className="max-w-[640px] mx-auto pt-16 pb-0 px-6 text-center">
+      <section className="max-w-[640px] mx-auto pt-16 pb-0 px-4 sm:px-6 text-center min-w-0">
         {/* Advisor Orb */}
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
@@ -118,7 +118,7 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
       </section>
 
       {/* NEW Stat Cards Row */}
-      <section className="max-w-[640px] mx-auto px-6 pt-14 pb-16 border-b border-[var(--border)]">
+      <section className="max-w-[640px] mx-auto px-4 sm:px-6 pt-14 pb-16 border-b border-[var(--border)] min-w-0">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
             { num: '53', label: 'matches found\nfor your criteria' },
@@ -157,7 +157,7 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
               <span className={`text-sm ${billingPeriod === 'monthly' ? 'text-white' : 'text-gray-500'}`}>Monthly</span>
               <button
                 onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'annual' : 'monthly')}
-                className="relative w-12 h-6 rounded-full bg-gray-800 border border-gray-700 transition-colors"
+                className="relative w-12 h-6 rounded-full bg-gray-800 border border-gray-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-[var(--accent)] transition-transform ${billingPeriod === 'annual' ? 'translate-x-6' : 'translate-x-0.5'}`} />
               </button>
@@ -210,7 +210,7 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
                   >
                     <button
                       onClick={() => handleSelectPlan(PRICING_PLANS[0].id)}
-                      className="w-full max-w-[360px] mx-auto block py-[18px] bg-[var(--accent)] text-black rounded-full font-bold text-[17px] hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(198,255,74,0.2)] transition-all"
+                      className="w-full max-w-[360px] mx-auto block min-h-[44px] py-[18px] bg-[var(--accent)] text-black rounded-full font-bold text-[17px] hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(198,255,74,0.2)] transition-all"
                     >
                       Activate Your Advisor
                     </button>

@@ -9,7 +9,7 @@ import { Footer } from './Footer';
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] overflow-x-hidden">
       <Navbar />
       <Hero />
       <HowItWorks />

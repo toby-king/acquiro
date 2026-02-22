@@ -451,11 +451,11 @@ export function TimeToSuccessSection() {
   }, [isInView, startDate, endDate]);
 
   return (
-    <div ref={ref} className="flex flex-col items-center justify-center min-h-[400px] py-12 px-4" style={{ overflow: 'visible' }}>
-      <Card className="max-w-[600px] w-full border-none" style={{ background: 'transparent', border: 'none', overflow: 'visible' }}>
-        <div className="space-y-8" style={{ overflow: 'visible' }}>
+    <div ref={ref} className="flex flex-col items-center justify-center min-h-[400px] py-12 px-4 w-full min-w-0" style={{ overflow: 'visible' }}>
+      <Card className="max-w-[600px] w-full border-none min-w-0" style={{ background: 'transparent', border: 'none', overflow: 'visible' }}>
+        <div className="space-y-8 min-w-0" style={{ overflow: 'visible' }}>
           {/* Headline */}
-          <h2 className="text-3xl font-display font-medium text-[var(--text-primary)] text-center">
+          <h2 className="text-2xl md:text-3xl font-display font-medium text-[var(--text-primary)] text-center">
             You could close your ideal acquisition by{' '}
             <RollingDate startDate={startDate} endDate={endDate} />
           </h2>

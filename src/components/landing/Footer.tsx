@@ -5,8 +5,8 @@ export function Footer() {
 
   return (
     <footer className="border-t border-[var(--border)] bg-[var(--bg-primary)]">
-      <div className="max-w-[1200px] mx-auto px-12 py-12">
-        <div className="grid md:grid-cols-3 gap-8">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-8 md:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Logo */}
           <div>
             <Link to="/" className="font-display font-bold text-xl text-[var(--text-primary)] mb-4 inline-block">
@@ -20,17 +20,17 @@ export function Footer() {
           {/* Navigation Links */}
           <div>
             <h3 className="text-[var(--text-primary)] font-semibold mb-4">Navigation</h3>
-            <nav className="flex flex-col gap-2">
-              <a href="#how-it-works" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm">
+            <nav className="flex flex-col gap-0">
+              <a href="#how-it-works" className="min-h-[44px] flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm py-2">
                 How It Works
               </a>
-              <a href="#features" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm">
+              <a href="#features" className="min-h-[44px] flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm py-2">
                 Features
               </a>
-              <a href="#demo" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm">
+              <a href="#demo" className="min-h-[44px] flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm py-2">
                 Demo
               </a>
-              <a href="#pricing" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm">
+              <a href="#pricing" className="min-h-[44px] flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm py-2">
                 Pricing
               </a>
             </nav>
@@ -39,11 +39,11 @@ export function Footer() {
           {/* Legal */}
           <div>
             <h3 className="text-[var(--text-primary)] font-semibold mb-4">Legal</h3>
-            <nav className="flex flex-col gap-2">
-              <a href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm">
+            <nav className="flex flex-col gap-0">
+              <a href="#" className="min-h-[44px] flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm py-2">
                 Privacy Policy
               </a>
-              <a href="#" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm">
+              <a href="#" className="min-h-[44px] flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm py-2">
                 Terms of Service
               </a>
             </nav>

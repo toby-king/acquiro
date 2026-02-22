@@ -33,8 +33,8 @@ export function TypeStep() {
       animate="animate"
       className="space-y-6"
     >
-      <div className="text-center">
-        <h2 className="text-3xl font-display font-bold mb-2 text-[var(--text-primary)]">
+      <div className="text-center min-w-0">
+        <h2 className="text-2xl md:text-3xl font-display font-bold mb-2 text-[var(--text-primary)]">
           Choose Your Advisor Type
         </h2>
         <p className="text-[var(--text-secondary)]">
@@ -42,7 +42,7 @@ export function TypeStep() {
         </p>
       </div>
       
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
         {ADVISOR_TYPES.map((type) => {
           const Icon = iconMap[type.icon as keyof typeof iconMap] || GraduationCap;
           const isSelected = config.type === type.id;

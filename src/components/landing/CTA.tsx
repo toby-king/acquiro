@@ -4,7 +4,7 @@ import { Reveal } from '../ui/Reveal';
 
 export function CTA() {
   return (
-    <section className="relative py-[120px] px-12 overflow-hidden">
+    <section className="relative py-16 md:py-24 lg:py-[120px] px-4 sm:px-6 md:px-8 lg:px-12 overflow-hidden">
       {/* Radial gradient glow background */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(198,255,74,0.15),transparent_70%)]" />
 

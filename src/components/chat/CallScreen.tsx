@@ -245,17 +245,17 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
   return (
     <div className="flex flex-col h-screen bg-[var(--bg-primary)]">
       {/* Logo header */}
-      <header className="flex-shrink-0 flex justify-center py-6">
-        <span className="font-display font-bold text-[1.6rem] text-[var(--text-primary)]">
+      <header className="flex-shrink-0 flex justify-center py-4 md:py-6 px-4">
+        <span className="font-display font-bold text-lg sm:text-[1.6rem] text-[var(--text-primary)]">
           acquiro<span className="text-accent">.</span>
         </span>
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        <div className="max-w-4xl w-full flex flex-col items-center gap-12">
-          {/* Large Orb */}
-          <div className="flex-shrink-0">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 py-8 md:py-12 min-w-0">
+        <div className="max-w-4xl w-full flex flex-col items-center gap-8 md:gap-12 min-w-0">
+          {/* Large Orb - scale down on small screens */}
+          <div className="flex-shrink-0 w-full max-w-full flex justify-center origin-center scale-75 sm:scale-90 md:scale-100">
             <AdvisorOrb
               intensity={orbIntensity}
               isActivated={orbIsActivated}
@@ -276,7 +276,7 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={startCall}
-                className="flex items-center gap-2 px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-all"
+                className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-all"
               >
                 <Phone className="w-5 h-5" />
                 Start Call
@@ -288,7 +288,7 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={handleContinue}
-                className="flex items-center gap-2 px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-all"
+                className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-all"
               >
                 <span>Continue</span>
                 <ArrowRight className="w-5 h-5" />
@@ -300,7 +300,7 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 disabled
-                className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-gray-400 font-medium rounded-full cursor-not-allowed"
+                className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-gray-700 text-gray-400 font-medium rounded-full cursor-not-allowed"
               >
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Connecting...
@@ -313,7 +313,7 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   onClick={endCall}
-                  className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white font-medium rounded-full hover:bg-red-700 transition-all"
+                  className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-red-600 text-white font-medium rounded-full hover:bg-red-700 transition-all"
                 >
                   <PhoneOff className="w-5 h-5" />
                   End Call
@@ -340,7 +340,7 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
                 </p>
                 <button
                   onClick={startCall}
-                  className="flex items-center gap-2 px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-all"
+                  className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-all"
                 >
                   <Phone className="w-5 h-5" />
                   Retry Call
@@ -359,7 +359,7 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="sticky bottom-0 bg-[var(--bg-primary)]/95 backdrop-blur-md border-t border-[var(--border)] px-6 py-4"
+            className="sticky bottom-0 bg-[var(--bg-primary)]/95 backdrop-blur-md border-t border-[var(--border)] px-4 md:px-6 py-4"
           >
             <div className="max-w-2xl mx-auto">
               <form onSubmit={handleSendTextMessage} className="flex items-end gap-3">

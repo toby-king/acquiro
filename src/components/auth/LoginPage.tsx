@@ -72,14 +72,14 @@ export function LoginPage() {
   };
 
   const loginLayout = (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-bg-primary relative p-6 md:p-10">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-bg-primary relative px-4 py-6 md:p-10">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background: 'radial-gradient(600px 600px at 50% 35%, rgba(198, 255, 74, 0.15) 0%, transparent 70%)',
         }}
       />
-      <main className="relative z-10 w-full max-w-[420px] flex flex-col items-center">
+      <main className="relative z-10 w-full max-w-[420px] flex flex-col items-center min-w-0">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -94,8 +94,8 @@ export function LoginPage() {
             acquiro<span className="text-accent">.</span>
           </Link>
           <h1
-            className="font-display font-bold text-text-primary text-center w-full mb-2"
-            style={{ fontSize: '1.8rem', fontFamily: 'Petrona, Georgia, serif', fontWeight: 700 }}
+            className="font-display font-bold text-text-primary text-center w-full mb-2 text-2xl md:text-[1.8rem]"
+            style={{ fontFamily: 'Petrona, Georgia, serif', fontWeight: 700 }}
           >
             Welcome back
           </h1>
@@ -149,7 +149,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-pill font-sans font-semibold text-[0.95rem] flex items-center justify-center gap-2 transition-all disabled:opacity-70 hover:bg-accent-light hover:-translate-y-px hover:shadow-accent-sm focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg-primary"
+              className="w-full min-h-[44px] rounded-pill font-sans font-semibold text-[0.95rem] flex items-center justify-center gap-2 transition-all disabled:opacity-70 hover:bg-accent-light hover:-translate-y-px hover:shadow-accent-sm focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg-primary"
               style={{
                 padding: '14px 24px',
                 background: '#c6ff4a',

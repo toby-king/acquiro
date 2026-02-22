@@ -11,7 +11,7 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onA
 }
 
 export function Button({ variant = 'primary', children, className = '', disabled, arrow = false, ...props }: ButtonProps) {
-  const baseStyles = 'px-6 py-3 rounded-full font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]';
+  const baseStyles = 'inline-flex items-center justify-center min-h-[44px] min-w-[44px] px-6 py-3 rounded-full font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]';
   
   const variantStyles = {
     primary: 'bg-accent text-[var(--bg-primary)] px-9 py-4 rounded-pill font-semibold hover:bg-accent-light hover:-translate-y-0.5 hover:shadow-accent-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none',
