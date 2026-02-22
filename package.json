@@ -9,6 +9,11 @@
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
+  "overrides": {
+    "eslint-plugin-react-hooks": {
+      "eslint": "$eslint"
+    }
+  },
   "dependencies": {
     "@elevenlabs/cli": "^0.3.4",
     "@elevenlabs/react": "^0.14.0",
