@@ -1,5 +1,5 @@
 import { AdvisorConfig } from '../types/advisor';
-import { buildSystemPrompt } from '../prompts/advisorPrompt';
+import { buildSystemPrompt, getOpeningGenerationPrompt } from '../prompts/advisorPrompt';
 
 interface Message {
   id: string;
@@ -222,5 +222,90 @@ export async function generateChatResponseStream(
   } catch (error) {
     console.error('Failed to generate chat response:', error);
     // Don't throw - let the UI handle the error gracefully
+  }
+}
+
+const OPENING_FALLBACK = "Hello! I'm your Acquiro advisor. Let's get started — what's brought you here today?";
+
+/**
+ * Generates the agent's first message for the voice call using the opening prompt rules.
+ * Returns a fallback string on any failure so the call can still start.
+ */
+export async function generateOpeningMessage(
+  config: AdvisorConfig,
+  userName: string | null
+): Promise<string> {
+  if (!API_KEY) {
+    console.warn('OpenAI API key missing; using fallback opening');
+    return OPENING_FALLBACK;
+  }
+
+  try {
+    const instructions = getOpeningGenerationPrompt(config, userName);
+    const input = [{ role: 'user' as const, content: 'Generate your first message now.' }];
+
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-5-mini',
+        input,
+        instructions,
+        stream: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.warn('OpenAI opening message failed:', response.status, errText);
+      return OPENING_FALLBACK;
+    }
+
+    if (!response.body) {
+      return OPENING_FALLBACK;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let accumulatedText = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ') || line.trim() === 'data: [DONE]') continue;
+          const data = line.slice(6);
+          if (data === '[DONE]') break;
+          try {
+            const json = JSON.parse(data);
+            if (json.type === 'response.output_text.delta' && json.delta) {
+              const text = typeof json.delta === 'string' ? json.delta : (json.delta?.text ?? '');
+              if (text) accumulatedText += text;
+            }
+            if (json.type === 'response.output_text.done' && json.part?.text) {
+              accumulatedText = json.part.text;
+            }
+          } catch {
+            // skip parse errors
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    const trimmed = accumulatedText.trim();
+    return trimmed.length > 0 ? trimmed : OPENING_FALLBACK;
+  } catch (error) {
+    console.warn('generateOpeningMessage error:', error);
+    return OPENING_FALLBACK;
   }
 }

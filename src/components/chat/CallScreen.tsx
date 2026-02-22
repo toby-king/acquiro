@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
-import { ArrowLeft, Phone, PhoneOff, Loader2, ArrowRight, Send } from 'lucide-react';
+import { Phone, PhoneOff, Loader2, ArrowRight, Send } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useConversation } from '@elevenlabs/react';
 import { buildSystemPrompt } from '../../prompts/advisorPrompt';
+import { generateOpeningMessage } from '../../services/openaiService';
 
 interface CallScreenProps {
   onBack: () => void;
@@ -140,7 +141,11 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
       // Stop the test stream (ElevenLabs will handle the actual audio)
       stream.getTracks().forEach(track => track.stop());
 
-      // Prepare dynamic variables
+      // Build system prompt and generate first message before building variables
+      const systemPrompt = buildSystemPrompt(config, userName);
+      const firstMessage = await generateOpeningMessage(config, userName);
+
+      // Prepare dynamic variables (include first message so agent can speak it reliably)
       const dynamicVariables: Record<string, string> = {};
       if (userName) {
         dynamicVariables.name = userName;
@@ -148,22 +153,20 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
       if (config.advisorName) {
         dynamicVariables.agent_name = config.advisorName;
       }
-      // Use userId (after payment) when available, otherwise leadId
       const userIdentifier = userId || leadId;
       if (userIdentifier) {
         dynamicVariables.user_id = userIdentifier;
       }
+      dynamicVariables.first_message = firstMessage;
 
-      // Build system prompt from advisorPrompt.ts
-      const systemPrompt = buildSystemPrompt(config, userName);
-
-      // Build overrides object with camelCase properties for @elevenlabs/react v0.14
+      // Overrides: send both camelCase (SDK) and snake_case (API) for first message
       const overrides: any = {
         agent: {
           prompt: {
             prompt: systemPrompt,
           },
-          firstMessage: 'Hello',
+          firstMessage,
+          first_message: firstMessage,
         },
       };
 
@@ -241,18 +244,11 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
 
   return (
     <div className="flex flex-col h-screen bg-[var(--bg-primary)]">
-      {/* Header with back button */}
-      <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft size={18} />
-            <span>Back to Chat</span>
-          </Button>
-        </div>
+      {/* Logo header */}
+      <header className="flex-shrink-0 flex justify-center py-6">
+        <span className="font-display font-bold text-[1.6rem] text-[var(--text-primary)]">
+          acquiro<span className="text-accent">.</span>
+        </span>
       </header>
 
       {/* Main Content */}

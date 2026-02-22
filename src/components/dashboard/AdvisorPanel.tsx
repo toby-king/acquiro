@@ -5,6 +5,7 @@ import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { motion } from 'framer-motion';
 import { buildSystemPrompt } from '../../prompts/advisorPrompt';
+import { generateOpeningMessage } from '../../services/openaiService';
 
 type CallStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
@@ -209,7 +210,11 @@ export function AdvisorPanel() {
         throw mediaError;
       }
 
-      // Prepare dynamic variables
+      // Build system prompt and generate first message before building variables
+      const systemPrompt = buildSystemPrompt(config, userName);
+      const firstMessage = await generateOpeningMessage(config, userName);
+
+      // Prepare dynamic variables (include first message so agent can speak it reliably)
       const dynamicVariables: Record<string, string> = {};
       if (userName) {
         dynamicVariables.name = userName;
@@ -217,26 +222,24 @@ export function AdvisorPanel() {
       if (config.advisorName) {
         dynamicVariables.agent_name = config.advisorName;
       }
-      // Use userId if available (after payment), otherwise fall back to leadId
       const userIdentifier = userId || leadId;
       if (userIdentifier) {
         dynamicVariables.user_id = userIdentifier;
       }
+      dynamicVariables.first_message = firstMessage;
 
       // Small delay to ensure audio context is fully initialized
       // This helps prevent AudioWorkletNode errors
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Build system prompt from advisorPrompt.ts
-      const systemPrompt = buildSystemPrompt(config, userName);
-
-      // Build overrides object with camelCase properties for @elevenlabs/react v0.14
+      // Overrides: send both camelCase (SDK) and snake_case (API) for first message
       const overrides: any = {
         agent: {
           prompt: {
             prompt: systemPrompt,
           },
-          firstMessage: 'Hello',
+          firstMessage,
+          first_message: firstMessage,
         },
       };
 

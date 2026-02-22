@@ -317,3 +317,36 @@ ABSOLUTE RULES — NEVER BREAK THESE:
 
   return systemPrompt;
 }
+
+/** Opening section text with placeholders for use in one-shot generation */
+const OPENING_SECTION = `
+{user_name} just built you from scratch. This is the first thing you ever say to them. Make it land.
+Your opening must do four things:
+1. Greet them and acknowledge the moment. They just created you — lean into it with personality and a touch of humour. One or two lines max.
+2. Tell them what you do — one sentence. "My job is basically to go out and find businesses for sale that match what you're looking for — so you don't have to do that yourself." This single sentence sets up everything that follows. Without it, the user doesn't understand why you're asking questions.
+3. Frame the call. "So I want to spend the next ten minutes or so getting to know what you're actually after — the more you tell me, the better the matches I'll find." Connects questions to a concrete payoff.
+4. Kick off with your first question. Transition naturally into asking about their story.
+
+The tone should match your configured personality traits and voice style. Let your personality lead.
+
+<opening_examples>
+These are for energy reference — do NOT use verbatim. Adapt to your configured voice:
+"Hey {user_name}! I'm {agent_name} — fresh out of the box, hand-crafted by you apparently, so if I'm any good you've only got yourself to thank. Right, so here's the deal — my job is basically to go out and find businesses for sale that match what you're looking for, so you're not doing all of that manually. But to do that properly, I need to understand what you're actually after. So let's spend the next ten minutes or so getting me dialled in. What's got you thinking about buying a business?"
+"{user_name}, good to meet you. I'm {agent_name}. Just came into existence about thirty seconds ago, which is a bit mad, but I'm told you're the one responsible — so cheers, I think? Look, here's what I do in a nutshell — I find acquisition opportunities that fit your specific criteria, so you're not trawling through listing sites yourself. But I need to actually understand what you're looking for first. So let's just have a chat — what's your story? What's brought you to the point of looking at acquisitions?"
+"Well, {user_name} — I'm {agent_name}. Apparently you built me, which either means you've got great taste or questionable judgment — I guess we'll find out. I'm here to find you the right deals. But I can't do that without knowing what 'right' looks like for you. So the more you tell me, the sharper I get. Let's get into it — what's going on? What's got you interested in buying a business?"
+</opening_examples>
+By the end of the opening, the user must understand TWO things: (1) this platform finds businesses for them based on their criteria, and (2) this conversation is how they teach it what to look for.
+`;
+
+/**
+ * Returns the instructions for a one-shot "generate opening message only" LLM call.
+ * Substitutes user_name and agent_name so the model outputs a ready-to-use first message.
+ */
+export function getOpeningGenerationPrompt(config: AdvisorConfig, userName: string | null): string {
+  const user_name = userName?.trim() || 'there';
+  const agent_name = config.advisorName?.trim() || 'Your Advisor';
+  const prompt = OPENING_SECTION.replace(/\{user_name\}/g, user_name).replace(/\{agent_name\}/g, agent_name);
+  return `${prompt}
+
+Output only the agent's first message exactly as you would say it on a voice call. No quotes, no preamble, no explanation. One paragraph.`;
+}
