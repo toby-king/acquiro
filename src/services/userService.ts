@@ -6,6 +6,7 @@ const BASE_URL = import.meta.env.VITE_BUBBLE_API_BASE_URL;
 const API_TOKEN = import.meta.env.VITE_BUBBLE_API_TOKEN;
 const CREATE_USER_URL = `${BASE_URL}/create_user`;
 const GET_USER_URL = `${BASE_URL}/get_user`;
+const SEND_MAGIC_LINK_URL = `${BASE_URL}/send_magic_link`;
 
 interface CreateUserPayload {
   lead_id: string;
@@ -225,6 +226,120 @@ export async function getUserByEmail(email: string): Promise<GetUserByEmailResul
 
   if (!userId || !userEmail) {
     throw new Error('ACCOUNT_NOT_FOUND');
+  }
+
+  return {
+    email: userEmail,
+    user_id: userId,
+    name: name ?? null,
+  };
+}
+
+// --- send_magic_link ---
+
+interface SendMagicLinkPayload {
+  email: string;
+}
+
+/**
+ * Sends a magic link to the given email via the Bubble API.
+ * @param email - The user's email
+ * @throws On API error or when no account exists (Bubble returns error)
+ */
+export async function sendMagicLink(email: string): Promise<void> {
+  const trimmed = email?.trim();
+  if (!trimmed) {
+    throw new Error('Email is required');
+  }
+  if (!API_TOKEN || !BASE_URL) {
+    throw new Error('Bubble API configuration is missing.');
+  }
+
+  const payload: SendMagicLinkPayload = { email: trimmed };
+  const body = JSON.stringify(payload);
+
+  const response = await fetch(SEND_MAGIC_LINK_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_TOKEN}`,
+    },
+    body,
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error('SEND_MAGIC_LINK_ERROR');
+  }
+
+  const data = responseText ? JSON.parse(responseText) : {};
+  if (data.status === 'error' || data.error) {
+    throw new Error('SEND_MAGIC_LINK_ERROR');
+  }
+}
+
+// --- get_user by magic link (verify link) ---
+
+interface GetUserByMagicLinkPayload {
+  magic_link: string;
+}
+
+interface GetUserByMagicLinkResponse {
+  status?: string;
+  response?: {
+    email?: string;
+    user_id?: string;
+    name?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface GetUserByMagicLinkResult {
+  email: string;
+  user_id: string;
+  name: string | null;
+}
+
+/**
+ * Fetches user details by magic link (for /login?link=...).
+ * Calls Bubble get_user with body { magic_link } and returns the user's details.
+ * @param link - The magic link value from the email (URL query param ?link=...)
+ * @returns User email, user_id, and name
+ */
+export async function getUserByMagicLink(link: string): Promise<GetUserByMagicLinkResult> {
+  const trimmed = link?.trim();
+  if (!trimmed) {
+    throw new Error('Link is required');
+  }
+  if (!API_TOKEN || !BASE_URL) {
+    throw new Error('Bubble API configuration is missing.');
+  }
+
+  const payload: GetUserByMagicLinkPayload = { magic_link: trimmed };
+  const body = JSON.stringify(payload);
+
+  const response = await fetch(GET_USER_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_TOKEN}`,
+    },
+    body,
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error('LINK_EXPIRED');
+  }
+
+  const data = JSON.parse(responseText) as GetUserByMagicLinkResponse;
+  const res = data.response;
+  const userEmail = res?.email != null && String(res.email).trim() !== '' ? String(res.email).trim() : null;
+  const userId = res?.user_id != null && String(res.user_id).trim() !== '' ? String(res.user_id).trim() : null;
+  const name = res?.name != null && String(res.name).trim() !== '' ? String(res.name).trim() : null;
+
+  if (!userId || !userEmail) {
+    throw new Error('LINK_EXPIRED');
   }
 
   return {

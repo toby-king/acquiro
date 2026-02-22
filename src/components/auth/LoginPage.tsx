@@ -1,22 +1,46 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Loader2, ArrowRight } from 'lucide-react';
-import { getUserByEmail } from '../../services/userService';
+import { Loader2, ArrowRight, Mail } from 'lucide-react';
+import { sendMagicLink, getUserByMagicLink } from '../../services/userService';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const linkParam = searchParams.get('link');
   const { userId, setUserId, setUserName, setUserEmail } = useAdvisorStore();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [linkExpired, setLinkExpired] = useState(false);
 
   useEffect(() => {
     if (userId) {
       navigate('/dashboard', { replace: true });
     }
   }, [userId, navigate]);
+
+  useEffect(() => {
+    if (!linkParam || !linkParam.trim()) return;
+    setVerifying(true);
+    setLinkExpired(false);
+    getUserByMagicLink(linkParam)
+      .then((user) => {
+        setUserEmail(user.email);
+        setUserId(user.user_id);
+        if (user.name) setUserName(user.name);
+        navigate('/dashboard', { replace: true });
+      })
+      .catch(() => {
+        setLinkExpired(true);
+      })
+      .finally(() => {
+        setVerifying(false);
+      });
+  }, [linkParam, setUserId, setUserName, setUserEmail, navigate]);
 
   if (userId) {
     return null;
@@ -32,25 +56,23 @@ export function LoginPage() {
     }
     setLoading(true);
     try {
-      const user = await getUserByEmail(trimmed);
-      setUserEmail(user.email);
-      setUserId(user.user_id);
-      if (user.name) setUserName(user.name);
-      navigate('/dashboard', { replace: true });
+      await sendMagicLink(trimmed);
+      setEmailSent(trimmed);
     } catch (err) {
-      setLoading(false);
-      const message = err instanceof Error && err.message === 'ACCOUNT_NOT_FOUND'
-        ? 'No account found with this email.'
-        : err instanceof Error
-          ? err.message
-          : 'Something went wrong. Please try again.';
+      const message =
+        err instanceof Error && err.message === 'SEND_MAGIC_LINK_ERROR'
+          ? 'No account with that email exists.'
+          : err instanceof Error
+            ? err.message
+            : 'Something went wrong. Please try again.';
       setError(message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
+  const loginLayout = (
     <div className="min-h-screen flex flex-col items-center justify-center bg-bg-primary relative p-6 md:p-10">
-      {/* Subtle radial gradient glow behind content (accent 15%, 600px, above centre) */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -64,7 +86,6 @@ export function LoginPage() {
           transition={{ duration: 0.7, ease: 'easeOut' }}
           className="w-full flex flex-col items-center"
         >
-          {/* Logo */}
           <Link
             to="/"
             className="font-display font-bold text-[1.6rem] text-text-primary hover:opacity-90 transition-opacity mb-8"
@@ -72,8 +93,6 @@ export function LoginPage() {
           >
             acquiro<span className="text-accent">.</span>
           </Link>
-
-          {/* Header */}
           <h1
             className="font-display font-bold text-text-primary text-center w-full mb-2"
             style={{ fontSize: '1.8rem', fontFamily: 'Petrona, Georgia, serif', fontWeight: 700 }}
@@ -151,10 +170,7 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p
-            className="mt-8 text-center font-sans"
-            style={{ fontSize: '0.88rem' }}
-          >
+          <p className="mt-8 text-center font-sans" style={{ fontSize: '0.88rem' }}>
             <span className="text-text-muted">New here? </span>
             <Link
               to="/builder"
@@ -167,4 +183,73 @@ export function LoginPage() {
       </main>
     </div>
   );
+
+  if (verifying) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg-primary p-6">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(600px 600px at 50% 35%, rgba(198, 255, 74, 0.15) 0%, transparent 70%)',
+          }}
+        />
+        <div className="relative z-10 flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-accent" />
+          <p className="text-text-secondary font-sans text-[0.95rem]">Verifying your link...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (linkExpired) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg-primary p-6">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(600px 600px at 50% 35%, rgba(198, 255, 74, 0.15) 0%, transparent 70%)',
+          }}
+        />
+        <div className="relative z-10 max-w-md text-center flex flex-col items-center gap-6">
+          <p className="text-text-primary font-sans text-[0.95rem]">
+            The link has expired. Please try logging in again.
+          </p>
+          <Link
+            to="/login"
+            className="rounded-pill font-sans font-semibold text-[0.95rem] px-6 py-3 bg-accent text-bg-primary hover:bg-accent-light transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg-primary"
+          >
+            Back to login
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (emailSent) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg-primary p-6">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(600px 600px at 50% 35%, rgba(198, 255, 74, 0.15) 0%, transparent 70%)',
+          }}
+        />
+        <div className="relative z-10 max-w-md text-center flex flex-col items-center gap-6">
+          <Mail className="w-14 h-14 text-accent" />
+          <h2
+            className="font-display font-bold text-text-primary"
+            style={{ fontSize: '1.5rem', fontFamily: 'Petrona, Georgia, serif', fontWeight: 700 }}
+          >
+            Check your inbox
+          </h2>
+          <p className="text-text-secondary font-sans text-[0.95rem] leading-relaxed">
+            We’ve sent a login link to <strong className="text-text-primary">{emailSent}</strong>. The link is
+            active for 15 minutes.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return loginLayout;
 }

@@ -24,6 +24,9 @@ export function Navbar() {
           <a href="#pricing" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
             Pricing
           </a>
+          <Link to="/login" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+            Log in
+          </Link>
         </div>
 
         {/* CTA Button */}
