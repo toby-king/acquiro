@@ -77,12 +77,9 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                       'July', 'August', 'September', 'October', 'November', 'December'];
 
-  // Format day as string (no leading zeros to match formatDate)
-  const formatDay = (day: number) => day.toString();
+  // Format year as string for display
   const formatYear = (year: number) => year.toString();
 
-  const _startDayStr = formatDay(startDay);
-  const _endDayStr = formatDay(endDay);
   const startYearStr = formatYear(startYear);
   const endYearStr = formatYear(endYear);
 
@@ -93,18 +90,6 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
 
   const startMonthIndex = getMonthIndex(startMonth, startYear);
   const endMonthIndex = getMonthIndex(endMonth, endYear);
-
-  // Calculate how many months to scroll (handle wrap-around)
-  const calculateMonthScroll = () => {
-    if (startYear === endYear) {
-      return startMonthIndex - endMonthIndex;
-    } else {
-      // Crosses year boundary - scroll backwards through remaining months
-      return (12 - endMonthIndex) + startMonthIndex;
-    }
-  };
-
-  const _monthScrollDistance = calculateMonthScroll();
 
   useEffect(() => {
     // Start animation after a brief delay
@@ -154,16 +139,10 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
       // Calculate translateY: start at startDigit (in the middle set, index 10 + startDigit)
       // This gives us room to scroll in either direction
       const startTranslateY = -(10 + startDigit) * 1.2;
-      
+
       // Calculate how many digits to scroll
       const digitDiff = startDigit - endDigit;
-      let _scrollAmount = digitDiff;
 
-      // If digit stays the same, still scroll down and back up for visual effect
-      if (digitDiff === 0) {
-        _scrollAmount = -10; // Scroll down 10 digits (full rotation) then back
-      }
-      
       // End position: scroll to endDigit (in the middle set, index 10 + endDigit)
       // If same digit, we scroll down 10 then back up 10 to end at the same position
       let endTranslateY = -(10 + endDigit) * 1.2;
