@@ -10,23 +10,23 @@ export const cardTap = {
   transition: { duration: 0.1 }
 };
 
-export const fadeIn: Variants = {
+export const fadeIn = {
   initial: { opacity: 0 },
   animate: { opacity: 1, transition: { duration: 0.3 } },
   exit: { opacity: 0, transition: { duration: 0.3 } }
-};
+} as Variants;
 
-export const slideUp: Variants = {
+export const slideUp = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.3 } },
   exit: { opacity: 0, y: -20, transition: { duration: 0.3 } }
-};
+} as Variants;
 
-export const slideDown: Variants = {
+export const slideDown = {
   initial: { opacity: 0, y: -20 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.3 } },
   exit: { opacity: 0, y: 20, transition: { duration: 0.3 } }
-};
+} as Variants;
 
 export const staggerChildren: Variants = {
   initial: {},
@@ -37,8 +37,8 @@ export const staggerChildren: Variants = {
   }
 };
 
-export const scaleIn: Variants = {
+export const scaleIn = {
   initial: { opacity: 0, scale: 0.9 },
   animate: { opacity: 1, scale: 1, transition: { duration: 0.2 } },
   exit: { opacity: 0, scale: 0.9, transition: { duration: 0.2 } }
-};
+} as Variants;

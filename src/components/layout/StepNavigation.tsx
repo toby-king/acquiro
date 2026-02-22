@@ -1,6 +1,5 @@
 import { useStepNavigation } from '../../hooks/useStepNavigation';
 import { Button } from '../ui/Button';
-import { motion } from 'framer-motion';
 
 export function StepNavigation() {
   const { isFirstStep, isLastStep, canProceed, nextStep, prevStep, currentStepIndex, totalSteps, showInterstitial } = useStepNavigation();

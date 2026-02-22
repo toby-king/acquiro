@@ -96,8 +96,8 @@ export function AdvisorPanel() {
           } else {
             errorMessage = error.message;
           }
-        } else if (error.toString) {
-          errorMessage = error.toString();
+        } else if (typeof (error as Error).toString === 'function') {
+          errorMessage = (error as Error).toString();
         }
       }
       

@@ -7,14 +7,13 @@ interface ProgressBarProps extends HTMLAttributes<HTMLDivElement> {
   completedSteps: number;
 }
 
-export function ProgressBar({ steps, currentStep, completedSteps, className = '' }: ProgressBarProps) {
+export function ProgressBar({ steps, currentStep, completedSteps: _completedSteps, className = '' }: ProgressBarProps) {
   return (
     <div className={`flex items-end gap-3 ${className}`}>
       {steps.map((step, index) => {
         const stepNumber = index + 1;
         const isCompleted = stepNumber < currentStep;
         const isCurrent = stepNumber === currentStep;
-        const isUpcoming = stepNumber > currentStep;
         
         // Determine segment color
         const segmentColor = isCompleted || isCurrent

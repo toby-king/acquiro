@@ -1,5 +1,6 @@
+import { type MouseEvent } from 'react';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
-import { EMBRACE_TRAITS, AVOID_TRAITS } from '../../constants/traits';
+import { EMBRACE_TRAITS } from '../../constants/traits';
 import { Pill } from '../ui/Pill';
 import { motion } from 'framer-motion';
 import { staggerChildren, slideUp } from '../../utils/animations';
@@ -81,7 +82,7 @@ export function TraitsStep() {
                   key={trait}
                   selected={isSelected}
                   variant="embrace"
-                  onClick={(e) => handleEmbraceToggle(trait, e.currentTarget)}
+                  onClick={(e: MouseEvent<HTMLButtonElement>) => handleEmbraceToggle(trait, e.currentTarget)}
                 >
                   {trait}
                 </Pill>

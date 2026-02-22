@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AdvisorConfig, WizardStep } from '../types/advisor';
 import { CHALLENGE_STYLES } from '../constants/challengeStyles';
-import { InterstitialId, getInterstitialAfterStep, getInterstitialBeforeStep } from '../constants/interstitials';
+import { InterstitialId, getInterstitialAfterStep } from '../constants/interstitials';
 
 interface AdvisorStore {
   config: AdvisorConfig;
