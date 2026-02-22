@@ -23,7 +23,7 @@ export function ParticleBurst({
   particleCount = 25,
   origin,
   color = '#C6FF4A',
-  duration = 1000,
+  duration: _duration = 1000,
   spread = 'radial',
   onComplete,
 }: ParticleBurstProps) {

@@ -4,7 +4,6 @@ import { Header } from './components/layout/Header';
 import { AdvisorPanel } from './components/advisor/AdvisorPanel';
 import { StepNavigation } from './components/layout/StepNavigation';
 import { BirthAnimation } from './components/advisor/BirthAnimation';
-import { NamingCeremony } from './components/advisor/NamingCeremony';
 import { ChatContainer } from './components/chat/ChatContainer';
 import { TypeStep } from './components/steps/TypeStep';
 import { PersonalityStep } from './components/steps/PersonalityStep';

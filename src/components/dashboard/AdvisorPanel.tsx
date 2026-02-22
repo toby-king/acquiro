@@ -79,28 +79,27 @@ export function AdvisorPanel() {
       }
       pulseStartTimeRef.current = null;
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       console.error('ElevenLabs error:', error);
-      // Handle undefined or malformed errors gracefully
       let errorMessage = 'Connection error. Please try again.';
-      
+
       if (error) {
         if (typeof error === 'string') {
           errorMessage = error;
-        } else if (error.message) {
-          const msg = error.message.toLowerCase();
+        } else if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message: unknown }).message === 'string') {
+          const msg = (error as { message: string }).message.toLowerCase();
           if (msg.includes('audioworklet') || msg.includes('audio context')) {
             errorMessage = 'Audio initialization failed. Please refresh the page and try again.';
           } else if (msg.includes('websocket') || msg.includes('connection')) {
             errorMessage = 'Connection failed. Please check your internet connection and try again.';
           } else {
-            errorMessage = error.message;
+            errorMessage = (error as { message: string }).message;
           }
         } else if (typeof (error as Error).toString === 'function') {
           errorMessage = (error as Error).toString();
         }
       }
-      
+
       setCallStatus('error');
       setErrorMessage(errorMessage);
     },

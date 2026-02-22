@@ -6,7 +6,7 @@ interface ChatActionButtonsProps {
   onMessage: () => void;
 }
 
-export function ChatActionButtons({ onCall, onMessage }: ChatActionButtonsProps) {
+export function ChatActionButtons({ onCall, onMessage: _onMessage }: ChatActionButtonsProps) {
   const buttons = [
     {
       id: 'call',
