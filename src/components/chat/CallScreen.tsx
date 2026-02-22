@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { Phone, PhoneOff, Loader2, ArrowRight, Send } from 'lucide-react';
-import { Button } from '../ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useConversation } from '@elevenlabs/react';
 import { buildSystemPrompt } from '../../prompts/advisorPrompt';
