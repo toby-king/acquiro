@@ -2,7 +2,15 @@ import { ButtonHTMLAttributes, MouseEvent, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { scaleIn } from '../../utils/animations';
 
-type PillProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onAnimationStart' | 'onAnimationEnd' | 'onAnimationIteration'> & {
+type PillProps = Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  | 'onAnimationStart'
+  | 'onAnimationEnd'
+  | 'onAnimationIteration'
+  | 'onDragStart'
+  | 'onDragEnd'
+  | 'onDrag'
+> & {
   children: ReactNode;
   selected?: boolean;
   variant?: 'embrace' | 'avoid' | 'neutral';

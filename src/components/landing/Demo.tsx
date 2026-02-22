@@ -1,6 +1,5 @@
 import { Section, SectionLabel, SectionTitle, SectionDesc } from '../ui/Section';
 import { Reveal } from '../ui/Reveal';
-import { cn } from '../../utils/cn';
 
 export function Demo() {
   return (

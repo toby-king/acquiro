@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { Reveal } from '../ui/Reveal';
-import { cn } from '../../utils/cn';
 
 export function Hero() {
   return (

@@ -81,13 +81,13 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
   const formatDay = (day: number) => day.toString();
   const formatYear = (year: number) => year.toString();
 
-  const startDayStr = formatDay(startDay);
-  const endDayStr = formatDay(endDay);
+  const _startDayStr = formatDay(startDay);
+  const _endDayStr = formatDay(endDay);
   const startYearStr = formatYear(startYear);
   const endYearStr = formatYear(endYear);
 
   // Calculate month indices (handle year wrap-around)
-  const getMonthIndex = (month: number, year: number) => {
+  const getMonthIndex = (month: number, _year: number) => {
     return month;
   };
 
@@ -104,7 +104,7 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
     }
   };
 
-  const monthScrollDistance = calculateMonthScroll();
+  const _monthScrollDistance = calculateMonthScroll();
 
   useEffect(() => {
     // Start animation after a brief delay
@@ -157,11 +157,11 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
       
       // Calculate how many digits to scroll
       const digitDiff = startDigit - endDigit;
-      let scrollAmount = digitDiff;
-      
+      let _scrollAmount = digitDiff;
+
       // If digit stays the same, still scroll down and back up for visual effect
       if (digitDiff === 0) {
-        scrollAmount = -10; // Scroll down 10 digits (full rotation) then back
+        _scrollAmount = -10; // Scroll down 10 digits (full rotation) then back
       }
       
       // End position: scroll to endDigit (in the middle set, index 10 + endDigit)

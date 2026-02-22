@@ -10,7 +10,7 @@ import { getUser } from '../../services/userService';
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const { userId, userName, userEmail, setUserName, setUserEmail, logout } = useAdvisorStore();
+  const { userId, userName, setUserName, setUserEmail, logout } = useAdvisorStore();
   const fetchedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
