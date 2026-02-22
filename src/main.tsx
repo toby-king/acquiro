@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import App from './App.tsx'
 import { LandingPage } from './components/landing/LandingPage.tsx'
-import { Dashboard } from './components/dashboard/Dashboard.tsx'
+import { DashboardGuard } from './components/dashboard/DashboardGuard.tsx'
+import { LoginPage } from './components/auth/LoginPage.tsx'
 import { CheckoutComplete } from './components/payment/CheckoutComplete.tsx'
 import { SubscriptionPage } from './components/payment/SubscriptionPage.tsx'
 import './index.css'
@@ -14,7 +15,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/builder" element={<App />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/dashboard" element={<DashboardGuard />} />
         <Route path="/subscription/complete" element={<CheckoutComplete />} />
         <Route 
           path="/offer" 

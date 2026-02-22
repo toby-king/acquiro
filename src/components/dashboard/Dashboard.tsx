@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MatchesList } from './MatchesList';
 import { AdvisorPanel } from './AdvisorPanel';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
@@ -9,7 +9,8 @@ import { Phone, Settings, LogOut } from 'lucide-react';
 import { getUser } from '../../services/userService';
 
 export function Dashboard() {
-  const { userId, userName, userEmail, setUserName, setUserEmail } = useAdvisorStore();
+  const navigate = useNavigate();
+  const { userId, userName, userEmail, setUserName, setUserEmail, logout } = useAdvisorStore();
   const fetchedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -66,8 +67,8 @@ export function Dashboard() {
             aria-label="Logout"
             title="Logout"
             onClick={() => {
-              // TODO: Implement logout functionality
-              console.log('Logout clicked');
+              logout();
+              navigate('/', { replace: true });
             }}
           >
             <LogOut size={18} />

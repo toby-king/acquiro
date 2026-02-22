@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { AdvisorConfig, WizardStep } from '../types/advisor';
 import { CHALLENGE_STYLES } from '../constants/challengeStyles';
 import { InterstitialId, getInterstitialAfterStep, getInterstitialBeforeStep } from '../constants/interstitials';
@@ -36,6 +37,7 @@ interface AdvisorStore {
   
   activateAdvisor: () => void;
   reset: () => void;
+  logout: () => void;
 }
 
 const STEP_ORDER: WizardStep[] = ['type', 'personality', 'traits', 'style', 'voice'];
@@ -55,7 +57,16 @@ const initialConfig: AdvisorConfig = {
   advisorName: null,
 };
 
-export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
+const sessionPartialize = (state: AdvisorStore) => ({
+  userId: state.userId,
+  userName: state.userName,
+  userEmail: state.userEmail,
+  leadId: state.leadId,
+});
+
+export const useAdvisorStore = create<AdvisorStore>()(
+  persist(
+    (set, get) => ({
   config: initialConfig,
   currentStep: 'type',
   isComplete: false,
@@ -235,4 +246,17 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
     showInterstitial: false,
     currentInterstitial: null,
   }),
-}));
+
+  logout: () => set({
+    userId: null,
+    userName: null,
+    userEmail: null,
+    leadId: null,
+  }),
+}),
+    {
+      name: 'acquiro-session',
+      partialize: sessionPartialize,
+    }
+  )
+);

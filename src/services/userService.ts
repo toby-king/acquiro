@@ -163,3 +163,73 @@ export async function getUser(userId: string): Promise<GetUserResult> {
     email: (res?.email != null && String(res.email).trim() !== '') ? String(res.email) : null,
   };
 }
+
+// --- get_user by email (login) ---
+
+interface GetUserByEmailPayload {
+  email: string;
+}
+
+interface GetUserByEmailResponse {
+  status?: string;
+  response?: {
+    email?: string;
+    user_id?: string;
+    name?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface GetUserByEmailResult {
+  email: string;
+  user_id: string;
+  name: string | null;
+}
+
+/**
+ * Looks up a user by email via the Bubble API (for login).
+ * @param email - The user's email
+ * @returns User email, user_id, and name if the account exists; throws if not found or API error
+ */
+export async function getUserByEmail(email: string): Promise<GetUserByEmailResult> {
+  const trimmed = email?.trim();
+  if (!trimmed) {
+    throw new Error('Email is required');
+  }
+  if (!API_TOKEN || !BASE_URL) {
+    throw new Error('Bubble API configuration is missing.');
+  }
+
+  const payload: GetUserByEmailPayload = { email: trimmed };
+  const body = JSON.stringify(payload);
+
+  const response = await fetch(GET_USER_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_TOKEN}`,
+    },
+    body,
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(`Lookup failed: ${response.status} ${responseText}`);
+  }
+
+  const data = JSON.parse(responseText) as GetUserByEmailResponse;
+  const res = data.response;
+  const userEmail = res?.email != null && String(res.email).trim() !== '' ? String(res.email).trim() : null;
+  const userId = res?.user_id != null && String(res.user_id).trim() !== '' ? String(res.user_id).trim() : null;
+  const name = res?.name != null && String(res.name).trim() !== '' ? String(res.name).trim() : null;
+
+  if (!userId || !userEmail) {
+    throw new Error('ACCOUNT_NOT_FOUND');
+  }
+
+  return {
+    email: userEmail,
+    user_id: userId,
+    name: name ?? null,
+  };
+}
