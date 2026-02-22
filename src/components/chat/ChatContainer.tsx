@@ -576,10 +576,15 @@ export function ChatContainer() {
         </div>
       </div>
       
-      {/* Input Area */}
+      {/* Input Area - disabled until agent asks for name, then for email, then until user picks Let's call or Let's message */}
       <div className="sticky bottom-0 bg-[var(--bg-primary)]/80 backdrop-blur-md border-t border-[var(--border)] px-6 py-4">
         <div className="max-w-4xl mx-auto">
-          <ChatInput onSend={handleSend} />
+          <ChatInput
+            onSend={handleSend}
+            disabled={
+              !(isAskingForUserName || isAskingForEmail || useLLM) || showActionButtons
+            }
+          />
         </div>
       </div>
     </div>
