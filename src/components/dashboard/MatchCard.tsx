@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -18,6 +19,9 @@ export function MatchCard({
   thumbnail,
   onClick,
 }: MatchCardProps) {
+  const [imageError, setImageError] = useState(false);
+  const showImage = thumbnail && !imageError;
+
   return (
     <motion.button
       initial={{ opacity: 0, y: 10 }}
@@ -25,17 +29,18 @@ export function MatchCard({
       onClick={onClick}
       className="w-full flex items-center gap-4 p-4 bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl hover:bg-[var(--bg-secondary)] hover:border-accent/50 transition-all group"
     >
-      {/* Thumbnail */}
+      {/* Thumbnail or fallback initial */}
       <div className="w-16 h-16 bg-[var(--bg-secondary)] rounded-xl flex-shrink-0 overflow-hidden">
-        {thumbnail ? (
-          <img 
-            src={thumbnail} 
-            alt={companyName} 
-            className="w-full h-full object-cover max-w-full"
+        {showImage ? (
+          <img
+            src={thumbnail!}
+            alt={companyName}
+            className="w-full h-full object-cover"
+            onError={() => setImageError(true)}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
-            <span className="text-gray-600 text-xs font-semibold">
+            <span className="text-gray-400 text-lg font-semibold">
               {companyName.charAt(0).toUpperCase()}
             </span>
           </div>
