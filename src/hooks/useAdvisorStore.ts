@@ -17,6 +17,8 @@ interface AdvisorStore {
   currentInterstitial: InterstitialId | null;
   /** Set to true when interstitial animation (e.g. typing) has completed; blocks Next until ready */
   interstitialReady: boolean;
+  /** True when user returned via /builder?lead= - skip name/email, show reconnection message */
+  isLeadReconnection: boolean;
   
   // Actions
   setType: (type: AdvisorConfig['type']) => void;
@@ -33,6 +35,9 @@ interface AdvisorStore {
   setLeadId: (leadId: string) => void;
   setUserId: (userId: string) => void;
   setInterstitialReady: (ready: boolean) => void;
+  /** Hydrate store from get_agent API (for lead reconnection flow) */
+  hydrateFromLead: (leadId: string, config: AdvisorConfig, userName: string | null, userEmail: string | null) => void;
+  clearLeadReconnection: () => void;
   
   goToStep: (step: WizardStep) => void;
   nextStep: () => void;
@@ -62,9 +67,6 @@ const initialConfig: AdvisorConfig = {
 
 const sessionPartialize = (state: AdvisorStore) => ({
   userId: state.userId,
-  userName: state.userName,
-  userEmail: state.userEmail,
-  leadId: state.leadId,
 });
 
 export const useAdvisorStore = create<AdvisorStore>()(
@@ -81,6 +83,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
   showInterstitial: false,
   currentInterstitial: null,
   interstitialReady: true,
+  isLeadReconnection: false,
   
   setType: (type) => set((state) => ({ config: { ...state.config, type } })),
   
@@ -132,6 +135,16 @@ export const useAdvisorStore = create<AdvisorStore>()(
   
   setUserId: (userId) => set({ userId }),
   setInterstitialReady: (ready) => set({ interstitialReady: ready }),
+  hydrateFromLead: (leadId, config, userName, userEmail) => set({
+    leadId,
+    config,
+    userName,
+    userEmail,
+    isComplete: true,
+    isActivated: true,
+    isLeadReconnection: true,
+  }),
+  clearLeadReconnection: () => set({ isLeadReconnection: false }),
   
   goToStep: (step) => set({ currentStep: step }),
   
@@ -258,6 +271,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
     showInterstitial: false,
     currentInterstitial: null,
     interstitialReady: true,
+    isLeadReconnection: false,
   }),
 
   logout: () => set({

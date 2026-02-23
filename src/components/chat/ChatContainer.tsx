@@ -15,7 +15,8 @@ import { AnimatePresence } from 'framer-motion';
 import { isValidEmail } from '../../utils/emailValidation';
 import { createLead } from '../../services/leadService';
 import { createAgent } from '../../services/agentService';
-import { generateChatResponseStream } from '../../services/openaiService'; 
+import { generateChatResponseStream } from '../../services/openaiService';
+import { sendLeadMail, hasSentLeadMail, markLeadMailSent } from '../../services/leadMailService'; 
 
 interface Message {
   id: string;
@@ -46,7 +47,36 @@ export function ChatContainer() {
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
 
-    // Generate initial message based on personality
+    const { isLeadReconnection: reconnecting } = useAdvisorStore.getState();
+
+    if (reconnecting) {
+      // Lead reconnection flow: show reconnection message + action buttons, skip name/email
+      const displayName = userName || 'there';
+      const reconnectionMessage: Message = {
+        id: '1',
+        text: `Hi ${displayName}, I think we got disconnected. Let's continue your journey to finding the perfect business acquisition.`,
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages([reconnectionMessage]);
+      setTimeout(() => {
+        setIsTyping(true);
+        setTimeout(() => {
+          setIsTyping(false);
+          const introMessage: Message = {
+            id: '2',
+            text: "Perfect! Let's get started.\n\nNow, to give you the best guidance, I'd like to start with a quick discovery conversation — about 10-15 minutes where I learn about your background, goals, and what you're looking for in an acquisition.\n\nThink of it as us getting properly introduced.\n\nHow would you prefer to do this?",
+            isUser: false,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, introMessage]);
+          setShowActionButtons(true);
+        }, 1000);
+      }, 500);
+      return;
+    }
+
+    // Normal flow: intro then name/email
     const generateIntroMessage = () => {
       const name = config.advisorName || 'your advisor';
       if (config.personality) {
@@ -57,7 +87,6 @@ export function ChatContainer() {
       return `Hello, I'm ${name}. I'm ready to help you navigate this acquisition. Time to find you the perfect acquisition.`;
     };
 
-    // Show first message immediately so it's always visible (avoids Strict Mode timer issues)
     const firstMessage: Message = {
       id: '1',
       text: generateIntroMessage(),
@@ -66,9 +95,6 @@ export function ChatContainer() {
     };
     setMessages([firstMessage]);
 
-    // Schedule second message - check store at fire time (handles persist rehydration)
-    // No cleanup: Strict Mode's unmount/remount clears timers and breaks the flow.
-    // setState on unmounted component is a no-op in React 18.
     setTimeout(() => {
       const { userName: currentName, userEmail: currentEmail } = useAdvisorStore.getState();
       setIsTyping(true);
@@ -116,6 +142,19 @@ export function ChatContainer() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping, streamingMessageId]);
+
+  // Send retention email when user leaves without finishing (has lead but no userId)
+  useEffect(() => {
+    const handleLeave = () => {
+      const { leadId: lid, userId: uid, userName: un, userEmail: ue } = useAdvisorStore.getState();
+      if (lid && !uid && un && ue && !hasSentLeadMail(lid)) {
+        sendLeadMail(lid);
+        markLeadMailSent(lid);
+      }
+    };
+    window.addEventListener('pagehide', handleLeave);
+    return () => window.removeEventListener('pagehide', handleLeave);
+  }, []);
   
   const handleSend = (text: string) => {
     const userMessage: Message = {
