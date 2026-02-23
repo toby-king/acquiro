@@ -9,7 +9,11 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Logo */}
           <div>
-            <Link to="/" className="font-display font-bold text-xl text-[var(--text-primary)] mb-4 inline-block">
+            <Link
+              to="/"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="font-display font-bold text-xl text-[var(--text-primary)] mb-4 inline-block"
+            >
               acquiro<span className="text-accent">.</span>
             </Link>
             <p className="text-[var(--text-secondary)] text-sm">
