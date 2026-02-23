@@ -54,6 +54,9 @@ app.use(
 );
 app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'Acquiro Backend API', health: '/health', checkout: '/api/checkout' });
+});
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
