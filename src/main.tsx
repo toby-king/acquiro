@@ -9,6 +9,13 @@ import { CheckoutComplete } from './components/payment/CheckoutComplete.tsx'
 import { SubscriptionPage } from './components/payment/SubscriptionPage.tsx'
 import './index.css'
 
+// Initialize theme before first paint - default to dark unless user explicitly chose light
+(function initTheme() {
+  const stored = localStorage.getItem('theme');
+  const theme = stored === 'light' || stored === 'dark' ? stored : 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+})();
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>

@@ -171,9 +171,11 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
               <span className={`text-sm ${billingPeriod === 'monthly' ? 'text-white' : 'text-gray-500'}`}>Monthly</span>
               <button
                 onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'annual' : 'monthly')}
-                className="relative w-12 h-6 rounded-full bg-gray-800 border border-gray-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="relative w-12 h-6 rounded-full bg-gray-800 border border-gray-700 transition-colors overflow-hidden flex items-center justify-center"
               >
-                <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-[var(--accent)] transition-transform ${billingPeriod === 'annual' ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                <div
+                  className={`absolute top-1/2 left-0.5 w-5 h-5 -translate-y-1/2 rounded-full bg-[var(--accent)] transition-transform ${billingPeriod === 'annual' ? 'translate-x-[26px]' : 'translate-x-0'}`}
+                />
               </button>
               <span className={`text-sm ${billingPeriod === 'annual' ? 'text-white' : 'text-gray-500'}`}>Annual</span>
             </div>
