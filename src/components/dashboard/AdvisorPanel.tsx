@@ -4,8 +4,9 @@ import { useConversation } from '@elevenlabs/react';
 import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { motion } from 'framer-motion';
-import { buildSystemPrompt } from '../../prompts/advisorPrompt';
-import { generateOpeningMessage } from '../../services/openaiService';
+import { buildDashboardSystemPrompt } from '../../prompts/dashboardPrompt';
+import { getBuyerInfo } from '../../services/buyerInfoService';
+import { fetchMatches } from '../../services/matchesService';
 
 type CallStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
@@ -210,36 +211,48 @@ export function AdvisorPanel() {
         throw mediaError;
       }
 
-      // Build system prompt and generate first message before building variables
-      const systemPrompt = buildSystemPrompt(config, userName);
-      const firstMessage = await generateOpeningMessage(config, userName);
+      // Dashboard: custom first message and prompt (buyer criteria + matches)
+      const firstMessage = userName
+        ? `Hi ${userName}, how can I help?`
+        : 'Hi, how can I help?';
 
-      // Prepare dynamic variables (include first message so agent can speak it reliably)
+      let buyerInfo = null;
+      let matches: Awaited<ReturnType<typeof fetchMatches>> = [];
+      const userIdentifier = userId || leadId;
+      if (userIdentifier) {
+        try {
+          [buyerInfo, matches] = await Promise.all([
+            getBuyerInfo(userIdentifier),
+            fetchMatches(userIdentifier).catch(() => []),
+          ]);
+        } catch (e) {
+          console.warn('[AdvisorPanel] Could not load buyer info or matches:', e);
+        }
+      }
+
+      const systemPrompt = buildDashboardSystemPrompt(config, userName, buyerInfo, matches);
+
+      // Prepare dynamic variables for ElevenLabs
       const dynamicVariables: Record<string, string> = {};
       if (userName) {
         dynamicVariables.name = userName;
+        dynamicVariables.user_name = userName;
       }
       if (config.advisorName) {
         dynamicVariables.agent_name = config.advisorName;
       }
-      const userIdentifier = userId || leadId;
       if (userIdentifier) {
         dynamicVariables.user_id = userIdentifier;
       }
-      dynamicVariables.first_message = firstMessage;
 
       // Small delay to ensure audio context is fully initialized
       // This helps prevent AudioWorkletNode errors
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Overrides: send both camelCase (SDK) and snake_case (API) for first message
       const overrides: any = {
         agent: {
-          prompt: {
-            prompt: systemPrompt,
-          },
+          prompt: { prompt: systemPrompt },
           firstMessage,
-          first_message: firstMessage,
         },
       };
 
