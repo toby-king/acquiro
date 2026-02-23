@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -31,34 +31,43 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
   const navigate = useNavigate();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [showCheckout, setShowCheckout] = useState(false);
-  
-  const handleSelectPlan = (planId: string) => {
-    // Show inline checkout instead of modal
-    setShowCheckout(true);
-    // Still call onSelectPlan for backwards compatibility if needed
-    if (onSelectPlan) {
-      onSelectPlan(planId, billingPeriod);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
+  const clientSecretRef = useRef<string | null>(null);
+
+  const handleSelectPlan = async (planId: string) => {
+    setCheckoutError(null);
+    setIsLoadingCheckout(true);
+    if (onSelectPlan) onSelectPlan(planId, billingPeriod);
+
+    try {
+      const params: CreateCheckoutSessionParams = {
+        billingPeriod,
+        userId: leadId || undefined,
+        userEmail: userEmail || undefined,
+      };
+      const { clientSecret } = await createCheckoutSession(params);
+      clientSecretRef.current = clientSecret;
+      setShowCheckout(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setCheckoutError(msg);
+      console.error('[SubscriptionPage] createCheckoutSession failed:', err);
+    } finally {
+      setIsLoadingCheckout(false);
     }
   };
 
   const fetchClientSecret = useCallback(async () => {
-    if (!stripePublishableKey) {
-      throw new Error('Stripe publishable key is not configured');
-    }
-    
+    if (clientSecretRef.current) return clientSecretRef.current;
     const params: CreateCheckoutSessionParams = {
       billingPeriod,
       userId: leadId || undefined,
       userEmail: userEmail || undefined,
     };
-    
-    try {
-      const { clientSecret } = await createCheckoutSession(params);
-      return clientSecret;
-    } catch (err) {
-      console.error('[SubscriptionPage] createCheckoutSession failed:', err);
-      throw err;
-    }
+    const { clientSecret } = await createCheckoutSession(params);
+    clientSecretRef.current = clientSecret;
+    return clientSecret;
   }, [billingPeriod, leadId, userEmail]);
 
   const handleBack = () => {
@@ -215,10 +224,16 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
                   >
                     <button
                       onClick={() => handleSelectPlan(PRICING_PLANS[0].id)}
-                      className="w-full max-w-[360px] mx-auto block min-h-[44px] py-[18px] bg-[var(--accent)] text-black rounded-full font-bold text-[17px] hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(198,255,74,0.2)] transition-all"
+                      disabled={isLoadingCheckout}
+                      className="w-full max-w-[360px] mx-auto block min-h-[44px] py-[18px] bg-[var(--accent)] text-black rounded-full font-bold text-[17px] hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(198,255,74,0.2)] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                      Activate Your Advisor
+                      {isLoadingCheckout ? 'Connecting...' : 'Activate Your Advisor'}
                     </button>
+                    {checkoutError && (
+                      <p className="mt-3 text-red-400 text-sm max-w-[360px] mx-auto">
+                        {checkoutError}
+                      </p>
+                    )}
                     
                     <p className="text-[13px] text-gray-600 mt-3.5 relative">
                       Cancel anytime · No contracts · 30-day guarantee
@@ -236,7 +251,11 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
                     {stripePromise ? (
                       <div className="relative">
                         <button
-                          onClick={() => setShowCheckout(false)}
+                          onClick={() => {
+                            setShowCheckout(false);
+                            setCheckoutError(null);
+                            clientSecretRef.current = null;
+                          }}
                           className="absolute top-0 right-0 p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] rounded-full transition-colors z-10"
                         >
                           <X className="w-5 h-5" />
