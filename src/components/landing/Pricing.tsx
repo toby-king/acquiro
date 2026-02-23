@@ -9,7 +9,7 @@ import { cn } from '../../utils/cn';
 const plans = [
   {
     name: 'Professional',
-    price: '£10',
+    price: '£1',
     period: '/mo',
     description: 'For serious acquirers',
     features: [
@@ -37,7 +37,7 @@ export function Pricing() {
           </Reveal>
         </div>
 
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 gap-6 w-full md:max-w-[50%] md:mx-auto">
           {plans.map((plan, index) => (
             <Reveal key={plan.name} delay={300 + index * 100}>
               <Card

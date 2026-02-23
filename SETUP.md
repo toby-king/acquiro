@@ -71,7 +71,7 @@ Backend will run on `http://localhost:3001`
 4. You'll see prices listed - copy the **Price ID** (starts with `price_`)
 5. If you only have one price, create a second one:
    - Click **Add another price**
-   - Set amount (£149/month or £119/month for annual)
+   - Set amount (£1/month or £12/year for annual)
    - Set billing period (monthly or annual)
    - Copy the new Price ID
 

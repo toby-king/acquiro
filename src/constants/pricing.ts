@@ -21,9 +21,9 @@ export const PRICING_PLANS: PricingPlan[] = [
     id: 'professional',
     name: 'Professional',
     description: 'For serious acquirers ready to move fast',
-    monthlyPrice: 10,
-    annualPrice: 100,
-    annualMonthlyPrice: 8.33,
+    monthlyPrice: 1,
+    annualPrice: 12,
+    annualMonthlyPrice: 1,
     currency: 'GBP',
     ctaText: 'Get Started',
     features: [
