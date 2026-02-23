@@ -331,24 +331,6 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
               </div>
             </div>
 
-            {/* Social proof bar */}
-            <div className="bg-[var(--bg-card)] border-t border-[var(--border)] px-6 md:px-10 py-4 flex items-center justify-center gap-2.5">
-              <div className="flex">
-                {['T', 'M', 'S', 'R'].map((letter, i) => (
-                  <div
-                    key={i}
-                    className="w-6 h-6 rounded-full border-2 border-[var(--bg-secondary)] flex items-center justify-center text-[9px] font-bold text-[var(--accent)] bg-[var(--accent)]/10"
-                    style={{ marginLeft: i > 0 ? '-5px' : 0 }}
-                  >
-                    {letter}
-                  </div>
-                ))}
-              </div>
-              <span className="text-xs text-gray-500">
-                <strong className="text-gray-300 font-semibold">27 buyers</strong> activated this month
-              </span>
-            </div>
-
           </div>
         </motion.div>
       </section>
