@@ -19,6 +19,8 @@ export function AdvisorPanel() {
   const pulseAnimationRef = useRef<number | null>(null);
   const pulseStartTimeRef = useRef<number | null>(null);
   const isConnectingRef = useRef<boolean>(false);
+  const callStatusRef = useRef<CallStatus>(callStatus);
+  callStatusRef.current = callStatus;
 
   // Handle unhandled errors from ElevenLabs SDK
   useEffect(() => {
@@ -341,22 +343,18 @@ export function AdvisorPanel() {
     }
   };
 
-  // Cleanup on unmount
+  // Cleanup on unmount only (not when callStatus changes - that was cancelling the session)
   useEffect(() => {
     return () => {
-      // Clean up any ongoing animations
       if (pulseAnimationRef.current) {
         cancelAnimationFrame(pulseAnimationRef.current);
         pulseAnimationRef.current = null;
       }
-      // End session if still connected
-      if (callStatus === 'connected' || callStatus === 'connecting') {
-        conversation.endSession().catch(() => {
-          // Ignore errors during cleanup
-        });
+      if (callStatusRef.current === 'connected' || callStatusRef.current === 'connecting') {
+        conversation.endSession().catch(() => {});
       }
     };
-  }, [callStatus, conversation]);
+  }, [conversation]);
 
   // Determine orb intensity and activation based on call status
   const orbIntensity = callStatus === 'connected' ? 80 : callStatus === 'connecting' ? 60 : 50;
