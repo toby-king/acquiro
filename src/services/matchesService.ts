@@ -55,14 +55,29 @@ export async function fetchMatches(userId: string): Promise<Match[]> {
 
     const data = await response.json();
 
-    // API returns array of { business_name, description } (possibly wrapped in response)
+    // API returns { status, response: { matches: "<json string>" } }
+    // matches is a JSON string of array of { business_name, description }
     let raw: BubbleMatchItem[] = [];
-    if (Array.isArray(data)) {
+    const matchesData = data?.response?.matches;
+
+    if (typeof matchesData === 'string') {
+      try {
+        let parsed = JSON.parse(matchesData);
+        if (!Array.isArray(parsed)) {
+          // Fallback: Bubble may return comma-separated objects without array brackets
+          const wrapped = `[${matchesData.trim()}]`;
+          parsed = JSON.parse(wrapped);
+        }
+        raw = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        console.warn('Failed to parse matches JSON string:', matchesData?.slice(0, 100));
+      }
+    } else if (Array.isArray(matchesData)) {
+      raw = matchesData;
+    } else if (Array.isArray(data)) {
       raw = data;
     } else if (data?.response && Array.isArray(data.response)) {
       raw = data.response;
-    } else if (data?.matches && Array.isArray(data.matches)) {
-      raw = data.matches;
     }
 
     const mappedMatches: Match[] = raw.map((item, index) => ({
