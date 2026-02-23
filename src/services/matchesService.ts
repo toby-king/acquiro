@@ -58,13 +58,23 @@ export async function fetchMatches(userId: string): Promise<Match[]> {
 
     if (typeof matchesData === 'string') {
       try {
-        let parsed = JSON.parse(matchesData);
-        if (!Array.isArray(parsed)) {
+        // Fix unescaped newlines/carriage returns that break JSON (common in Bubble outputs)
+        const sanitized = matchesData
+          .replace(/\r\n/g, '\\n')
+          .replace(/\r/g, '\\n')
+          .replace(/\n/g, '\\n');
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(sanitized);
+        } catch {
           // Fallback: Bubble may return comma-separated objects without array brackets
-          const wrapped = `[${matchesData.trim()}]`;
-          parsed = JSON.parse(wrapped);
+          parsed = JSON.parse(`[${sanitized.trim()}]`);
         }
-        raw = Array.isArray(parsed) ? parsed : [];
+        if (!Array.isArray(parsed)) {
+          raw = [parsed as BubbleMatchItem];
+        } else {
+          raw = parsed as BubbleMatchItem[];
+        }
       } catch {
         console.warn('Failed to parse matches JSON string:', matchesData?.slice(0, 100));
       }
