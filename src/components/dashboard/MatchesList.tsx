@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MatchCard } from './MatchCard';
-import { fetchMatches, Match } from '../../services/matchesService';
+import { fetchMatches, dismissMatch, Match } from '../../services/matchesService';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { Loader2, RefreshCw } from 'lucide-react';
 
@@ -40,6 +41,16 @@ export function MatchesList() {
   useEffect(() => {
     loadMatches();
   }, [loadMatches]);
+
+  const handleDismiss = useCallback(async (match: Match) => {
+    if (!match.matchId) return;
+    try {
+      await dismissMatch(match.matchId);
+      setMatches((prev) => prev.filter((m) => m.id !== match.id));
+    } catch (err) {
+      console.error('Failed to dismiss match:', err);
+    }
+  }, []);
 
   const matchesHeader = (
     <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4 min-w-0">
@@ -118,20 +129,28 @@ export function MatchesList() {
       {matchesHeader}
 
       <div className="space-y-3">
-        {matches.map((match, index) => (
-          <div
-            key={match.id}
-            style={{ animationDelay: `${index * 0.05}s` }}
-          >
-            <MatchCard
-              companyName={match.companyName}
-              description={match.description}
-              status={match.status}
-              thumbnail={match.thumbnail}
-              onClick={() => requestCallWithMatch(match)}
-            />
-          </div>
-        ))}
+        <AnimatePresence mode="popLayout">
+          {matches.map((match, index) => (
+            <motion.div
+              key={match.id}
+              layout
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, x: -100, transition: { duration: 0.3 } }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
+            >
+              <MatchCard
+                companyName={match.companyName}
+                description={match.description}
+                status={match.status}
+                thumbnail={match.thumbnail}
+                matchId={match.matchId}
+                onClick={() => requestCallWithMatch(match)}
+                onDismiss={() => handleDismiss(match)}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </div>
   );
