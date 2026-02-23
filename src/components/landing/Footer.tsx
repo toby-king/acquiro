@@ -40,12 +40,12 @@ export function Footer() {
           <div>
             <h3 className="text-[var(--text-primary)] font-semibold mb-4">Legal</h3>
             <nav className="flex flex-col gap-0">
-              <a href="#" className="min-h-[44px] flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm py-2">
+              <Link to="/privacy" className="min-h-[44px] flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm py-2">
                 Privacy Policy
-              </a>
-              <a href="#" className="min-h-[44px] flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm py-2">
+              </Link>
+              <Link to="/terms" className="min-h-[44px] flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm py-2">
                 Terms of Service
-              </a>
+              </Link>
             </nav>
           </div>
         </div>
