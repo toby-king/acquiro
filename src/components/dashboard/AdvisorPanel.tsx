@@ -94,7 +94,7 @@ export function AdvisorPanel() {
           const msg = (error as { message: string }).message.toLowerCase();
           if (msg.includes('audioworklet') || msg.includes('audio context')) {
             errorMessage = 'Audio initialization failed. Please refresh the page and try again.';
-          } else if (msg.includes('websocket') || msg.includes('connection')) {
+          } else if (msg.includes('websocket') || msg.includes('webrtc') || msg.includes('connection')) {
             errorMessage = 'Connection failed. Please check your internet connection and try again.';
           } else {
             errorMessage = (error as { message: string }).message;
@@ -275,7 +275,7 @@ export function AdvisorPanel() {
         const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_0401kfask9wye6dt9cymkzbcxdg3';
         await conversation.startSession({
           agentId,
-          connectionType: 'websocket' as const,
+          connectionType: 'webrtc' as const,
           ...(Object.keys(dynamicVariables).length > 0 && { dynamicVariables }),
           overrides,
         });
@@ -343,7 +343,7 @@ export function AdvisorPanel() {
     }
   };
 
-  // Cleanup on unmount only (not when callStatus changes - that was cancelling the session)
+  // Cleanup on unmount only - empty deps so we never run cleanup during re-renders
   useEffect(() => {
     return () => {
       if (pulseAnimationRef.current) {
@@ -354,7 +354,8 @@ export function AdvisorPanel() {
         conversation.endSession().catch(() => {});
       }
     };
-  }, [conversation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on unmount
+  }, []);
 
   // Determine orb intensity and activation based on call status
   const orbIntensity = callStatus === 'connected' ? 80 : callStatus === 'connecting' ? 60 : 50;

@@ -185,7 +185,7 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
       const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_0401kfask9wye6dt9cymkzbcxdg3';
       await conversation.startSession({
         agentId,
-        connectionType: 'websocket' as const,
+        connectionType: 'webrtc' as const,
         ...(Object.keys(dynamicVariables).length > 0 && { dynamicVariables }),
         overrides,
       });
