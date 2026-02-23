@@ -69,6 +69,15 @@ Gets the status of a checkout session.
 ### GET `/health`
 Health check endpoint.
 
+## Deploying to Vercel (acquiro-backend.vercel.app)
+
+1. Create a Vercel project and set **Root Directory** to `server` (if the repo contains both frontend and backend).
+2. Set **Environment Variables** in the Vercel project:
+   - `FRONTEND_URL` = `https://acquirolabs.vercel.app`
+   - `STRIPE_SECRET_KEY`, `STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID`, `STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID`
+3. Deploy. The Express app at `src/app.ts` is used as the serverless entry (Vercel zero-config Express).
+4. Stripe checkout return URLs will use `FRONTEND_URL`, so users are redirected to the frontend after payment.
+
 ## Getting Stripe Price IDs
 
 1. Go to [Stripe Dashboard](https://dashboard.stripe.com)
