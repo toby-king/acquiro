@@ -1,17 +1,19 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MatchesList } from './MatchesList';
 import { AdvisorPanel } from './AdvisorPanel';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
-import { motion } from 'framer-motion';
-import { Phone, Settings, LogOut } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Phone, LogOut } from 'lucide-react';
 import { getUser } from '../../services/userService';
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { userId, userName, setUserName, setUserEmail, logout } = useAdvisorStore();
   const fetchedUserIdRef = useRef<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!userId || fetchedUserIdRef.current === userId) return;
@@ -23,6 +25,18 @@ export function Dashboard() {
       })
       .catch((err) => console.error('[Dashboard] Failed to fetch user profile:', err));
   }, [userId, setUserName, setUserEmail]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    if (profileOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [profileOpen]);
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col overflow-x-hidden">
@@ -43,45 +57,48 @@ export function Dashboard() {
           </h1>
         </div>
 
-        {/* Right side - Actions and Avatar */}
+        {/* Right side - Theme and Profile */}
         <div className="flex items-center gap-2">
-          {/* Settings Button */}
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="min-h-[44px] min-w-[44px] rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
-            aria-label="Settings"
-            title="Settings"
-          >
-            <Settings size={18} />
-          </motion.button>
-
-          {/* Theme Toggle */}
           <ThemeToggle />
 
-          {/* Logout Button */}
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="min-h-[44px] min-w-[44px] rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
-            aria-label="Logout"
-            title="Logout"
-            onClick={() => {
-              logout();
-              navigate('/', { replace: true });
-            }}
-          >
-            <LogOut size={18} />
-          </motion.button>
-
-          {/* User Avatar */}
-          <div className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden ml-2">
-            {/* Placeholder avatar - replace with actual user image */}
-            <div className="w-full h-full flex items-center justify-center">
+          {/* User Profile - Avatar with dropdown */}
+          <div className="relative" ref={profileRef}>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setProfileOpen((o) => !o)}
+              className="min-h-[44px] min-w-[44px] rounded-full bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
+              aria-label="Profile menu"
+              aria-expanded={profileOpen}
+            >
               <span className="text-gray-400 text-sm font-semibold">
                 {userName ? userName.charAt(0).toUpperCase() : 'U'}
               </span>
-            </div>
+            </motion.button>
+
+            <AnimatePresence>
+              {profileOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-full mt-2 py-1 min-w-[160px] rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] shadow-lg z-50"
+                >
+                  <button
+                    onClick={() => {
+                      setProfileOpen(false);
+                      logout();
+                      navigate('/', { replace: true });
+                    }}
+                    className="w-full px-4 py-2.5 flex items-center gap-2 text-left text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors text-sm"
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </motion.div>
