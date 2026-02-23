@@ -52,8 +52,13 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
       userEmail: userEmail || undefined,
     };
     
-    const { clientSecret } = await createCheckoutSession(params);
-    return clientSecret;
+    try {
+      const { clientSecret } = await createCheckoutSession(params);
+      return clientSecret;
+    } catch (err) {
+      console.error('[SubscriptionPage] createCheckoutSession failed:', err);
+      throw err;
+    }
   }, [billingPeriod, leadId, userEmail]);
 
   const handleBack = () => {

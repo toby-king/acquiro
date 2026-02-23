@@ -33,21 +33,26 @@ if (missingVars.length > 0 && process.env.VERCEL !== '1') {
 }
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const allowedOrigins = [
-  ...new Set([
-    FRONTEND_URL,
-    'https://acquirolabs.vercel.app',
-    'http://localhost:5173',
-    'http://localhost:3000',
-  ].filter(Boolean)),
-];
+
+function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin) return true;
+  if (origin === FRONTEND_URL) return true;
+  if (origin === 'https://acquirolabs.vercel.app') return true;
+  if (origin.includes('acquirolabs.vercel.app')) return true; // production + preview deployments
+  if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) return true;
+  return false;
+}
 
 const app = express();
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin || allowedOrigins.includes(origin)) cb(null, true);
-      else cb(new Error('Not allowed by CORS'));
+      if (isAllowedOrigin(origin)) {
+        cb(null, true);
+      } else {
+        console.warn('[CORS] Rejected origin:', origin);
+        cb(new Error('Not allowed by CORS'));
+      }
     },
     credentials: true,
   })
