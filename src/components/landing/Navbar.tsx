@@ -58,9 +58,12 @@ export function Navbar() {
         <Link
           to="/"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="font-display font-bold text-[1.6rem] text-[var(--text-primary)]"
+          className="font-display font-bold text-[1.6rem] text-[var(--text-primary)] inline-flex items-center"
         >
-          acquiro<span className="text-accent">.</span>
+          acquiro<span className="inline-flex flex-col items-center leading-none">
+            <span className="font-mono text-[10px] sm:text-xs uppercase tracking-wider text-[var(--text-tertiary)]">BETA</span>
+            <span className="text-accent">.</span>
+          </span>
         </Link>
 
         {/* Desktop Navigation Links */}

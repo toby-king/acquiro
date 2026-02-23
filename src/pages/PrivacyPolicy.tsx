@@ -7,9 +7,12 @@ export function PrivacyPolicy() {
         <div className="max-w-[800px] mx-auto px-4 sm:px-6 py-4">
           <Link
             to="/"
-            className="font-display font-bold text-xl text-[var(--text-primary)] hover:opacity-90 transition-opacity"
+            className="font-display font-bold text-xl text-[var(--text-primary)] hover:opacity-90 transition-opacity inline-flex items-center"
           >
-            acquiro<span className="text-accent">.</span>
+            acquiro<span className="inline-flex flex-col items-center leading-none">
+              <span className="font-mono text-[10px] sm:text-xs uppercase tracking-wider text-[var(--text-tertiary)]">BETA</span>
+              <span className="text-accent">.</span>
+            </span>
           </Link>
         </div>
       </header>

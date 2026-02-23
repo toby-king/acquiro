@@ -88,10 +88,13 @@ export function LoginPage() {
         >
           <Link
             to="/"
-            className="font-display font-bold text-[1.6rem] text-text-primary hover:opacity-90 transition-opacity mb-8"
+            className="font-display font-bold text-[1.6rem] text-text-primary hover:opacity-90 transition-opacity mb-8 inline-flex items-center"
             style={{ fontFamily: 'Petrona, Georgia, serif', fontWeight: 700 }}
           >
-            acquiro<span className="text-accent">.</span>
+            acquiro<span className="inline-flex flex-col items-center leading-none">
+              <span className="font-mono text-[10px] sm:text-xs uppercase tracking-wider text-[var(--text-tertiary)]">BETA</span>
+              <span className="text-accent">.</span>
+            </span>
           </Link>
           <h1
             className="font-display font-bold text-text-primary text-center w-full mb-2 text-2xl md:text-[1.8rem]"
