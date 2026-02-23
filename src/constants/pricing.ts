@@ -21,9 +21,9 @@ export const PRICING_PLANS: PricingPlan[] = [
     id: 'professional',
     name: 'Professional',
     description: 'For serious acquirers ready to move fast',
-    monthlyPrice: 149,
-    annualPrice: 1430,
-    annualMonthlyPrice: 119,
+    monthlyPrice: 10,
+    annualPrice: 100,
+    annualMonthlyPrice: 8.33,
     currency: 'GBP',
     ctaText: 'Get Started',
     features: [
@@ -46,7 +46,7 @@ export const FAQ_ITEMS = [
   },
   {
     question: 'What payment methods do you accept?',
-    answer: 'We accept all major credit cards (Visa, Mastercard, Amex).',
+    answer: 'We use Stripe for secure payment processing. We accept Visa, Mastercard, American Express, Klarna, and Link. All payments are processed securely and encrypted.',
   },
   {
     question: 'What happens to my advisor if I cancel?',

@@ -12,6 +12,8 @@ export default {
       },
       fontFamily: {
         sans: ['Afacad', 'sans-serif'],
+        serif: ['"DM Serif"', 'serif'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
     },
   },

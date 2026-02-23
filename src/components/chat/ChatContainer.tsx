@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ChatActionButtons } from './ChatActionButtons';
 import { CallScreen } from './CallScreen';
+import { OrbTransition } from './OrbTransition';
 import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { SelectionSummary } from '../advisor/SelectionSummary';
 import { ThemeToggle } from '../layout/ThemeToggle';
@@ -33,8 +35,11 @@ export function ChatContainer() {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [showCallScreen, setShowCallScreen] = useState(false);
   const [showSubscriptionPage, setShowSubscriptionPage] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false);
+  const headerOrbRef = useRef<HTMLDivElement>(null);
+  const streamingTextRefs = useRef<Record<string, string>>({});
   
   useEffect(() => {
     // Only run once on mount
@@ -249,6 +254,9 @@ export function ChatContainer() {
       
       let isFirstChunk = true;
       
+      // Initialize streaming text ref for this message
+      streamingTextRefs.current[messageId] = '';
+      
       // Generate streaming response
       generateChatResponseStream(
         [...messages, userMessage],
@@ -261,22 +269,24 @@ export function ChatContainer() {
             isFirstChunk = false;
           }
           
-          console.log('Received chunk:', chunk, 'for messageId:', messageId);
-          // Update message incrementally as chunks arrive
-          setMessages(prev => {
-            const updated = prev.map(msg => {
-              if (msg.id === messageId) {
-                const newText = msg.text + chunk;
-                console.log('Updating message', messageId, 'from', msg.text, 'to', newText);
-                return { ...msg, text: newText };
-              }
-              return msg;
+          // Accumulate text in ref for immediate access
+          streamingTextRefs.current[messageId] += chunk;
+          
+          // Force immediate update using flushSync for smooth streaming
+          flushSync(() => {
+            setMessages(prev => {
+              return prev.map(msg => {
+                if (msg.id === messageId) {
+                  return { ...msg, text: streamingTextRefs.current[messageId] };
+                }
+                return msg;
+              });
             });
-            console.log('Updated messages:', updated);
-            return updated;
           });
         }
       ).then(() => {
+        // Clear ref when streaming completes
+        delete streamingTextRefs.current[messageId];
         // Stream completed
         setStreamingMessageId(null);
       }).catch((error) => {
@@ -310,6 +320,11 @@ export function ChatContainer() {
 
   const handleCallClick = () => {
     setShowActionButtons(false);
+    setIsTransitioning(true);
+  };
+
+  const handleTransitionComplete = () => {
+    setIsTransitioning(false);
     setShowCallScreen(true);
   };
 
@@ -339,6 +354,9 @@ export function ChatContainer() {
     
     let isFirstChunk = true;
     
+    // Initialize streaming text ref for this message
+    streamingTextRefs.current[messageId] = '';
+    
     // Generate streaming response
     generateChatResponseStream(
       [...messages, userMessage],
@@ -351,22 +369,24 @@ export function ChatContainer() {
           isFirstChunk = false;
         }
         
-        console.log('Received chunk:', chunk, 'for messageId:', messageId);
-        // Update message incrementally as chunks arrive
-        setMessages(prev => {
-          const updated = prev.map(msg => {
-            if (msg.id === messageId) {
-              const newText = msg.text + chunk;
-              console.log('Updating message', messageId, 'from', msg.text, 'to', newText);
-              return { ...msg, text: newText };
-            }
-            return msg;
+        // Accumulate text in ref for immediate access
+        streamingTextRefs.current[messageId] += chunk;
+        
+        // Force immediate update using flushSync for smooth streaming
+        flushSync(() => {
+          setMessages(prev => {
+            return prev.map(msg => {
+              if (msg.id === messageId) {
+                return { ...msg, text: streamingTextRefs.current[messageId] };
+              }
+              return msg;
+            });
           });
-          console.log('Updated messages:', updated);
-          return updated;
         });
       }
     ).then(() => {
+      // Clear ref when streaming completes
+      delete streamingTextRefs.current[messageId];
       // Stream completed
       setStreamingMessageId(null);
     }).catch((error) => {
@@ -409,13 +429,45 @@ export function ChatContainer() {
     );
   }
 
-  // Show call screen if user clicked call button
-  if (showCallScreen) {
+  // Show transition animation with CallScreen behind it
+  if (isTransitioning || showCallScreen) {
     return (
-      <CallScreen
-        onBack={() => setShowCallScreen(false)}
-        onContinue={() => setShowSubscriptionPage(true)}
-      />
+      <>
+        {/* Render CallScreen immediately but hide orb during transition */}
+        <div style={{ opacity: isTransitioning ? 0 : 1, pointerEvents: isTransitioning ? 'none' : 'auto' }}>
+          <CallScreen
+            onBack={() => {
+              setShowCallScreen(false);
+              setIsTransitioning(false);
+            }}
+            onContinue={() => setShowSubscriptionPage(true)}
+          />
+        </div>
+        
+        {/* Transition overlay - only show during transition */}
+        {isTransitioning && (
+          <>
+            {/* Render hidden header for orb position reference */}
+            <div className="fixed inset-0 pointer-events-none opacity-0 z-[101]">
+              <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
+                <div className="flex items-center justify-between max-w-4xl mx-auto">
+                  <div className="flex items-center gap-3">
+                    <div ref={headerOrbRef}>
+                      <AdvisorOrb intensity={100} isActivated size={48} />
+                    </div>
+                  </div>
+                </div>
+              </header>
+            </div>
+            
+            {/* Transition overlay */}
+            <OrbTransition
+              headerOrbRef={headerOrbRef}
+              onComplete={handleTransitionComplete}
+            />
+          </>
+        )}
+      </>
     );
   }
 
@@ -425,7 +477,15 @@ export function ChatContainer() {
       <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
         <div className="flex items-center justify-between max-w-4xl mx-auto">
           <div className="flex items-center gap-3">
-            <AdvisorOrb intensity={100} isActivated size={48} />
+            <div ref={headerOrbRef}>
+              <AdvisorOrb 
+                intensity={100} 
+                isActivated 
+                size={48} 
+                allowProfanity={config.allowProfanity}
+                paletteIndex={1}
+              />
+            </div>
             <div>
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                 {config.advisorName || 'Your Advisor'}

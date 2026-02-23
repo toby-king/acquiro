@@ -30,7 +30,11 @@ export function AdvisorPanel() {
           <SelectionSummary />
         </div>
         <div className="scale-75 sm:scale-100">
-          <AdvisorOrb intensity={intensity} isActivated={isActivated} allowProfanity={config.allowProfanity} />
+          <AdvisorOrb 
+            intensity={intensity} 
+            isActivated={isActivated} 
+            allowProfanity={config.allowProfanity}
+          />
         </div>
         
         <div className="mt-8 w-full">

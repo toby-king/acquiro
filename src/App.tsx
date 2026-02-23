@@ -15,6 +15,8 @@ import { InterstitialContent } from './components/onboarding/InterstitialContent
 import { useStepNavigation } from './hooks/useStepNavigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeIn } from './utils/animations';
+import { AbsorptionCanvas } from './components/advisor/AbsorptionCanvas';
+import { getOrbPalette } from './utils/orbPalette';
 
 function StepContent() {
   const { currentStep, showInterstitial } = useStepNavigation();
@@ -81,47 +83,45 @@ function WizardView() {
 }
 
 function App() {
-  const { isActivated, activateAdvisor, isComplete } = useAdvisorStore();
+  const { isActivated, activateAdvisor, isComplete, config } = useAdvisorStore();
   const [showBirthAnimation, setShowBirthAnimation] = useState(false);
-  const [showNamingCeremony, setShowNamingCeremony] = useState(false);
   
   useEffect(() => {
     // Handle activation when configuration is complete
-    if (isComplete && !isActivated && !showBirthAnimation && !showNamingCeremony) {
+    if (isComplete && !isActivated && !showBirthAnimation) {
       setShowBirthAnimation(true);
     }
-  }, [isComplete, isActivated, showBirthAnimation, showNamingCeremony]);
-  
-  const handleAwakeningComplete = () => {
-    // Transition from birth animation to naming ceremony
-    setShowBirthAnimation(false);
-    setShowNamingCeremony(true);
-  };
+  }, [isComplete, isActivated, showBirthAnimation]);
   
   const handleBirthComplete = () => {
     // This is called after birth animation fully completes (if naming ceremony is skipped)
     setShowBirthAnimation(false);
-  };
-  
-  const handleNamingComplete = () => {
-    // Transition from naming ceremony to chat
-    setShowNamingCeremony(false);
     activateAdvisor();
   };
+
+  // Get consistent palette based on config
+  const birthPalette = getOrbPalette(config.allowProfanity || false);
   
   if (showBirthAnimation) {
-    return <BirthAnimation onComplete={handleBirthComplete} onAwakeningComplete={handleAwakeningComplete} />;
-  }
-  
-  if (showNamingCeremony) {
-    return <NamingCeremony onComplete={handleNamingComplete} />;
+    return <BirthAnimation onComplete={handleBirthComplete} palette={birthPalette} allowProfanity={config.allowProfanity || false} />;
   }
   
   if (isActivated) {
     return <ChatContainer />;
   }
   
-  return <WizardView />;
+  return (
+    <>
+      <AbsorptionCanvas />
+      {showBirthAnimation ? (
+        <BirthAnimation onComplete={handleBirthComplete} palette={birthPalette} allowProfanity={config.allowProfanity || false} />
+      ) : isActivated ? (
+        <ChatContainer />
+      ) : (
+        <WizardView />
+      )}
+    </>
+  );
 }
 
 export default App;
