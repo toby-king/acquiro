@@ -15,6 +15,8 @@ interface AdvisorStore {
   userId: string | null;
   showInterstitial: boolean;
   currentInterstitial: InterstitialId | null;
+  /** Set to true when interstitial animation (e.g. typing) has completed; blocks Next until ready */
+  interstitialReady: boolean;
   
   // Actions
   setType: (type: AdvisorConfig['type']) => void;
@@ -30,6 +32,7 @@ interface AdvisorStore {
   setUserEmail: (email: string) => void;
   setLeadId: (leadId: string) => void;
   setUserId: (userId: string) => void;
+  setInterstitialReady: (ready: boolean) => void;
   
   goToStep: (step: WizardStep) => void;
   nextStep: () => void;
@@ -77,6 +80,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
   userId: null,
   showInterstitial: false,
   currentInterstitial: null,
+  interstitialReady: true,
   
   setType: (type) => set((state) => ({ config: { ...state.config, type } })),
   
@@ -127,6 +131,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
   setLeadId: (leadId) => set({ leadId }),
   
   setUserId: (userId) => set({ userId }),
+  setInterstitialReady: (ready) => set({ interstitialReady: ready }),
   
   goToStep: (step) => set({ currentStep: step }),
   
@@ -134,12 +139,15 @@ export const useAdvisorStore = create<AdvisorStore>()(
     const { currentStep, showInterstitial } = get();
     
     if (showInterstitial) {
-      // Currently on interstitial, advance to next main step
+      // Currently on interstitial, advance to next main step (only if animation ready)
+      const { interstitialReady } = get();
+      if (!interstitialReady) return;
       const currentIndex = STEP_ORDER.indexOf(currentStep);
       if (currentIndex < STEP_ORDER.length - 1) {
         set({ 
           showInterstitial: false, 
           currentInterstitial: null,
+          interstitialReady: true,
           currentStep: STEP_ORDER[currentIndex + 1] 
         });
       } else {
@@ -154,6 +162,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
         set({ 
           showInterstitial: false,
           currentInterstitial: null,
+          interstitialReady: true,
           isComplete 
         });
       }
@@ -165,7 +174,8 @@ export const useAdvisorStore = create<AdvisorStore>()(
         // Show interstitial before advancing to next step
         set({ 
           showInterstitial: true, 
-          currentInterstitial: interstitialId 
+          currentInterstitial: interstitialId,
+          interstitialReady: false, // Will be set true when animation completes
         });
       } else {
         // No interstitial (after Voice step), proceed to completion check
@@ -195,7 +205,8 @@ export const useAdvisorStore = create<AdvisorStore>()(
       // User's selection is preserved since we don't change currentStep
       set({ 
         showInterstitial: false, 
-        currentInterstitial: null 
+        currentInterstitial: null,
+        interstitialReady: true,
       });
     } else {
       // Normal previous behavior - go to previous step
@@ -210,7 +221,8 @@ export const useAdvisorStore = create<AdvisorStore>()(
           set({ 
             showInterstitial: true,
             currentInterstitial: prevInterstitial,
-            currentStep: prevStep
+            currentStep: prevStep,
+            interstitialReady: false,
           });
         } else {
           // No interstitial after previous step, just go to it
@@ -245,6 +257,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
     userId: null,
     showInterstitial: false,
     currentInterstitial: null,
+    interstitialReady: true,
   }),
 
   logout: () => set({

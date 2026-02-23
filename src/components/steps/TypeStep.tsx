@@ -42,16 +42,16 @@ export function TypeStep() {
         </p>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
+      <div className="grid grid-cols-1 gap-4 min-w-0 w-full max-w-full">
         {ADVISOR_TYPES.map((type) => {
           const Icon = iconMap[type.icon as keyof typeof iconMap] || GraduationCap;
           const isSelected = config.type === type.id;
           
           return (
-            <motion.div key={type.id} variants={slideUp}>
+            <motion.div key={type.id} variants={slideUp} className="w-full max-w-full min-w-0">
               <div
                 ref={(el) => { cardRefs.current[type.id] = el; }}
-                className="relative"
+                className="relative w-full"
                 data-card-id={`type-${type.id}`}
               >
                 <Card

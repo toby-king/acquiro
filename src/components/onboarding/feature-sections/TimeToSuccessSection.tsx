@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useMemo } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { Card } from '../../ui/Card';
+import { useAdvisorStore } from '../../../hooks/useAdvisorStore';
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -332,7 +333,12 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
 export function TimeToSuccessSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const setInterstitialReady = useAdvisorStore((s) => s.setInterstitialReady);
   const [dealClosedDate, setDealClosedDate] = useState<string>('');
+
+  useEffect(() => {
+    setInterstitialReady(true);
+  }, [setInterstitialReady]);
   const [showCheckmark, setShowCheckmark] = useState(false);
   
   // Animation state - first node (index 0) always visible

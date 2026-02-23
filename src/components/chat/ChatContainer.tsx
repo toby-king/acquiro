@@ -43,10 +43,9 @@ export function ChatContainer() {
   const streamingTextRefs = useRef<Record<string, string>>({});
   
   useEffect(() => {
-    // Only run once on mount
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
-    
+
     // Generate initial message based on personality
     const generateIntroMessage = () => {
       const name = config.advisorName || 'your advisor';
@@ -57,51 +56,62 @@ export function ChatContainer() {
       }
       return `Hello, I'm ${name}. I'm ready to help you navigate this acquisition. Time to find you the perfect acquisition.`;
     };
-    
-    setIsTyping(true);
+
+    // Show first message immediately so it's always visible (avoids Strict Mode timer issues)
+    const firstMessage: Message = {
+      id: '1',
+      text: generateIntroMessage(),
+      isUser: false,
+      timestamp: new Date(),
+    };
+    setMessages([firstMessage]);
+
+    // Schedule second message - check store at fire time (handles persist rehydration)
+    // No cleanup: Strict Mode's unmount/remount clears timers and breaks the flow.
+    // setState on unmounted component is a no-op in React 18.
     setTimeout(() => {
-      setIsTyping(false);
-      const firstMessage: Message = {
-        id: '1',
-        text: generateIntroMessage(),
-        isUser: false,
-        timestamp: new Date(),
-      };
-      setMessages([firstMessage]);
-      
-      // Send second message asking for user's name (only if not already set)
-      if (!userName) {
-        setTimeout(() => {
-          setIsTyping(true);
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages(prev => [...prev, {
+      const { userName: currentName, userEmail: currentEmail } = useAdvisorStore.getState();
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        if (!currentName) {
+          setMessages((prev) => [
+            ...prev,
+            {
               id: '2',
-              text: "Before we begin, what should I call you?",
+              text: 'Before we begin, what should I call you?',
               isUser: false,
               timestamp: new Date(),
-            }]);
-            setIsAskingForUserName(true);
-          }, 1000);
-        }, 500);
-      } else if (!userEmail) {
-        // If name exists but email doesn't, ask for email
-        setTimeout(() => {
-          setIsTyping(true);
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages(prev => [...prev, {
+            },
+          ]);
+          setIsAskingForUserName(true);
+        } else if (!currentEmail) {
+          setMessages((prev) => [
+            ...prev,
+            {
               id: '2',
               text: "What's your email address? I'd like to be able to reach out if we get disconnected.",
               isUser: false,
               timestamp: new Date(),
-            }]);
-            setIsAskingForEmail(true);
-          }, 1000);
-        }, 500);
-      }
-    }, 1000);
-  }, [config.advisorName, config.personality, config.customStats, userName, userEmail]);
+            },
+          ]);
+          setIsAskingForEmail(true);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: '2',
+              text: `Welcome back${currentName ? `, ${currentName}` : ''}! How can I help you with your acquisition today?`,
+              isUser: false,
+              timestamp: new Date(),
+            },
+          ]);
+          setUseLLM(true);
+        }
+      }, 1000);
+    }, 500);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount; config captured in closure
+  }, []);
   
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

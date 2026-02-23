@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { Factory, Package, Truck, Check } from 'lucide-react';
 import { Card } from '../../ui/Card';
+import { useAdvisorStore } from '../../../hooks/useAdvisorStore';
 
 const DEAL_CARDS = [
   {
@@ -33,7 +34,12 @@ const DEAL_CARDS = [
 export function SocialProofSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const setInterstitialReady = useAdvisorStore((s) => s.setInterstitialReady);
   const [visibleCards, setVisibleCards] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    setInterstitialReady(true);
+  }, [setInterstitialReady]);
   const [showBlogPost, setShowBlogPost] = useState(false);
 
   // Track which cards are visible for counter animation - trigger earlier
