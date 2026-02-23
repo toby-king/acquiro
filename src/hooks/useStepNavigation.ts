@@ -4,7 +4,7 @@ import { WizardStep } from '../types/advisor';
 const STEP_ORDER: WizardStep[] = ['type', 'personality', 'traits', 'style', 'voice'];
 
 export function useStepNavigation() {
-  const { currentStep, nextStep, prevStep, goToStep, showInterstitial } = useAdvisorStore();
+  const { currentStep, nextStep, prevStep, goToStep, showInterstitial, interstitialReady } = useAdvisorStore();
   
   const currentStepIndex = STEP_ORDER.indexOf(currentStep);
   // During interstitials, we're between steps, so don't show step indicator
@@ -14,9 +14,9 @@ export function useStepNavigation() {
   const isLastStep = currentStepIndex === STEP_ORDER.length - 1 && !showInterstitial;
   
   const canProceed = () => {
-    // Interstitials always allow proceeding (no selection required)
+    // Interstitials require animation to complete before proceeding
     if (showInterstitial) {
-      return true;
+      return interstitialReady;
     }
     
     const { config } = useAdvisorStore.getState();

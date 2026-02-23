@@ -97,8 +97,8 @@ export function StyleStep() {
       animate="animate"
       className="space-y-6"
     >
-      <div className='text-center'>
-        <h2 className="text-3xl font-bold mb-2 text-[var(--text-primary)]">
+      <div className="text-center min-w-0">
+        <h2 className="text-2xl md:text-3xl font-display font-bold mb-2 text-[var(--text-primary)]">
           Set Challenge Style
         </h2>
         <p className="text-[var(--text-secondary)]">
@@ -128,7 +128,7 @@ export function StyleStep() {
               })()}
             </div>
             <h3 
-              className="text-2xl font-bold transition-colors duration-300"
+              className="text-xl md:text-2xl font-bold transition-colors duration-300"
               style={{ color: getStyleColor(config.challengeLevel) }}
             >
               {currentStyle.name}

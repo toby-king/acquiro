@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
-import { ArrowLeft, Phone, PhoneOff, Loader2, ArrowRight } from 'lucide-react';
-import { Button } from '../ui/Button';
-import { motion } from 'framer-motion';
+import { Phone, PhoneOff, Loader2, ArrowRight, Send } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useConversation } from '@elevenlabs/react';
+import { buildSystemPrompt } from '../../prompts/advisorPrompt';
+import { generateOpeningMessage } from '../../services/openaiService';
 
 interface CallScreenProps {
   onBack: () => void;
@@ -14,14 +15,16 @@ interface CallScreenProps {
 type CallStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
 export function CallScreen({ onBack, onContinue }: CallScreenProps) {
-  const { config, userName, leadId } = useAdvisorStore();
+  const { config, userName, userId, leadId } = useAdvisorStore();
   const [callStatus, setCallStatus] = useState<CallStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speechPulse, setSpeechPulse] = useState(0);
   const [wasConnected, setWasConnected] = useState(false); // Track if call was ever connected
+  const [textMessage, setTextMessage] = useState('');
   const pulseAnimationRef = useRef<number | null>(null);
   const pulseStartTimeRef = useRef<number | null>(null);
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -137,7 +140,11 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
       // Stop the test stream (ElevenLabs will handle the actual audio)
       stream.getTracks().forEach(track => track.stop());
 
-      // Prepare dynamic variables
+      // Build system prompt and generate first message before building variables
+      const systemPrompt = buildSystemPrompt(config, userName);
+      const firstMessage = await generateOpeningMessage(config, userName);
+
+      // Prepare dynamic variables (include first message so agent can speak it reliably)
       const dynamicVariables: Record<string, string> = {};
       if (userName) {
         dynamicVariables.name = userName;
@@ -145,16 +152,42 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
       if (config.advisorName) {
         dynamicVariables.agent_name = config.advisorName;
       }
-      if (leadId) {
-        dynamicVariables.user_id = leadId;
+      const userIdentifier = userId || leadId;
+      if (userIdentifier) {
+        dynamicVariables.user_id = userIdentifier;
+      }
+      dynamicVariables.first_message = firstMessage;
+
+      // Overrides: send both camelCase (SDK) and snake_case (API) for first message
+      const overrides: any = {
+        agent: {
+          prompt: {
+            prompt: systemPrompt,
+          },
+          firstMessage,
+          first_message: firstMessage,
+        },
+      };
+
+      // Add TTS voice override if voice is selected
+      if (config.voice?.id) {
+        overrides.tts = {
+          voiceId: config.voice.id,
+        };
+        console.log('[CallScreen] Setting voice override:', config.voice.id);
+      } else {
+        console.log('[CallScreen] No voice selected in config');
       }
 
-      // Start the conversation with dynamic variables
+      console.log('[CallScreen] Full overrides object:', JSON.stringify(overrides, null, 2));
+
+      // Start the conversation with dynamic variables and system prompt override
       const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_0401kfask9wye6dt9cymkzbcxdg3';
       await conversation.startSession({
         agentId,
         connectionType: 'webrtc' as const,
         ...(Object.keys(dynamicVariables).length > 0 && { dynamicVariables }),
+        overrides,
       });
     } catch (error) {
       if (error instanceof DOMException && error.name === 'NotAllowedError') {
@@ -190,6 +223,19 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
     }
   };
 
+  const handleSendTextMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (textMessage.trim() && callStatus === 'connected') {
+      try {
+        conversation.sendUserMessage(textMessage.trim());
+        setTextMessage('');
+      } catch (error) {
+        console.error('Failed to send text message:', error);
+        setErrorMessage('Failed to send message. Please try again.');
+      }
+    }
+  };
+
   // Determine orb intensity and activation based on call status
   const orbIntensity = callStatus === 'connected' ? 80 : callStatus === 'connecting' ? 60 : 50;
   const orbIsActivated = callStatus === 'connected';
@@ -197,25 +243,18 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
 
   return (
     <div className="flex flex-col h-screen bg-[var(--bg-primary)]">
-      {/* Header with back button */}
-      <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft size={18} />
-            <span>Back to Chat</span>
-          </Button>
-        </div>
+      {/* Logo header */}
+      <header className="flex-shrink-0 flex justify-center py-4 md:py-6 px-4">
+        <span className="font-display font-bold text-lg sm:text-[1.6rem] text-[var(--text-primary)]">
+          acquiro<span className="text-accent">.</span>
+        </span>
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        <div className="max-w-4xl w-full flex flex-col items-center gap-12">
-          {/* Large Orb */}
-          <div className="flex-shrink-0">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 py-8 md:py-12 min-w-0">
+        <div className="max-w-4xl w-full flex flex-col items-center gap-8 md:gap-12 min-w-0">
+          {/* Large Orb - scale down on small screens */}
+          <div className="flex-shrink-0 w-full max-w-full flex justify-center origin-center scale-75 sm:scale-90 md:scale-100">
             <AdvisorOrb
               intensity={orbIntensity}
               isActivated={orbIsActivated}
@@ -236,7 +275,7 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={startCall}
-                className="flex items-center gap-2 px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-all"
+                className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-all"
               >
                 <Phone className="w-5 h-5" />
                 Start Call
@@ -248,7 +287,7 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={handleContinue}
-                className="flex items-center gap-2 px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-all"
+                className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-all"
               >
                 <span>Continue</span>
                 <ArrowRight className="w-5 h-5" />
@@ -260,7 +299,7 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 disabled
-                className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-gray-400 font-medium rounded-full cursor-not-allowed"
+                className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-gray-700 text-gray-400 font-medium rounded-full cursor-not-allowed"
               >
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Connecting...
@@ -273,7 +312,7 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   onClick={endCall}
-                  className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white font-medium rounded-full hover:bg-red-700 transition-all"
+                  className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-red-600 text-white font-medium rounded-full hover:bg-red-700 transition-all"
                 >
                   <PhoneOff className="w-5 h-5" />
                   End Call
@@ -300,7 +339,7 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
                 </p>
                 <button
                   onClick={startCall}
-                  className="flex items-center gap-2 px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-all"
+                  className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-all"
                 >
                   <Phone className="w-5 h-5" />
                   Retry Call
@@ -310,6 +349,58 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
           </div>
         </div>
       </div>
+
+      {/* Text Input for sending messages during call */}
+      <AnimatePresence>
+        {callStatus === 'connected' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className="sticky bottom-0 bg-[var(--bg-primary)]/95 backdrop-blur-md border-t border-[var(--border)] px-4 md:px-6 py-4"
+          >
+            <div className="max-w-2xl mx-auto">
+              <form onSubmit={handleSendTextMessage} className="flex items-end gap-3">
+                <textarea
+                  ref={textInputRef}
+                  value={textMessage}
+                  onChange={(e) => setTextMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendTextMessage(e);
+                    }
+                  }}
+                  placeholder="Type a message if you can't use your mic..."
+                  rows={2}
+                  className="flex-1 px-4 py-3 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent resize-none text-base"
+                />
+                <motion.button
+                  type="submit"
+                  disabled={!textMessage.trim()}
+                  className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] ${
+                    !textMessage.trim()
+                      ? 'bg-[var(--bg-card)] opacity-50 cursor-not-allowed'
+                      : 'bg-accent hover:bg-accent/90 cursor-pointer'
+                  }`}
+                  whileHover={!textMessage.trim() ? {} : { scale: 1.02 }}
+                  whileTap={!textMessage.trim() ? {} : { scale: 0.98 }}
+                >
+                  <Send 
+                    size={18} 
+                    strokeWidth={2.5} 
+                    className={textMessage.trim() ? "text-[var(--bg-primary)]" : "text-[var(--text-secondary)]"} 
+                  />
+                </motion.button>
+              </form>
+              <p className="mt-2 text-xs text-[var(--text-tertiary)] text-center">
+                Press Enter to send, Shift+Enter for new line
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

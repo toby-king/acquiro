@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /*
  * AdvisorOrb v2 — Gaseous gradient orb.
@@ -101,8 +101,8 @@ function createOffscreen(w: number, h: number): HTMLCanvasElement | OffscreenCan
 // ─── Component ──────────────────────────────────────────────
 
 export function AdvisorOrb({
-  intensity = 0,
-  isActivated = false,
+  intensity: _intensity = 0,
+  isActivated: _isActivated = false,
   className = '',
   size = 200,
   allowProfanity = false,

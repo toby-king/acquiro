@@ -618,12 +618,12 @@ export function BirthAnimation({ onComplete, palette, allowProfanity = false }: 
       if (s.nameText && s.nameAlpha > 0.01) {
         const nameY = cy + s.orbRadius + 55;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = `600 ${Math.min(w * 0.07, 36)}px "DM Sans", system-ui, sans-serif`;
+        ctx.font = `600 ${Math.min(w * 0.07, 36)}px Afacad, system-ui, sans-serif`;
         ctx.fillStyle = `rgba(198, 255, 74, ${s.nameAlpha})`;
         ctx.fillText(s.nameText, cx, nameY);
 
         if (s.subtitleAlpha > 0.01) {
-          ctx.font = `400 ${Math.min(w * 0.03, 13)}px "DM Sans", system-ui, sans-serif`;
+          ctx.font = `400 ${Math.min(w * 0.03, 13)}px Afacad, system-ui, sans-serif`;
           ctx.fillStyle = `rgba(168, 85, 247, ${s.subtitleAlpha * 0.7})`;
           ctx.fillText('AGENT ACTIVATED', cx, nameY + 32);
         }
@@ -654,8 +654,7 @@ export function BirthAnimation({ onComplete, palette, allowProfanity = false }: 
   // ─── Render ─────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#08080d]">
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+    <div className="fixed inset-0 z-[100] bg-[#08080d] font-sans">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
       {/* DOM overlay for input — positioned below the orb */}
@@ -675,7 +674,6 @@ export function BirthAnimation({ onComplete, palette, allowProfanity = false }: 
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.3 }}
-                style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
               >
                 What would you like to call me?
               </motion.p>
@@ -693,8 +691,7 @@ export function BirthAnimation({ onComplete, palette, allowProfanity = false }: 
                   onChange={(e) => setName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Escape') handleSubmit('Advisor'); }}
                   placeholder="Enter a name..."
-                  className="w-[300px] bg-transparent border-0 border-b-2 border-gray-600 focus:border-[#a855f7] outline-none text-white text-center text-lg pb-2 transition-colors duration-200 placeholder:text-gray-600"
-                  style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
+                  className="w-full max-w-[300px] bg-transparent border-0 border-b-2 border-gray-600 focus:border-[#a855f7] outline-none text-white text-center text-lg pb-2 transition-colors duration-200 placeholder:text-gray-600"
                   maxLength={30}
                 />
               </motion.form>

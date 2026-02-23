@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { Card } from '../../ui/Card';
+import { useAdvisorStore } from '../../../hooks/useAdvisorStore';
 
 type ChatState = 'user' | 'typing' | 'agent' | 'pause';
 
@@ -8,32 +9,35 @@ export function CustomisationSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
   const [chatState, setChatState] = useState<ChatState>('user');
+  const setInterstitialReady = useAdvisorStore((s) => s.setInterstitialReady);
 
   // Animation sequence: user -> pause -> typing -> agent -> stop
   useEffect(() => {
-    if (!isInView) return;
-
     const timers: ReturnType<typeof setTimeout>[] = [];
+
+    if (!isInView) {
+      // Content not in view yet - allow proceeding after a short delay so user isn't stuck
+      const fallback = setTimeout(() => setInterstitialReady(true), 500);
+      timers.push(fallback);
+      return () => timers.forEach((t) => clearTimeout(t));
+    }
 
     // Start with user message
     setChatState('user');
 
-    // After 1.5s, show typing indicator
-    const typingTimer = setTimeout(() => {
-      setChatState('typing');
-    }, 1500);
+    // After 0.5s, show typing indicator
+    const typingTimer = setTimeout(() => setChatState('typing'), 500);
     timers.push(typingTimer);
 
-    // After 2.5s total (1s after typing starts), show agent message
+    // After 1.2s total (~0.7s typing), show agent message and allow proceeding
     const agentTimer = setTimeout(() => {
       setChatState('agent');
-    }, 2500);
+      setInterstitialReady(true);
+    }, 1200);
     timers.push(agentTimer);
 
-    return () => {
-      timers.forEach(timer => clearTimeout(timer));
-    };
-  }, [isInView]);
+    return () => timers.forEach((t) => clearTimeout(t));
+  }, [isInView, setInterstitialReady]);
 
   // Typing indicator component
   const TypingIndicator = () => (
@@ -58,11 +62,11 @@ export function CustomisationSection() {
   );
 
   return (
-    <div ref={ref} className="flex flex-col items-center justify-center min-h-[400px] py-12 px-4">
-      <Card className="max-w-[600px] w-full border-none" style={{ background: 'transparent', border: 'none' }}>
-        <div className="space-y-8">
+    <div ref={ref} className="flex flex-col items-center justify-center min-h-[400px] py-12 px-4 w-full min-w-0">
+      <Card className="max-w-[600px] w-full border-none min-w-0" style={{ background: 'transparent', border: 'none' }}>
+        <div className="space-y-8 min-w-0">
           {/* Headline */}
-          <h2 className="text-3xl font-medium text-[var(--text-primary)] text-center">
+          <h2 className="text-2xl md:text-3xl font-display font-medium text-[var(--text-primary)] text-center">
             Your advisor, your rules.
           </h2>
           

@@ -4,11 +4,14 @@ import { useConversation } from '@elevenlabs/react';
 import { AdvisorOrb } from '../advisor/AdvisorOrb';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { motion } from 'framer-motion';
+import { buildDashboardSystemPrompt } from '../../prompts/dashboardPrompt';
+import { getBuyerInfo } from '../../services/buyerInfoService';
+import { fetchMatches } from '../../services/matchesService';
 
 type CallStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
 export function AdvisorPanel() {
-  const { config, userName, userId, leadId } = useAdvisorStore();
+  const { config, userName, userId, leadId, matchToDiscuss, clearMatchToDiscuss } = useAdvisorStore();
   const [callStatus, setCallStatus] = useState<CallStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -16,6 +19,9 @@ export function AdvisorPanel() {
   const pulseAnimationRef = useRef<number | null>(null);
   const pulseStartTimeRef = useRef<number | null>(null);
   const isConnectingRef = useRef<boolean>(false);
+  const callStatusRef = useRef<CallStatus>(callStatus);
+  callStatusRef.current = callStatus;
+  const startCallRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   // Handle unhandled errors from ElevenLabs SDK
   useEffect(() => {
@@ -78,28 +84,27 @@ export function AdvisorPanel() {
       }
       pulseStartTimeRef.current = null;
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       console.error('ElevenLabs error:', error);
-      // Handle undefined or malformed errors gracefully
       let errorMessage = 'Connection error. Please try again.';
-      
+
       if (error) {
         if (typeof error === 'string') {
           errorMessage = error;
-        } else if (error.message) {
-          const msg = error.message.toLowerCase();
+        } else if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message: unknown }).message === 'string') {
+          const msg = (error as { message: string }).message.toLowerCase();
           if (msg.includes('audioworklet') || msg.includes('audio context')) {
             errorMessage = 'Audio initialization failed. Please refresh the page and try again.';
-          } else if (msg.includes('websocket') || msg.includes('connection')) {
+          } else if (msg.includes('websocket') || msg.includes('webrtc') || msg.includes('connection')) {
             errorMessage = 'Connection failed. Please check your internet connection and try again.';
           } else {
-            errorMessage = error.message;
+            errorMessage = (error as { message: string }).message;
           }
-        } else if (error.toString) {
-          errorMessage = error.toString();
+        } else if (typeof (error as Error).toString === 'function') {
+          errorMessage = (error as Error).toString();
         }
       }
-      
+
       setCallStatus('error');
       setErrorMessage(errorMessage);
     },
@@ -209,16 +214,46 @@ export function AdvisorPanel() {
         throw mediaError;
       }
 
-      // Prepare dynamic variables
+      // Dashboard: custom first message and prompt (buyer criteria + matches)
+      const firstMessage = userName
+        ? `Nice to hear from you again ${userName}, how can I help today?`
+        : 'Nice to hear from you again, how can I help today?';
+
+      let buyerInfo = null;
+      let matches: Awaited<ReturnType<typeof fetchMatches>> = [];
+      const userIdentifier = userId || leadId;
+      if (userIdentifier) {
+        try {
+          [buyerInfo, matches] = await Promise.all([
+            getBuyerInfo(userIdentifier),
+            fetchMatches(userIdentifier).catch(() => []),
+          ]);
+        } catch (e) {
+          console.warn('[AdvisorPanel] Could not load buyer info or matches:', e);
+        }
+      }
+
+      const matchForPrompt = useAdvisorStore.getState().matchToDiscuss;
+      if (matchForPrompt) clearMatchToDiscuss();
+
+      // Customize first message when user selected a match to discuss
+      const resolvedFirstMessage = matchForPrompt
+        ? (userName
+          ? `Hi ${userName}, I see you'd like to discuss ${matchForPrompt.companyName}. What would you like to know?`
+          : `I see you'd like to discuss ${matchForPrompt.companyName}. What would you like to know?`)
+        : firstMessage;
+
+      const systemPrompt = buildDashboardSystemPrompt(config, userName, buyerInfo, matches, matchForPrompt);
+
+      // Prepare dynamic variables for ElevenLabs
       const dynamicVariables: Record<string, string> = {};
       if (userName) {
         dynamicVariables.name = userName;
+        dynamicVariables.user_name = userName;
       }
       if (config.advisorName) {
         dynamicVariables.agent_name = config.advisorName;
       }
-      // Use userId if available (after payment), otherwise fall back to leadId
-      const userIdentifier = userId || leadId;
       if (userIdentifier) {
         dynamicVariables.user_id = userIdentifier;
       }
@@ -227,13 +262,33 @@ export function AdvisorPanel() {
       // This helps prevent AudioWorkletNode errors
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Start the conversation with dynamic variables
+      const overrides: any = {
+        agent: {
+          prompt: { prompt: systemPrompt },
+          firstMessage: resolvedFirstMessage,
+        },
+      };
+
+      // Add TTS voice override if voice is selected
+      if (config.voice?.id) {
+        overrides.tts = {
+          voiceId: config.voice.id,
+        };
+        console.log('[AdvisorPanel] Setting voice override:', config.voice.id);
+      } else {
+        console.log('[AdvisorPanel] No voice selected in config');
+      }
+      
+      console.log('[AdvisorPanel] Full overrides object:', JSON.stringify(overrides, null, 2));
+
+      // Start the conversation with dynamic variables and system prompt override
       try {
         const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_0401kfask9wye6dt9cymkzbcxdg3';
         await conversation.startSession({
           agentId,
           connectionType: 'webrtc' as const,
           ...(Object.keys(dynamicVariables).length > 0 && { dynamicVariables }),
+          overrides,
         });
         
         // Stop the test stream after session is established
@@ -285,6 +340,27 @@ export function AdvisorPanel() {
       }
     }
   };
+  startCallRef.current = startCall;
+
+  // When user clicks a match to discuss, auto-start the call (if idle) or send message (if already connected)
+  useEffect(() => {
+    if (!matchToDiscuss) return;
+
+    if (callStatus === 'idle' && !isConnectingRef.current) {
+      startCallRef.current();
+    } else if (callStatus === 'connected') {
+      const desc = matchToDiscuss.description?.slice(0, 150);
+      const message = desc
+        ? `I've just selected a match I'd like to discuss - ${matchToDiscuss.companyName}. ${desc}${matchToDiscuss.description.length > 150 ? '...' : ''} Can we go through this one?`
+        : `I've just selected a match I'd like to discuss - ${matchToDiscuss.companyName}. Can we go through this one?`;
+      try {
+        conversation.sendUserMessage(message);
+      } catch (err) {
+        console.error('[AdvisorPanel] Failed to send match context to agent:', err);
+      }
+      clearMatchToDiscuss();
+    }
+  }, [matchToDiscuss, callStatus, conversation, clearMatchToDiscuss]);
 
   const endCall = async () => {
     try {
@@ -299,22 +375,19 @@ export function AdvisorPanel() {
     }
   };
 
-  // Cleanup on unmount
+  // Cleanup on unmount only - empty deps so we never run cleanup during re-renders
   useEffect(() => {
     return () => {
-      // Clean up any ongoing animations
       if (pulseAnimationRef.current) {
         cancelAnimationFrame(pulseAnimationRef.current);
         pulseAnimationRef.current = null;
       }
-      // End session if still connected
-      if (callStatus === 'connected' || callStatus === 'connecting') {
-        conversation.endSession().catch(() => {
-          // Ignore errors during cleanup
-        });
+      if (callStatusRef.current === 'connected' || callStatusRef.current === 'connecting') {
+        conversation.endSession().catch(() => {});
       }
     };
-  }, [callStatus, conversation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on unmount
+  }, []);
 
   // Determine orb intensity and activation based on call status
   const orbIntensity = callStatus === 'connected' ? 80 : callStatus === 'connecting' ? 60 : 50;
@@ -344,7 +417,7 @@ export function AdvisorPanel() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={startCall}
-            className="flex items-center gap-2 px-6 py-3 bg-white text-black font-medium rounded-full hover:bg-gray-100 transition-all"
+            className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-white text-black font-medium rounded-full hover:bg-gray-100 transition-all"
           >
             <Phone className="w-5 h-5" />
             Call Agent
@@ -356,7 +429,7 @@ export function AdvisorPanel() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             disabled
-            className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-gray-400 font-medium rounded-full cursor-not-allowed"
+            className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-gray-700 text-gray-400 font-medium rounded-full cursor-not-allowed"
           >
             <Loader2 className="w-5 h-5 animate-spin" />
             Connecting...
@@ -369,7 +442,7 @@ export function AdvisorPanel() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               onClick={endCall}
-              className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white font-medium rounded-full hover:bg-red-700 transition-all"
+              className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-red-600 text-white font-medium rounded-full hover:bg-red-700 transition-all"
             >
               <PhoneOff className="w-5 h-5" />
               End Call
@@ -396,7 +469,7 @@ export function AdvisorPanel() {
             </p>
             <button
               onClick={startCall}
-              className="flex items-center gap-2 px-6 py-3 bg-white text-black font-medium rounded-full hover:bg-gray-100 transition-all"
+              className="flex items-center gap-2 min-h-[44px] px-6 py-3 bg-white text-black font-medium rounded-full hover:bg-gray-100 transition-all"
             >
               <Phone className="w-5 h-5" />
               Retry Call

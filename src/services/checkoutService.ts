@@ -1,4 +1,21 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const PRODUCTION_BACKEND = 'https://acquiro-backend.vercel.app';
+
+function getApiUrl(): string {
+  // When served from a real domain (not localhost), always use production backend.
+  // This avoids "Failed to fetch" when VITE_API_URL was set to localhost in build.
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host !== 'localhost' && host !== '127.0.0.1') {
+      return PRODUCTION_BACKEND;
+    }
+  }
+  return (
+    import.meta.env.VITE_API_URL ||
+    (import.meta.env.PROD ? PRODUCTION_BACKEND : 'http://localhost:3001')
+  );
+}
+
+const API_URL = getApiUrl();
 
 export interface CreateCheckoutSessionParams {
   billingPeriod: 'monthly' | 'annual';
@@ -13,6 +30,8 @@ export interface CheckoutSessionResponse {
 export interface SessionStatusResponse {
   status: string;
   customerEmail?: string;
+  /** Lead ID stored in checkout session metadata (survives redirect from Stripe) */
+  leadId?: string;
 }
 
 /**

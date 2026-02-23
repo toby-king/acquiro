@@ -32,6 +32,7 @@ export interface VoiceOption {
   description: string;
   sampleQuote: string;
   waveformData?: number[];
+  audioSample?: string;
 }
 
 export interface AdvisorConfig {

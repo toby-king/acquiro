@@ -35,17 +35,17 @@ export function ChatMessage({ message, isUser, isTyping = false }: ChatMessagePr
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}
+      className={`flex items-start gap-3 min-w-0 ${isUser ? 'flex-row-reverse' : ''}`}
     >
       
       <div
-        className={`px-4 py-3 rounded-2xl max-w-[70%] ${
+        className={`px-4 py-3 rounded-2xl max-w-[85%] sm:max-w-[70%] min-w-0 ${
           isUser
             ? 'bg-accent text-[var(--bg-primary)] rounded-tr-sm'
             : 'bg-[var(--bg-card)] text-[var(--text-primary)] rounded-tl-sm'
         }`}
       >
-        <p className="text-sm leading-relaxed whitespace-pre-line">
+        <p className="text-base leading-relaxed whitespace-pre-line">
           {message || '\u00A0'}
         </p>
       </div>

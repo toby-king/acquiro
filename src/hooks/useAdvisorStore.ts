@@ -1,7 +1,9 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { AdvisorConfig, WizardStep } from '../types/advisor';
 import { CHALLENGE_STYLES } from '../constants/challengeStyles';
-import { InterstitialId, getInterstitialAfterStep, getInterstitialBeforeStep } from '../constants/interstitials';
+import { InterstitialId, getInterstitialAfterStep } from '../constants/interstitials';
+import type { Match } from '../services/matchesService';
 
 interface AdvisorStore {
   config: AdvisorConfig;
@@ -14,7 +16,13 @@ interface AdvisorStore {
   userId: string | null;
   showInterstitial: boolean;
   currentInterstitial: InterstitialId | null;
-  
+  /** Set to true when interstitial animation (e.g. typing) has completed; blocks Next until ready */
+  interstitialReady: boolean;
+  /** True when user returned via /builder?lead= - skip name/email, show reconnection message */
+  isLeadReconnection: boolean;
+  /** Match selected for discussion - when set, AdvisorPanel starts call with this context */
+  matchToDiscuss: Match | null;
+
   // Actions
   setType: (type: AdvisorConfig['type']) => void;
   setPersonality: (personality: AdvisorConfig['personality']) => void;
@@ -29,6 +37,13 @@ interface AdvisorStore {
   setUserEmail: (email: string) => void;
   setLeadId: (leadId: string) => void;
   setUserId: (userId: string) => void;
+  setInterstitialReady: (ready: boolean) => void;
+  /** Hydrate store from get_agent API (for lead reconnection flow) */
+  hydrateFromLead: (leadId: string, config: AdvisorConfig, userName: string | null, userEmail: string | null) => void;
+  clearLeadReconnection: () => void;
+  /** Request a call with the given match - AdvisorPanel will start the call with match context */
+  requestCallWithMatch: (match: Match) => void;
+  clearMatchToDiscuss: () => void;
   
   goToStep: (step: WizardStep) => void;
   nextStep: () => void;
@@ -36,6 +51,7 @@ interface AdvisorStore {
   
   activateAdvisor: () => void;
   reset: () => void;
+  logout: () => void;
 }
 
 const STEP_ORDER: WizardStep[] = ['type', 'personality', 'traits', 'style', 'voice'];
@@ -55,7 +71,13 @@ const initialConfig: AdvisorConfig = {
   advisorName: null,
 };
 
-export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
+const sessionPartialize = (state: AdvisorStore) => ({
+  userId: state.userId,
+});
+
+export const useAdvisorStore = create<AdvisorStore>()(
+  persist(
+    (set, get) => ({
   config: initialConfig,
   currentStep: 'type',
   isComplete: false,
@@ -66,7 +88,10 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
   userId: null,
   showInterstitial: false,
   currentInterstitial: null,
-  
+  interstitialReady: true,
+  isLeadReconnection: false,
+  matchToDiscuss: null,
+
   setType: (type) => set((state) => ({ config: { ...state.config, type } })),
   
   setPersonality: (personality) => set((state) => ({ 
@@ -116,19 +141,35 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
   setLeadId: (leadId) => set({ leadId }),
   
   setUserId: (userId) => set({ userId }),
-  
+  setInterstitialReady: (ready) => set({ interstitialReady: ready }),
+  hydrateFromLead: (leadId, config, userName, userEmail) => set({
+    leadId,
+    config,
+    userName,
+    userEmail,
+    isComplete: true,
+    isActivated: true,
+    isLeadReconnection: true,
+  }),
+  clearLeadReconnection: () => set({ isLeadReconnection: false }),
+  requestCallWithMatch: (match) => set({ matchToDiscuss: match }),
+  clearMatchToDiscuss: () => set({ matchToDiscuss: null }),
+
   goToStep: (step) => set({ currentStep: step }),
   
   nextStep: () => {
     const { currentStep, showInterstitial } = get();
     
     if (showInterstitial) {
-      // Currently on interstitial, advance to next main step
+      // Currently on interstitial, advance to next main step (only if animation ready)
+      const { interstitialReady } = get();
+      if (!interstitialReady) return;
       const currentIndex = STEP_ORDER.indexOf(currentStep);
       if (currentIndex < STEP_ORDER.length - 1) {
         set({ 
           showInterstitial: false, 
           currentInterstitial: null,
+          interstitialReady: true,
           currentStep: STEP_ORDER[currentIndex + 1] 
         });
       } else {
@@ -143,6 +184,7 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
         set({ 
           showInterstitial: false,
           currentInterstitial: null,
+          interstitialReady: true,
           isComplete 
         });
       }
@@ -154,7 +196,8 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
         // Show interstitial before advancing to next step
         set({ 
           showInterstitial: true, 
-          currentInterstitial: interstitialId 
+          currentInterstitial: interstitialId,
+          interstitialReady: false, // Will be set true when animation completes
         });
       } else {
         // No interstitial (after Voice step), proceed to completion check
@@ -184,7 +227,8 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
       // User's selection is preserved since we don't change currentStep
       set({ 
         showInterstitial: false, 
-        currentInterstitial: null 
+        currentInterstitial: null,
+        interstitialReady: true,
       });
     } else {
       // Normal previous behavior - go to previous step
@@ -199,7 +243,8 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
           set({ 
             showInterstitial: true,
             currentInterstitial: prevInterstitial,
-            currentStep: prevStep
+            currentStep: prevStep,
+            interstitialReady: false,
           });
         } else {
           // No interstitial after previous step, just go to it
@@ -234,5 +279,21 @@ export const useAdvisorStore = create<AdvisorStore>((set, get) => ({
     userId: null,
     showInterstitial: false,
     currentInterstitial: null,
+    interstitialReady: true,
+    isLeadReconnection: false,
+    matchToDiscuss: null,
   }),
-}));
+
+  logout: () => set({
+    userId: null,
+    userName: null,
+    userEmail: null,
+    leadId: null,
+  }),
+}),
+    {
+      name: 'acquiro-session',
+      partialize: sessionPartialize,
+    }
+  )
+);

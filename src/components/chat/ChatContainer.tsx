@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ChatMessage } from './ChatMessage';
@@ -15,7 +15,8 @@ import { AnimatePresence } from 'framer-motion';
 import { isValidEmail } from '../../utils/emailValidation';
 import { createLead } from '../../services/leadService';
 import { createAgent } from '../../services/agentService';
-import { generateChatResponseStream } from '../../services/openaiService'; 
+import { generateChatResponseStream } from '../../services/openaiService';
+import { sendLeadMail, hasSentLeadMail, markLeadMailSent } from '../../services/leadMailService'; 
 
 interface Message {
   id: string;
@@ -36,17 +37,46 @@ export function ChatContainer() {
   const [showCallScreen, setShowCallScreen] = useState(false);
   const [showSubscriptionPage, setShowSubscriptionPage] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [conversationStartIndex, setConversationStartIndex] = useState<number | null>(null); // Track where the real conversation starts
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false);
   const headerOrbRef = useRef<HTMLDivElement>(null);
   const streamingTextRefs = useRef<Record<string, string>>({});
   
   useEffect(() => {
-    // Only run once on mount
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
-    
-    // Generate initial message based on personality
+
+    const { isLeadReconnection: reconnecting } = useAdvisorStore.getState();
+
+    if (reconnecting) {
+      // Lead reconnection flow: show reconnection message + action buttons, skip name/email
+      const displayName = userName || 'there';
+      const reconnectionMessage: Message = {
+        id: '1',
+        text: `Hi ${displayName}, I think we got disconnected. Let's continue your journey to finding the perfect business acquisition.`,
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages([reconnectionMessage]);
+      setTimeout(() => {
+        setIsTyping(true);
+        setTimeout(() => {
+          setIsTyping(false);
+          const introMessage: Message = {
+            id: '2',
+            text: "Perfect! Let's get started.\n\nNow, to give you the best guidance, I'd like to start with a quick discovery conversation — about 10-15 minutes where I learn about your background, goals, and what you're looking for in an acquisition.\n\nThink of it as us getting properly introduced.\n\nHow would you prefer to do this?",
+            isUser: false,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, introMessage]);
+          setShowActionButtons(true);
+        }, 1000);
+      }, 500);
+      return;
+    }
+
+    // Normal flow: intro then name/email
     const generateIntroMessage = () => {
       const name = config.advisorName || 'your advisor';
       if (config.personality) {
@@ -56,55 +86,75 @@ export function ChatContainer() {
       }
       return `Hello, I'm ${name}. I'm ready to help you navigate this acquisition. Time to find you the perfect acquisition.`;
     };
-    
-    setIsTyping(true);
+
+    const firstMessage: Message = {
+      id: '1',
+      text: generateIntroMessage(),
+      isUser: false,
+      timestamp: new Date(),
+    };
+    setMessages([firstMessage]);
+
     setTimeout(() => {
-      setIsTyping(false);
-      const firstMessage: Message = {
-        id: '1',
-        text: generateIntroMessage(),
-        isUser: false,
-        timestamp: new Date(),
-      };
-      setMessages([firstMessage]);
-      
-      // Send second message asking for user's name (only if not already set)
-      if (!userName) {
-        setTimeout(() => {
-          setIsTyping(true);
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages(prev => [...prev, {
+      const { userName: currentName, userEmail: currentEmail } = useAdvisorStore.getState();
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        if (!currentName) {
+          setMessages((prev) => [
+            ...prev,
+            {
               id: '2',
-              text: "Before we begin, what should I call you?",
+              text: 'Before we begin, what should I call you?',
               isUser: false,
               timestamp: new Date(),
-            }]);
-            setIsAskingForUserName(true);
-          }, 1000);
-        }, 500);
-      } else if (!userEmail) {
-        // If name exists but email doesn't, ask for email
-        setTimeout(() => {
-          setIsTyping(true);
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages(prev => [...prev, {
+            },
+          ]);
+          setIsAskingForUserName(true);
+        } else if (!currentEmail) {
+          setMessages((prev) => [
+            ...prev,
+            {
               id: '2',
               text: "What's your email address? I'd like to be able to reach out if we get disconnected.",
               isUser: false,
               timestamp: new Date(),
-            }]);
-            setIsAskingForEmail(true);
-          }, 1000);
-        }, 500);
-      }
-    }, 1000);
-  }, [config.advisorName, config.personality, config.customStats, userName, userEmail]);
+            },
+          ]);
+          setIsAskingForEmail(true);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: '2',
+              text: `Welcome back${currentName ? `, ${currentName}` : ''}! How can I help you with your acquisition today?`,
+              isUser: false,
+              timestamp: new Date(),
+            },
+          ]);
+          setUseLLM(true);
+        }
+      }, 1000);
+    }, 500);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount; config captured in closure
+  }, []);
   
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping, streamingMessageId]);
+
+  // Send retention email when user leaves without finishing (has lead but no userId)
+  useEffect(() => {
+    const handleLeave = () => {
+      const { leadId: lid, userId: uid, userName: un, userEmail: ue } = useAdvisorStore.getState();
+      if (lid && !uid && un && ue && !hasSentLeadMail(lid)) {
+        sendLeadMail(lid);
+        markLeadMailSent(lid);
+      }
+    };
+    window.addEventListener('pagehide', handleLeave);
+    return () => window.removeEventListener('pagehide', handleLeave);
+  }, []);
   
   const handleSend = (text: string) => {
     const userMessage: Message = {
@@ -257,9 +307,16 @@ export function ChatContainer() {
       // Initialize streaming text ref for this message
       streamingTextRefs.current[messageId] = '';
       
+      // Determine which messages to send to the LLM
+      // If conversationStartIndex is set, only include messages from that point onwards
+      // Otherwise, include all messages (fallback for safety)
+      const messagesToSend = conversationStartIndex !== null
+        ? [...messages.slice(conversationStartIndex), userMessage]
+        : [...messages, userMessage];
+      
       // Generate streaming response
       generateChatResponseStream(
-        [...messages, userMessage],
+        messagesToSend,
         config,
         userName,
         (chunk: string) => {
@@ -337,7 +394,16 @@ export function ChatContainer() {
       isUser: true,
       timestamp: new Date(),
     };
-    setMessages(prev => [...prev, userMessage]);
+    
+    // Mark this as the start of the real conversation
+    // The next message count will be where the conversation starts
+    setMessages(prev => {
+      const newMessages = [...prev, userMessage];
+      // Set conversation start index to the current length (before adding user message)
+      // This means we'll only include messages from this point forward
+      setConversationStartIndex(prev.length);
+      return newMessages;
+    });
     
     // Create placeholder message for streaming
     const messageId = (Date.now() + 1).toString();
@@ -357,9 +423,13 @@ export function ChatContainer() {
     // Initialize streaming text ref for this message
     streamingTextRefs.current[messageId] = '';
     
+    // Start fresh - don't send any previous messages, just the user's "Let's Message Here"
+    // This allows the agent to respond with the opening greeting from the prompt
+    const messagesToSend: Message[] = [userMessage];
+    
     // Generate streaming response
     generateChatResponseStream(
-      [...messages, userMessage],
+      messagesToSend,
       config,
       userName,
       (chunk: string) => {
@@ -449,7 +519,7 @@ export function ChatContainer() {
           <>
             {/* Render hidden header for orb position reference */}
             <div className="fixed inset-0 pointer-events-none opacity-0 z-[101]">
-              <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
+              <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-4 md:px-6 py-4">
                 <div className="flex items-center justify-between max-w-4xl mx-auto">
                   <div className="flex items-center gap-3">
                     <div ref={headerOrbRef}>
@@ -472,10 +542,10 @@ export function ChatContainer() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[var(--bg-primary)]">
+    <div className="flex flex-col h-screen bg-[var(--bg-primary)] overflow-x-hidden">
       {/* Chat Header */}
-      <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
+      <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)] px-4 md:px-6 py-4">
+        <div className="flex items-center justify-between max-w-4xl mx-auto min-w-0">
           <div className="flex items-center gap-3">
             <div ref={headerOrbRef}>
               <AdvisorOrb 
@@ -500,13 +570,13 @@ export function ChatContainer() {
             <ThemeToggle />
             <button
               onClick={handleCallClick}
-              className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200"
+              className="min-h-[44px] min-w-[44px] rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200"
               aria-label="Start Call"
             >
               <Phone size={18} />
             </button>
             <button
-              className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200"
+              className="min-h-[44px] min-w-[44px] rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200"
               aria-label="Settings"
             >
               <Settings size={18} />
@@ -516,8 +586,8 @@ export function ChatContainer() {
       </header>
       
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="max-w-4xl mx-auto space-y-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-6 py-6">
+        <div className="max-w-4xl mx-auto space-y-4 min-w-0 w-full">
           <AnimatePresence>
             {messages.map((message) => {
               // Hide empty streaming messages while typing indicator is showing
@@ -555,10 +625,15 @@ export function ChatContainer() {
         </div>
       </div>
       
-      {/* Input Area */}
-      <div className="sticky bottom-0 bg-[var(--bg-primary)]/80 backdrop-blur-md border-t border-[var(--border)] px-6 py-4">
-        <div className="max-w-4xl mx-auto">
-          <ChatInput onSend={handleSend} />
+      {/* Input Area - disabled until agent asks for name, then for email, then until user picks Let's call or Let's message */}
+      <div className="sticky bottom-0 bg-[var(--bg-primary)]/80 backdrop-blur-md border-t border-[var(--border)] px-4 md:px-6 py-4">
+        <div className="max-w-4xl mx-auto min-w-0">
+          <ChatInput
+            onSend={handleSend}
+            disabled={
+              !(isAskingForUserName || isAskingForEmail || useLLM) || showActionButtons
+            }
+          />
         </div>
       </div>
     </div>

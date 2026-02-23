@@ -62,6 +62,15 @@ The production build will be in the `dist` directory.
 npm run preview
 ```
 
+### Deploying to Vercel (acquirolabs.vercel.app)
+
+1. Connect the repo to a Vercel project (frontend).
+2. Set **Environment Variables** for Production (and Preview if needed):
+   - `VITE_API_URL` = `https://acquiro-backend.vercel.app` (so checkout and session-status use the backend)
+   - All other `VITE_*` vars (Bubble, OpenAI, ElevenLabs, Stripe publishable key).
+3. Build Command: `npm run build`, Output Directory: `dist`.
+4. The app will call the backend at `https://acquiro-backend.vercel.app` when `VITE_API_URL` is set or when running in production (fallback).
+
 ## Project Structure
 
 ```

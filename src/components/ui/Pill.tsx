@@ -1,25 +1,33 @@
-import { HTMLAttributes, ReactNode } from 'react';
+import { ButtonHTMLAttributes, MouseEvent, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { scaleIn } from '../../utils/animations';
 
-interface PillProps extends HTMLAttributes<HTMLButtonElement> {
+type PillProps = Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  | 'onAnimationStart'
+  | 'onAnimationEnd'
+  | 'onAnimationIteration'
+  | 'onDragStart'
+  | 'onDragEnd'
+  | 'onDrag'
+> & {
   children: ReactNode;
   selected?: boolean;
   variant?: 'embrace' | 'avoid' | 'neutral';
-  onClick?: () => void;
-}
+  onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
+};
 
-export function Pill({ 
-  children, 
-  selected = false, 
+export function Pill({
+  children,
+  selected = false,
   variant = 'neutral',
   onClick,
   className = '',
-  ...props 
+  ...props
 }: PillProps) {
   const variantStyles = {
-    embrace: selected 
-      ? 'bg-accent text-[var(--bg-primary)] border-accent' 
+    embrace: selected
+      ? 'bg-accent text-[var(--bg-primary)] border-accent'
       : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border)] hover:border-accent',
     avoid: selected
       ? 'bg-red-500/20 text-red-400 border-red-500/50'
@@ -28,7 +36,7 @@ export function Pill({
       ? 'bg-accent text-[var(--bg-primary)] border-accent'
       : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border)] hover:border-accent',
   };
-  
+
   return (
     <motion.button
       variants={scaleIn}

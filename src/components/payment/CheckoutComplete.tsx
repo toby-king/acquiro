@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { getSessionStatus } from '../../services/checkoutService';
@@ -10,9 +10,11 @@ import { motion } from 'framer-motion';
 export function CheckoutComplete() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { leadId, setUserId, userName, config } = useAdvisorStore();
+  const { leadId: storeLeadId, setUserId, setLeadId, userName, config } = useAdvisorStore();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [showWhatsNext, setShowWhatsNext] = useState(false);
+  /** Guard: only run create-user flow once per session (avoids duplicate calls when setLeadId triggers re-render) */
+  const processedSessionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
@@ -24,36 +26,55 @@ export function CheckoutComplete() {
 
     getSessionStatus(sessionId)
       .then(async (data) => {
-        if (data.status === 'complete') {
-          // Create user in Bubble API if we have a leadId
-          if (leadId) {
-            try {
-              const userResult = await createUser(leadId);
-              if (userResult?.user_id) {
-                setUserId(userResult.user_id);
-                console.log('User ID set:', userResult.user_id);
-              } else {
-                console.warn('Failed to create user, but payment was successful');
-              }
-            } catch (error) {
-              console.error('Error creating user:', error);
-              // Don't fail the whole flow if user creation fails
+        if (data.status !== 'complete') {
+          console.error('[CheckoutComplete] Payment session status is not complete:', data.status);
+          setStatus('error');
+          return;
+        }
+
+        // Only run create-user once per session (effect may re-run when we setLeadId)
+        if (processedSessionIdRef.current === sessionId) {
+          setStatus('success');
+          return;
+        }
+        processedSessionIdRef.current = sessionId;
+
+        // Use leadId from store (same tab) or from session metadata (returned from Stripe redirect)
+        const leadId = storeLeadId ?? data.leadId ?? null;
+        if (leadId && !storeLeadId) {
+          setLeadId(leadId);
+        }
+
+        // Create user account in Bubble API after successful payment (once per session)
+        if (leadId) {
+          try {
+            console.log('[CheckoutComplete] Payment successful, creating user account in Bubble API for lead:', leadId);
+            const userResult = await createUser(leadId);
+            
+            if (userResult?.user_id) {
+              setUserId(userResult.user_id);
+              console.log('[CheckoutComplete] ✅ User account created. Stored userId for dashboard:', userResult.user_id);
+            } else {
+              console.error('[CheckoutComplete] ❌ No user_id returned from Bubble API');
+            }
+          } catch (error) {
+            console.error('[CheckoutComplete] ❌ Error creating user account in Bubble API:', error);
+            if (error instanceof Error) {
+              console.error('[CheckoutComplete] Error details:', error.message);
             }
           }
-          
-          setStatus('success');
-          // Show "What's Next" screen after brief success message
-          setTimeout(() => {
-            setShowWhatsNext(true);
-          }, 2000);
         } else {
-          setStatus('error');
+          console.warn('[CheckoutComplete] ⚠️ No leadId – cannot create user account in Bubble');
         }
+        
+        setStatus('success');
+        setTimeout(() => setShowWhatsNext(true), 2000);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('[CheckoutComplete] Error verifying payment session:', error);
         setStatus('error');
       });
-  }, [searchParams, navigate, leadId, setUserId]);
+  }, [searchParams, storeLeadId, setUserId, setLeadId]);
 
   // Show "What's Next" screen after successful payment
   if (showWhatsNext && status === 'success') {
@@ -90,7 +111,7 @@ export function CheckoutComplete() {
           className="text-center max-w-md"
         >
           <XCircle className="w-16 h-16 text-red-500 mx-auto mb-6" />
-          <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Something went wrong</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-[var(--text-primary)] mb-2">Something went wrong</h1>
           <p className="text-[var(--text-secondary)] mb-8">
             We couldn't verify your subscription. Please contact support if you were charged.
           </p>
@@ -113,7 +134,7 @@ export function CheckoutComplete() {
         className="text-center max-w-md"
       >
         <CheckCircle className="w-16 h-16 text-accent mx-auto mb-6" />
-        <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">Welcome aboard!</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)] mb-2">Welcome aboard!</h1>
         <p className="text-[var(--text-secondary)] mb-8">
           Your subscription is now active. Redirecting you to your dashboard...
         </p>

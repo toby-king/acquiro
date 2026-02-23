@@ -1,16 +1,45 @@
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { MatchesList } from './MatchesList';
 import { AdvisorPanel } from './AdvisorPanel';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
-import { motion } from 'framer-motion';
-import { Phone, Settings, LogOut } from 'lucide-react';
-import logo from '../../assets/logo.png';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Phone, LogOut } from 'lucide-react';
+import { getUser } from '../../services/userService';
 
 export function Dashboard() {
-  const { userName } = useAdvisorStore();
+  const navigate = useNavigate();
+  const { userId, userName, setUserName, setUserEmail, logout } = useAdvisorStore();
+  const fetchedUserIdRef = useRef<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!userId || fetchedUserIdRef.current === userId) return;
+    fetchedUserIdRef.current = userId;
+    getUser(userId)
+      .then(({ name, email }) => {
+        if (name) setUserName(name);
+        if (email) setUserEmail(email);
+      })
+      .catch((err) => console.error('[Dashboard] Failed to fetch user profile:', err));
+  }, [userId, setUserName, setUserEmail]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    if (profileOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [profileOpen]);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">
+    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col overflow-x-hidden">
       {/* Header - Full Width */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -18,55 +47,58 @@ export function Dashboard() {
         transition={{ duration: 0.5 }}
         className="w-full px-4 sm:px-6 py-4 flex items-center justify-between border-b border-[var(--border)]"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4 sm:gap-6 min-w-0">
           {/* Logo */}
-          <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden">
-            <img src={logo} alt="Acquiro Logo" className="w-full h-full object-cover" />
-          </div>
-          <h1 className="text-xl font-semibold text-[var(--text-primary)]">
+          <Link to="/" className="font-display font-bold text-lg sm:text-[1.6rem] text-[var(--text-primary)] flex-shrink-0 min-h-[44px] flex items-center">
+            acquiro<span className="text-accent">.</span>
+          </Link>
+          <h1 className="font-display font-bold text-xl lg:text-2xl text-[var(--text-primary)] hidden sm:block">
             Welcome back, {userName || 'there'}.
           </h1>
         </div>
 
-        {/* Right side - Actions and Avatar */}
+        {/* Right side - Theme and Profile */}
         <div className="flex items-center gap-2">
-          {/* Settings Button */}
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
-            aria-label="Settings"
-            title="Settings"
-          >
-            <Settings size={18} />
-          </motion.button>
-
-          {/* Theme Toggle */}
           <ThemeToggle />
 
-          {/* Logout Button */}
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
-            aria-label="Logout"
-            title="Logout"
-            onClick={() => {
-              // TODO: Implement logout functionality
-              console.log('Logout clicked');
-            }}
-          >
-            <LogOut size={18} />
-          </motion.button>
-
-          {/* User Avatar */}
-          <div className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden ml-2">
-            {/* Placeholder avatar - replace with actual user image */}
-            <div className="w-full h-full flex items-center justify-center">
+          {/* User Profile - Avatar with dropdown */}
+          <div className="relative" ref={profileRef}>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setProfileOpen((o) => !o)}
+              className="min-h-[44px] min-w-[44px] rounded-full bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
+              aria-label="Profile menu"
+              aria-expanded={profileOpen}
+            >
               <span className="text-gray-400 text-sm font-semibold">
                 {userName ? userName.charAt(0).toUpperCase() : 'U'}
               </span>
-            </div>
+            </motion.button>
+
+            <AnimatePresence>
+              {profileOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-full mt-2 py-1 min-w-[160px] rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] shadow-lg z-50"
+                >
+                  <button
+                    onClick={() => {
+                      setProfileOpen(false);
+                      logout();
+                      navigate('/', { replace: true });
+                    }}
+                    className="w-full px-4 py-2.5 flex items-center gap-2 text-left text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors text-sm"
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </motion.div>
@@ -74,7 +106,7 @@ export function Dashboard() {
       {/* Main Content - 50/50 Split */}
       <div className="flex-1 flex flex-col lg:flex-row relative">
         {/* Left - Matches (50%) */}
-        <div className="flex-1 p-4 md:p-8 overflow-y-auto pb-20 md:pb-8 relative">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden pb-20 md:pb-8 relative min-w-0">
           {/* Divider - 70% height */}
           <div className="hidden lg:block absolute right-0 top-[15%] bottom-[15%] w-px bg-[var(--border)]" />
           

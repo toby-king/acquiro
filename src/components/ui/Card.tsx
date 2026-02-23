@@ -1,12 +1,14 @@
 import { HTMLAttributes, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cardHover, cardTap } from '../../utils/animations';
+import { cn } from '../../utils/cn';
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   selected?: boolean;
   interactive?: boolean;
   onClick?: () => void;
+  glowLine?: boolean;
 }
 
 export function Card({ 
@@ -14,22 +16,22 @@ export function Card({
   selected = false, 
   interactive = false,
   onClick,
+  glowLine = false,
   className = '',
   ...props 
 }: CardProps) {
-  const baseStyles = 'relative rounded-2xl p-6 transition-all duration-300 overflow-hidden';
+  const baseStyles = 'relative rounded-card p-4 sm:p-6 transition-all duration-300 overflow-hidden bg-[var(--bg-card)] border border-[var(--border)] min-w-0 max-w-full';
   const borderStyles = selected 
     ? 'border-2 border-accent' 
-    : 'border border-[var(--border)]';
-  const interactiveStyles = interactive 
-    ? 'cursor-pointer hover:border-[var(--text-secondary)]' 
+    : '';
+  const interactiveStyles = interactive || glowLine
+    ? 'cursor-pointer hover:border-accent/20 hover:bg-[rgba(28,28,34,1)] hover:-translate-y-1' 
     : '';
   
   const content = (
     <div 
-      className={`${baseStyles} ${borderStyles} ${interactiveStyles} ${className}`}
+      className={cn(baseStyles, borderStyles, interactiveStyles, className)}
       style={{
-        background: 'var(--bg-card)',
         ...(selected && {
           border: '2px solid var(--accent)',
           boxShadow: '0 0 30px rgba(198, 255, 74, 0.3)',
@@ -37,6 +39,11 @@ export function Card({
       }}
       {...props}
     >
+      {/* Glow line at top - appears on hover */}
+      {glowLine && (
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-accent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      )}
+      
       {/* Blue gradient overlay */}
       {selected && (
         <div 
@@ -72,9 +79,18 @@ export function Card({
         whileHover={cardHover}
         whileTap={cardTap}
         onClick={onClick}
+        className={glowLine ? 'group' : ''}
       >
         {content}
       </motion.div>
+    );
+  }
+  
+  if (glowLine) {
+    return (
+      <div className="group">
+        {content}
+      </div>
     );
   }
   

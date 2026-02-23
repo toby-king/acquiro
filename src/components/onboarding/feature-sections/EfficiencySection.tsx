@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { motion, useInView, useMotionValue, useTransform, animate, useMotionValueEvent } from 'framer-motion';
 import { Card } from '../../ui/Card';
+import { useAdvisorStore } from '../../../hooks/useAdvisorStore';
 
 function CounterDisplay({ value, duration, delay, isInView }: { value: number; duration: number; delay: number; isInView: boolean }) {
   const progress = useMotionValue(0);
@@ -29,13 +30,18 @@ function CounterDisplay({ value, duration, delay, isInView }: { value: number; d
 export function EfficiencySection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const setInterstitialReady = useAdvisorStore((s) => s.setInterstitialReady);
+
+  useEffect(() => {
+    setInterstitialReady(true);
+  }, [setInterstitialReady]);
 
   return (
-    <div ref={ref} className="flex flex-col items-center justify-center min-h-[400px] py-12 px-4">
-      <Card className="max-w-[600px] w-full border-none" style={{ background: 'transparent', border: 'none' }}>
-        <div className="space-y-8">
+    <div ref={ref} className="flex flex-col items-center justify-center min-h-[400px] py-12 px-4 w-full min-w-0">
+      <Card className="max-w-[600px] w-full border-none min-w-0" style={{ background: 'transparent', border: 'none' }}>
+        <div className="space-y-8 min-w-0">
           {/* Headline */}
-          <h2 className="text-3xl font-medium text-[var(--text-primary)] text-center">
+          <h2 className="text-2xl md:text-3xl font-display font-medium text-[var(--text-primary)] text-center">
             You're building something powerful.
           </h2>
           

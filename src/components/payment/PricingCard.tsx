@@ -21,12 +21,12 @@ export function PricingCard({ plan, billingPeriod, onSelect }: PricingCardProps)
       <Card selected className="flex flex-col">
       
       {/* Plan name & description */}
-      <h3 className="text-xl font-semibold text-white">{plan.name}</h3>
+      <h3 className="text-lg md:text-xl font-semibold text-white">{plan.name}</h3>
       <p className="mt-2 text-sm text-gray-400">{plan.description}</p>
       
       {/* Price */}
       <div className="mt-6">
-        <span className="text-4xl font-bold text-white">£{price}</span>
+        <span className="text-3xl md:text-4xl font-bold text-white">£{price}</span>
         <span className="text-gray-400">/month</span>
         
         {billingPeriod === 'annual' && (
@@ -40,7 +40,7 @@ export function PricingCard({ plan, billingPeriod, onSelect }: PricingCardProps)
       {/* CTA Button */}
       <button
         onClick={() => onSelect(plan.id)}
-        className="mt-6 w-full py-3 rounded-full font-medium transition-all bg-accent text-black hover:bg-accent/90"
+        className="mt-6 w-full min-h-[44px] py-3 rounded-full font-medium transition-all bg-accent text-black hover:bg-accent/90"
       >
         {plan.ctaText}
       </button>

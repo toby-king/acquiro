@@ -7,7 +7,8 @@ export function useTheme() {
       if (stored === 'light' || stored === 'dark') {
         return stored;
       }
-      return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      // Default to dark unless user has explicitly chosen light via the toggle
+      return 'dark';
     }
     return 'dark';
   });

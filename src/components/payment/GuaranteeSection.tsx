@@ -8,7 +8,7 @@ const TRUST_ITEMS = [
 
 export function GuaranteeSection() {
   return (
-    <div className="grid grid-cols-3 md:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
       {TRUST_ITEMS.map((item) => {
         const Icon = item.icon;
         return (

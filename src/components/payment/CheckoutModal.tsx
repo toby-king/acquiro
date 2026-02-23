@@ -101,7 +101,7 @@ export function CheckoutModal({
             </h2>
             <button
               onClick={onClose}
-              className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] rounded-full transition-colors"
+              className="flex items-center justify-center min-h-[44px] min-w-[44px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] rounded-full transition-colors"
             >
               <X className="w-5 h-5" />
             </button>

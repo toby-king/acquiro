@@ -75,7 +75,7 @@ export function WhatsNextScreen({ userName, advisorName, onContinue }: WhatsNext
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center px-4 py-16">
+    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center px-4 py-12 md:py-16 overflow-x-hidden">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -250,7 +250,7 @@ export function WhatsNextScreen({ userName, advisorName, onContinue }: WhatsNext
         <button
           onClick={handleContinue}
           disabled={!animationComplete}
-          className="flex items-center gap-2 px-8 py-4 bg-accent text-black font-semibold rounded-full hover:bg-accent/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 min-h-[44px] px-8 py-4 bg-accent text-black font-semibold rounded-full hover:bg-accent/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span>Enter Dashboard</span>
           <ArrowRight className="w-5 h-5" />

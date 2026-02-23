@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useMemo } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { Card } from '../../ui/Card';
+import { useAdvisorStore } from '../../../hooks/useAdvisorStore';
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -77,34 +78,19 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                       'July', 'August', 'September', 'October', 'November', 'December'];
 
-  // Format day as string (no leading zeros to match formatDate)
-  const formatDay = (day: number) => day.toString();
+  // Format year as string for display
   const formatYear = (year: number) => year.toString();
 
-  const startDayStr = formatDay(startDay);
-  const endDayStr = formatDay(endDay);
   const startYearStr = formatYear(startYear);
   const endYearStr = formatYear(endYear);
 
   // Calculate month indices (handle year wrap-around)
-  const getMonthIndex = (month: number, year: number) => {
+  const getMonthIndex = (month: number, _year: number) => {
     return month;
   };
 
   const startMonthIndex = getMonthIndex(startMonth, startYear);
   const endMonthIndex = getMonthIndex(endMonth, endYear);
-
-  // Calculate how many months to scroll (handle wrap-around)
-  const calculateMonthScroll = () => {
-    if (startYear === endYear) {
-      return startMonthIndex - endMonthIndex;
-    } else {
-      // Crosses year boundary - scroll backwards through remaining months
-      return (12 - endMonthIndex) + startMonthIndex;
-    }
-  };
-
-  const monthScrollDistance = calculateMonthScroll();
 
   useEffect(() => {
     // Start animation after a brief delay
@@ -112,10 +98,10 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
       setIsAnimating(true);
     }, 500);
 
-    // Mark as settled after animation completes (1.8s duration + 0.5s delay + buffer)
+    // Mark as settled after full animation (day, month, year all complete; year last digit ~0.7s delay + 1.8s)
     const settleTimer = setTimeout(() => {
       setIsSettled(true);
-    }, 500 + 1800 + 300); // delay + duration + small buffer
+    }, 500 + 2500); // delay + full animation + buffer
 
     return () => {
       clearTimeout(timer);
@@ -143,7 +129,7 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
       const digitColumn = [];
       for (let d = 0; d <= 9; d++) {
         digitColumn.push(
-          <div key={d} className="text-3xl font-medium text-[var(--text-primary)] tabular-nums" style={{ height: '1.2em', lineHeight: '1.2em' }}>
+          <div key={d} className="text-2xl md:text-3xl font-medium text-[var(--text-primary)] tabular-nums" style={{ height: '1.2em', lineHeight: '1.2em' }}>
             {d}
           </div>
         );
@@ -154,16 +140,10 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
       // Calculate translateY: start at startDigit (in the middle set, index 10 + startDigit)
       // This gives us room to scroll in either direction
       const startTranslateY = -(10 + startDigit) * 1.2;
-      
+
       // Calculate how many digits to scroll
       const digitDiff = startDigit - endDigit;
-      let scrollAmount = digitDiff;
-      
-      // If digit stays the same, still scroll down and back up for visual effect
-      if (digitDiff === 0) {
-        scrollAmount = -10; // Scroll down 10 digits (full rotation) then back
-      }
-      
+
       // End position: scroll to endDigit (in the middle set, index 10 + endDigit)
       // If same digit, we scroll down 10 then back up 10 to end at the same position
       let endTranslateY = -(10 + endDigit) * 1.2;
@@ -181,7 +161,8 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
           className="relative inline-block overflow-hidden"
           style={{ 
             height: '1.2em',
-            width: '0.6em',
+            width: '0.65em',
+            minWidth: '0.5em',
             verticalAlign: 'baseline'
           }}
         >
@@ -211,7 +192,7 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
   const renderMonth = () => {
     // Create column of all 12 months (repeat 3 times for smooth wrap-around in both directions)
     const monthColumn = [...monthNames, ...monthNames, ...monthNames].map((month, index) => (
-      <div key={index} className="text-3xl font-medium text-[var(--text-primary)]" style={{ height: '1.2em', lineHeight: '1.2em', whiteSpace: 'nowrap' }}>
+      <div key={index} className="text-2xl md:text-3xl font-medium text-[var(--text-primary)]" style={{ height: '1.2em', lineHeight: '1.2em', whiteSpace: 'nowrap' }}>
         {month}
       </div>
     ));
@@ -263,7 +244,7 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
       const digitColumn = [];
       for (let d = 0; d <= 9; d++) {
         digitColumn.push(
-          <div key={d} className="text-3xl font-medium text-[var(--text-primary)] tabular-nums" style={{ height: '1.2em', lineHeight: '1.2em' }}>
+          <div key={d} className="text-2xl md:text-3xl font-medium text-[var(--text-primary)] tabular-nums" style={{ height: '1.2em', lineHeight: '1.2em' }}>
             {d}
           </div>
         );
@@ -295,7 +276,8 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
           className="relative inline-block overflow-hidden"
           style={{ 
             height: '1.2em',
-            width: '0.6em',
+            width: '0.65em',
+            minWidth: '0.5em',
             verticalAlign: 'baseline'
           }}
         >
@@ -353,7 +335,12 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
 export function TimeToSuccessSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const setInterstitialReady = useAdvisorStore((s) => s.setInterstitialReady);
   const [dealClosedDate, setDealClosedDate] = useState<string>('');
+
+  useEffect(() => {
+    setInterstitialReady(true);
+  }, [setInterstitialReady]);
   const [showCheckmark, setShowCheckmark] = useState(false);
   
   // Animation state - first node (index 0) always visible
@@ -472,11 +459,11 @@ export function TimeToSuccessSection() {
   }, [isInView, startDate, endDate]);
 
   return (
-    <div ref={ref} className="flex flex-col items-center justify-center min-h-[400px] py-12 px-4" style={{ overflow: 'visible' }}>
-      <Card className="max-w-[600px] w-full border-none" style={{ background: 'transparent', border: 'none', overflow: 'visible' }}>
-        <div className="space-y-8" style={{ overflow: 'visible' }}>
+    <div ref={ref} className="flex flex-col items-center justify-center min-h-[400px] py-12 px-4 w-full min-w-0" style={{ overflow: 'visible' }}>
+      <Card className="max-w-[600px] w-full border-none min-w-0" style={{ background: 'transparent', border: 'none', overflow: 'visible' }}>
+        <div className="space-y-8 min-w-0" style={{ overflow: 'visible' }}>
           {/* Headline */}
-          <h2 className="text-3xl font-medium text-[var(--text-primary)] text-center">
+          <h2 className="text-2xl md:text-3xl font-display font-medium text-[var(--text-primary)] text-center">
             You could close your ideal acquisition by{' '}
             <RollingDate startDate={startDate} endDate={endDate} />
           </h2>
@@ -486,8 +473,64 @@ export function TimeToSuccessSection() {
             With the right advisor and the right matches, the timeline is shorter than you think.
           </p>
 
-          {/* Horizontal Timeline */}
-          <div className="mt-8 relative pb-24" style={{ minHeight: '200px', overflow: 'visible' }}>
+          {/* Vertical Timeline - Mobile only */}
+          <div className="mt-8 md:hidden w-full max-w-sm mx-auto">
+            <div className="relative">
+              {/* Left column: vertical line and progress */}
+              <div className="absolute left-0 top-0 bottom-0 w-8 flex justify-center">
+                <div className="relative w-0.5 h-full bg-[#333]" style={{ zIndex: 1 }} />
+                <div
+                  className="absolute left-1/2 top-0 w-1 bg-accent rounded-full origin-top -translate-x-1/2"
+                  style={{
+                    height: `${barProgress * 100}%`,
+                    zIndex: 2,
+                    minHeight: barProgress > 0 ? '2px' : '0',
+                  }}
+                />
+              </div>
+              {/* Rows with nodes and labels */}
+              <div className="ml-8">
+                {TIMELINE_STAGES.map((stage, index) => {
+                  const isNodeVisible = visibleNodes.has(index);
+                  const isLabelVisible = isNodeVisible;
+                  return (
+                    <motion.div
+                      key={index}
+                      className="relative flex items-start gap-3 py-3 first:pt-0"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={isLabelVisible ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <div
+                        className={`absolute -left-[26px] top-0.5 ${stage.isFinal ? 'w-6 h-6' : 'w-5 h-5'} rounded-full bg-accent flex items-center justify-center flex-shrink-0 z-20`}
+                      >
+                        {stage.isFinal && isNodeVisible && (
+                          <Check className="w-4 h-4 text-black" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 pl-2">
+                        <div className="text-sm font-medium text-[var(--text-primary)]">
+                          {stage.label}
+                        </div>
+                        <div className="text-xs text-[var(--text-secondary)] mt-0.5">
+                          {stage.isFinal ? (
+                            <span className={showCheckmark ? 'font-semibold text-accent' : ''}>
+                              {dealClosedDate || formatDate(startDate)}
+                            </span>
+                          ) : (
+                            stage.timeframe
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Horizontal Timeline - Desktop only */}
+          <div className="mt-8 relative pb-24 hidden md:block" style={{ minHeight: '200px', overflow: 'visible' }}>
             {/* Background track line - spans full width, starts at first node center, ends at last node center */}
             <div 
               className="absolute h-0.5 bg-[#333]" 

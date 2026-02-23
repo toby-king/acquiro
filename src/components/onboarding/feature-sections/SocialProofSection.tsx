@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { Factory, Package, Truck, Check } from 'lucide-react';
 import { Card } from '../../ui/Card';
+import { useAdvisorStore } from '../../../hooks/useAdvisorStore';
 
 const DEAL_CARDS = [
   {
@@ -33,7 +34,12 @@ const DEAL_CARDS = [
 export function SocialProofSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const setInterstitialReady = useAdvisorStore((s) => s.setInterstitialReady);
   const [visibleCards, setVisibleCards] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    setInterstitialReady(true);
+  }, [setInterstitialReady]);
   const [showBlogPost, setShowBlogPost] = useState(false);
 
   // Track which cards are visible for counter animation - trigger earlier
@@ -56,11 +62,11 @@ export function SocialProofSection() {
   }, [isInView]);
 
   return (
-    <div ref={ref} className="flex flex-col items-center justify-center min-h-[400px] py-15 px-4" style={{ overflow: 'visible' }}>
-      <Card className="max-w-[700px] w-full border-none overflow-visible py-10" style={{ background: 'transparent', border: 'none', overflow: 'visible' }}>
-        <div className="space-y-8 overflow-visible">
+    <div ref={ref} className="flex flex-col items-center justify-center min-h-[400px] py-12 px-4 w-full min-w-0 overflow-x-hidden">
+      <Card className="w-full max-w-[700px] border-none overflow-visible py-10 min-w-0" style={{ background: 'transparent', border: 'none', overflow: 'visible' }}>
+        <div className="space-y-8 overflow-visible min-w-0">
           {/* Headline */}
-          <h2 className="text-3xl font-medium text-[var(--text-primary)] text-center">
+          <h2 className="text-2xl md:text-3xl font-display font-medium text-[var(--text-primary)] text-center">
             3 acquisitions. 11 months. 1 advisor.
           </h2>
           
@@ -99,12 +105,14 @@ export function SocialProofSection() {
                     {visibleCards.size} {visibleCards.size === 1 ? 'deal' : 'deals'} closed
                   </motion.div>
 
-                  {/* Deal Cards */}
-                  <div className="flex items-center justify-center gap-4 relative">
+                  {/* Deal Cards - vertical stack on mobile (with overlap), horizontal fanned on desktop */}
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-0 md:gap-0 relative w-full max-w-full">
                     {DEAL_CARDS.map((card, index) => {
                       const Icon = card.icon;
                       const isCardVisible = visibleCards.has(card.id);
                       const showCheckmark = isCardVisible;
+                      // On mobile: bottom cards on top when overlapping
+                      const zIndexClass = index === 0 ? 'z-[1] md:z-[1]' : index === 1 ? 'z-[2] md:z-[2]' : 'z-[3] md:z-[3]';
 
                       return (
                         <motion.div
@@ -131,14 +139,10 @@ export function SocialProofSection() {
                             delay: index * 0.4,
                             ease: [0.16, 1, 0.3, 1],
                           }}
-                          className="relative"
-                          style={{
-                            zIndex: card.zIndex,
-                            marginLeft: index > 0 ? '-20px' : '0', // Overlapping effect
-                          }}
+                          className={`relative w-full max-w-[200px] md:max-w-none md:w-[180px] md:flex-shrink-0 ${zIndexClass} ${index > 0 ? '-mt-14 md:mt-0 md:-ml-5' : ''}`}
                         >
                           <div
-                            className="w-[180px] h-[240px] rounded-xl p-6 flex flex-col items-center justify-between relative"
+                            className="w-full md:w-[180px] h-[200px] md:h-[240px] rounded-xl p-6 flex flex-col items-center justify-between relative flex-shrink-0"
                             style={{
                               background: '#1a1a1a',
                               border: '1px solid #2a2a2a',

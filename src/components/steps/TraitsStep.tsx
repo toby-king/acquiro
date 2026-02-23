@@ -1,5 +1,6 @@
+import { type MouseEvent } from 'react';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
-import { EMBRACE_TRAITS, AVOID_TRAITS } from '../../constants/traits';
+import { EMBRACE_TRAITS } from '../../constants/traits';
 import { Pill } from '../ui/Pill';
 import { motion } from 'framer-motion';
 import { staggerChildren, slideUp } from '../../utils/animations';
@@ -52,8 +53,8 @@ export function TraitsStep() {
       animate="animate"
       className="space-y-6"
     >
-      <div className='text-center'>
-        <h2 className="text-3xl font-bold mb-2 text-[var(--text-primary)]">
+      <div className="text-center min-w-0">
+        <h2 className="text-2xl md:text-3xl font-display font-bold mb-2 text-[var(--text-primary)]">
           Define Your Advisor's Traits
         </h2>
         <p className="text-[var(--text-secondary)]">
@@ -64,8 +65,8 @@ export function TraitsStep() {
       <div className="w-full">
         {/* Embrace Section */}
         <motion.div variants={slideUp} className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-semibold text-[var(--text-primary)]">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h3 className="text-lg md:text-xl font-semibold text-[var(--text-primary)]">
               Embrace These Traits
             </h3>
             <span className="px-3 py-1 bg-accent/20 text-accent text-sm font-medium rounded-full">
@@ -81,7 +82,7 @@ export function TraitsStep() {
                   key={trait}
                   selected={isSelected}
                   variant="embrace"
-                  onClick={(e) => handleEmbraceToggle(trait, e.currentTarget)}
+                  onClick={(e: MouseEvent<HTMLButtonElement>) => handleEmbraceToggle(trait, e.currentTarget)}
                 >
                   {trait}
                 </Pill>

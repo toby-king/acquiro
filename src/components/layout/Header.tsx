@@ -2,8 +2,7 @@ import { useStepNavigation } from '../../hooks/useStepNavigation';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ProgressBar } from '../ui/ProgressBar';
 import { ThemeToggle } from './ThemeToggle';
-import { motion } from 'framer-motion';
-import logo from '../../assets/logo.png';
+import { Link } from 'react-router-dom';
 
 const STEP_LABELS = ['Type', 'Personality', 'Traits', 'Style', 'Voice'];
 const STEP_ORDER = ['type', 'personality', 'traits', 'style', 'voice'];
@@ -32,19 +31,14 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-md border-b border-[var(--border)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-        <div className="flex items-center justify-between gap-6">
-          {/* Logo and Title */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center">
-              <img src={logo} alt="Acquiro Logo" className="w-full h-full rounded-full" />
-            </div>
-            <h1 className="text-xl font-semibold text-[var(--text-primary)]">
-              Acquiro Agents
-            </h1>
-          </div>
+        <div className="flex items-center justify-between gap-2 sm:gap-6 min-w-0">
+          {/* Logo */}
+          <Link to="/" className="font-display font-bold text-lg sm:text-[1.6rem] text-[var(--text-primary)] flex-shrink-0 min-h-[44px] flex items-center">
+            acquiro<span className="text-accent">.</span>
+          </Link>
           
-          {/* Progress Bar - centered and flexible */}
-          <div className="flex-1 flex justify-end">
+          {/* Progress Bar - centered and flexible, can shrink on mobile */}
+          <div className="flex-1 flex justify-end min-w-0 overflow-hidden flex-shrink">
             <ProgressBar
               steps={STEP_LABELS}
               currentStep={progressStepIndex}

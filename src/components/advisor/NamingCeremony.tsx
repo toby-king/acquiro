@@ -60,7 +60,7 @@ export function NamingCeremony({ onComplete }: NamingCeremonyProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[var(--bg-primary)] flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] bg-[var(--bg-primary)] flex items-center justify-center font-sans">
       {/* Subtle vignette */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -131,7 +131,7 @@ export function NamingCeremony({ onComplete }: NamingCeremonyProps) {
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Enter a name..."
-                className="w-[300px] bg-transparent border-0 border-b-2 border-[var(--text-secondary)] focus:border-accent outline-none text-white text-center text-lg pb-2 transition-colors duration-200 placeholder:text-[var(--text-secondary)]"
+                className="w-full max-w-[300px] bg-transparent border-0 border-b-2 border-[var(--text-secondary)] focus:border-accent outline-none text-white text-center text-lg pb-2 transition-colors duration-200 placeholder:text-[var(--text-secondary)]"
                 maxLength={30}
               />
             </motion.form>

@@ -7,7 +7,7 @@ export function useWaveformAnalyzer() {
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const connectedElementRef = useRef<HTMLAudioElement | null>(null);
-  const detectIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const detectIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connectToAudio = useCallback((audioElement: HTMLAudioElement) => {
     // Don't reconnect to the same element

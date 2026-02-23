@@ -2,28 +2,28 @@ import { PersonalityPreset } from '../types/advisor';
 
 export const PERSONALITY_PRESETS: PersonalityPreset[] = [
   {
-    id: 'warren-buffett',
-    name: 'Warren Buffett',
-    stats: { patience: 95, analytical: 90, warmth: 70, directness: 60, verbosity: 40 },
-    quote: "Price is what you pay. Value is what you get. Let's find the real value together.",
-  },
-  {
-    id: 'steve-jobs',
-    name: 'Steve Jobs',
-    stats: { patience: 30, analytical: 85, warmth: 40, directness: 95, verbosity: 60 },
-    quote: "We're here to make a dent in the universe. This acquisition better be insanely great.",
-  },
-  {
-    id: 'oprah-winfrey',
-    name: 'Oprah Winfrey',
-    stats: { patience: 90, analytical: 70, warmth: 95, directness: 50, verbosity: 60 },
-    quote: "What I know for sure is that the right decision will feel right. Let's explore this together.",
+    id: 'jeff-bezos',
+    name: 'Jeff Bezos',
+    stats: { patience: 80, analytical: 95, warmth: 45, directness: 75, verbosity: 35 },
+    quote: "It's all about the long game. Let's work backwards from your perfect acquisition.",
   },
   {
     id: 'elon-musk',
     name: 'Elon Musk',
     stats: { patience: 20, analytical: 95, warmth: 30, directness: 90, verbosity: 50 },
-    quote: "The data says this is either revolutionary or insane. Probably both. Let's crunch the numbers.",
+    quote: "The best deals are the ones everyone else thinks are crazy. Let's look at the fundamentals.",
+  },
+  {
+    id: 'sara-blakely',
+    name: 'Sara Blakely',
+    stats: { patience: 75, analytical: 70, warmth: 90, directness: 65, verbosity: 55 },
+    quote: "Every great business started with someone saying 'why not me?' Let's find yours.",
+  },
+  {
+    id: 'richard-branson',
+    name: 'Richard Branson',
+    stats: { patience: 40, analytical: 55, warmth: 85, directness: 70, verbosity: 65 },
+    quote: "Screw it, let's do it. But first, let's make sure the adventure is worth taking.",
   },
 ];
 

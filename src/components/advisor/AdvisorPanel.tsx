@@ -21,15 +21,15 @@ export function AdvisorPanel() {
   const hasStats = !!(config.personality || config.customStats);
   
   return (
-    <div className="bg-[var(--bg-card)] rounded-2xl p-4 sm:p-6 border border-[var(--border)]">
-      <div className="flex flex-col items-center">
-        <h2 className="text-2xl font-medium mb-2 text-[var(--text-primary)] text-center">
+    <div className="bg-[var(--bg-card)] rounded-2xl p-4 sm:p-6 border border-[var(--border)] min-w-0 w-full max-w-full">
+      <div className="flex flex-col items-center min-w-0">
+        <h2 className="text-xl md:text-2xl font-display font-medium mb-2 text-[var(--text-primary)] text-center">
           Your AI Advisor
         </h2>
-        <div className="w-full mb-4">
+        <div className="w-full mb-4 min-w-0">
           <SelectionSummary />
         </div>
-        <div className="scale-75 sm:scale-100">
+        <div className="scale-75 sm:scale-100 w-full max-w-full flex justify-center">
           <AdvisorOrb 
             intensity={intensity} 
             isActivated={isActivated} 
