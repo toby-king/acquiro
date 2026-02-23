@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { AdvisorConfig, WizardStep } from '../types/advisor';
 import { CHALLENGE_STYLES } from '../constants/challengeStyles';
 import { InterstitialId, getInterstitialAfterStep } from '../constants/interstitials';
+import type { Match } from '../services/matchesService';
 
 interface AdvisorStore {
   config: AdvisorConfig;
@@ -19,7 +20,9 @@ interface AdvisorStore {
   interstitialReady: boolean;
   /** True when user returned via /builder?lead= - skip name/email, show reconnection message */
   isLeadReconnection: boolean;
-  
+  /** Match selected for discussion - when set, AdvisorPanel starts call with this context */
+  matchToDiscuss: Match | null;
+
   // Actions
   setType: (type: AdvisorConfig['type']) => void;
   setPersonality: (personality: AdvisorConfig['personality']) => void;
@@ -38,6 +41,9 @@ interface AdvisorStore {
   /** Hydrate store from get_agent API (for lead reconnection flow) */
   hydrateFromLead: (leadId: string, config: AdvisorConfig, userName: string | null, userEmail: string | null) => void;
   clearLeadReconnection: () => void;
+  /** Request a call with the given match - AdvisorPanel will start the call with match context */
+  requestCallWithMatch: (match: Match) => void;
+  clearMatchToDiscuss: () => void;
   
   goToStep: (step: WizardStep) => void;
   nextStep: () => void;
@@ -84,7 +90,8 @@ export const useAdvisorStore = create<AdvisorStore>()(
   currentInterstitial: null,
   interstitialReady: true,
   isLeadReconnection: false,
-  
+  matchToDiscuss: null,
+
   setType: (type) => set((state) => ({ config: { ...state.config, type } })),
   
   setPersonality: (personality) => set((state) => ({ 
@@ -145,7 +152,9 @@ export const useAdvisorStore = create<AdvisorStore>()(
     isLeadReconnection: true,
   }),
   clearLeadReconnection: () => set({ isLeadReconnection: false }),
-  
+  requestCallWithMatch: (match) => set({ matchToDiscuss: match }),
+  clearMatchToDiscuss: () => set({ matchToDiscuss: null }),
+
   goToStep: (step) => set({ currentStep: step }),
   
   nextStep: () => {
@@ -272,6 +281,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
     currentInterstitial: null,
     interstitialReady: true,
     isLeadReconnection: false,
+    matchToDiscuss: null,
   }),
 
   logout: () => set({

@@ -11,7 +11,7 @@ import { fetchMatches } from '../../services/matchesService';
 type CallStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
 export function AdvisorPanel() {
-  const { config, userName, userId, leadId } = useAdvisorStore();
+  const { config, userName, userId, leadId, matchToDiscuss, clearMatchToDiscuss } = useAdvisorStore();
   const [callStatus, setCallStatus] = useState<CallStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -21,6 +21,7 @@ export function AdvisorPanel() {
   const isConnectingRef = useRef<boolean>(false);
   const callStatusRef = useRef<CallStatus>(callStatus);
   callStatusRef.current = callStatus;
+  const startCallRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   // Handle unhandled errors from ElevenLabs SDK
   useEffect(() => {
@@ -232,7 +233,17 @@ export function AdvisorPanel() {
         }
       }
 
-      const systemPrompt = buildDashboardSystemPrompt(config, userName, buyerInfo, matches);
+      const matchForPrompt = useAdvisorStore.getState().matchToDiscuss;
+      if (matchForPrompt) clearMatchToDiscuss();
+
+      // Customize first message when user selected a match to discuss
+      const resolvedFirstMessage = matchForPrompt
+        ? (userName
+          ? `Hi ${userName}, I see you'd like to discuss ${matchForPrompt.companyName}. What would you like to know?`
+          : `I see you'd like to discuss ${matchForPrompt.companyName}. What would you like to know?`)
+        : firstMessage;
+
+      const systemPrompt = buildDashboardSystemPrompt(config, userName, buyerInfo, matches, matchForPrompt);
 
       // Prepare dynamic variables for ElevenLabs
       const dynamicVariables: Record<string, string> = {};
@@ -254,7 +265,9 @@ export function AdvisorPanel() {
       const overrides: any = {
         agent: {
           prompt: { prompt: systemPrompt },
-          firstMessage,
+          ...(matchForPrompt && {
+            firstMessage: resolvedFirstMessage,
+          }),
         },
       };
 
@@ -329,6 +342,14 @@ export function AdvisorPanel() {
       }
     }
   };
+  startCallRef.current = startCall;
+
+  // When user clicks a match to discuss, auto-start the call
+  useEffect(() => {
+    if (matchToDiscuss && callStatus === 'idle' && !isConnectingRef.current) {
+      startCallRef.current();
+    }
+  }, [matchToDiscuss, callStatus]);
 
   const endCall = async () => {
     try {

@@ -34,12 +34,14 @@ Tone: Confident but approachable. Think experienced dealmaker who genuinely want
 /**
  * Builds the dashboard-specific system prompt for the advisor when the user calls from the dashboard.
  * Includes agent personality/name/voice, buyer criteria from Bubble, and current matches.
+ * Optionally includes a specific match the user wants to discuss.
  */
 export function buildDashboardSystemPrompt(
   config: AdvisorConfig,
   userName: string | null,
   buyerInfo: BuyerInfo | null,
-  matches: Match[]
+  matches: Match[],
+  matchToDiscuss?: Match | null
 ): string {
   const advisorName = config.advisorName || 'Your Advisor';
   const userGreeting = userName ? `The user's name is {{user_name}}.` : '';
@@ -124,6 +126,12 @@ Your communication style should reflect these custom-configured traits.`;
     matchesSection = '\n\n(No matches listed yet. They may still be loading or the user has none.)';
   }
 
+  // When user clicked a specific match to discuss, add that context
+  let matchToDiscussSection = '';
+  if (matchToDiscuss) {
+    matchToDiscussSection = `\n\nIMPORTANT: The user has selected a specific match they want to discuss. Open the conversation by acknowledging this and inviting them to share their thoughts or questions about it:\n- ${matchToDiscuss.companyName}${matchToDiscuss.description ? `: ${matchToDiscuss.description.slice(0, 200)}${matchToDiscuss.description.length > 200 ? '...' : ''}` : ''}\n\nBe ready to discuss due diligence, valuation, fit with their criteria, and next steps for this opportunity.`;
+  }
+
   return `${DASHBOARD_BASE}
 
 ${userGreeting}
@@ -137,5 +145,6 @@ ${traitsSection ? `Traits: ${traitsSection}\n` : ''}
 ${voiceSection ? `${voiceSection}\n` : ''}
 ${profanitySection}
 ${buyerCriteriaSection}
-${matchesSection}`;
+${matchesSection}
+${matchToDiscussSection}`;
 }

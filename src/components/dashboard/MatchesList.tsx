@@ -6,7 +6,7 @@ import { Loader2, RefreshCw } from 'lucide-react';
 
 export function MatchesList() {
   // Use userId (Bubble user id set after payment) for matches API – do not use leadId
-  const { userId } = useAdvisorStore();
+  const { userId, requestCallWithMatch } = useAdvisorStore();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -128,10 +128,7 @@ export function MatchesList() {
               description={match.description}
               status={match.status}
               thumbnail={match.thumbnail}
-              onClick={() => {
-                // TODO: Navigate to match detail or open modal
-                console.log('Clicked match:', match.id);
-              }}
+              onClick={() => requestCallWithMatch(match)}
             />
           </div>
         ))}
