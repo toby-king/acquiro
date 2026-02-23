@@ -2,10 +2,6 @@
  * Service for fetching matches via the Bubble API
  */
 
-interface DisplayMatchesPayload {
-  user_id: string;
-}
-
 const API_URL = `${import.meta.env.VITE_BUBBLE_API_BASE_URL}/display_matches`;
 const API_TOKEN = import.meta.env.VITE_BUBBLE_API_TOKEN;
 
