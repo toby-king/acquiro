@@ -216,8 +216,8 @@ export function AdvisorPanel() {
 
       // Dashboard: custom first message and prompt (buyer criteria + matches)
       const firstMessage = userName
-        ? `Hi ${userName}, how can I help?`
-        : 'Hi, how can I help?';
+        ? `Nice to hear from you again ${userName}, how can I help today?`
+        : 'Nice to hear from you again, how can I help today?';
 
       let buyerInfo = null;
       let matches: Awaited<ReturnType<typeof fetchMatches>> = [];
@@ -265,9 +265,7 @@ export function AdvisorPanel() {
       const overrides: any = {
         agent: {
           prompt: { prompt: systemPrompt },
-          ...(matchForPrompt && {
-            firstMessage: resolvedFirstMessage,
-          }),
+          firstMessage: resolvedFirstMessage,
         },
       };
 
@@ -344,12 +342,25 @@ export function AdvisorPanel() {
   };
   startCallRef.current = startCall;
 
-  // When user clicks a match to discuss, auto-start the call
+  // When user clicks a match to discuss, auto-start the call (if idle) or send message (if already connected)
   useEffect(() => {
-    if (matchToDiscuss && callStatus === 'idle' && !isConnectingRef.current) {
+    if (!matchToDiscuss) return;
+
+    if (callStatus === 'idle' && !isConnectingRef.current) {
       startCallRef.current();
+    } else if (callStatus === 'connected') {
+      const desc = matchToDiscuss.description?.slice(0, 150);
+      const message = desc
+        ? `I've just selected a match I'd like to discuss - ${matchToDiscuss.companyName}. ${desc}${matchToDiscuss.description.length > 150 ? '...' : ''} Can we go through this one?`
+        : `I've just selected a match I'd like to discuss - ${matchToDiscuss.companyName}. Can we go through this one?`;
+      try {
+        conversation.sendUserMessage(message);
+      } catch (err) {
+        console.error('[AdvisorPanel] Failed to send match context to agent:', err);
+      }
+      clearMatchToDiscuss();
     }
-  }, [matchToDiscuss, callStatus]);
+  }, [matchToDiscuss, callStatus, conversation, clearMatchToDiscuss]);
 
   const endCall = async () => {
     try {

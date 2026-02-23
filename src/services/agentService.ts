@@ -68,7 +68,7 @@ export async function createAgent(
     // Add personality field based on whether preset or custom
     if (config.personality) {
       // Use personality preset ID
-      payload.personality = config.personality.id;
+      payload.personality = config.personality.name;
     } else if (config.customStats) {
       // Concatenate custom stats with their titles
       payload.personality = formatCustomStats(config.customStats);
