@@ -9,7 +9,7 @@ interface ProgressBarProps extends HTMLAttributes<HTMLDivElement> {
 
 export function ProgressBar({ steps, currentStep, completedSteps: _completedSteps, className = '' }: ProgressBarProps) {
   return (
-    <div className={`flex items-end gap-3 ${className}`}>
+    <div className={`flex items-end gap-1 sm:gap-2 md:gap-3 ${className}`}>
       {steps.map((step, index) => {
         const stepNumber = index + 1;
         const isCompleted = stepNumber < currentStep;
@@ -26,10 +26,10 @@ export function ProgressBar({ steps, currentStep, completedSteps: _completedStep
           : 'text-[var(--text-secondary)]';
         
         return (
-          <div key={step} className="flex flex-col items-center gap-1.5">
+          <div key={step} className="flex flex-col items-center gap-1 sm:gap-1.5">
             {/* Pill-shaped segment */}
             <motion.div
-              className={`h-2 w-24 rounded-full transition-all duration-500 ${segmentColor}`}
+              className={`h-2 w-12 sm:w-20 md:w-24 rounded-full transition-all duration-500 ${segmentColor}`}
               initial={false}
               animate={{
                 scale: isCurrent ? [1, 1.05, 1] : 1,
@@ -43,7 +43,7 @@ export function ProgressBar({ steps, currentStep, completedSteps: _completedStep
             
             {/* Step label */}
             <span
-              className={`text-xs transition-colors duration-300 whitespace-nowrap ${textColor}`}
+              className={`text-[10px] sm:text-xs transition-colors duration-300 whitespace-nowrap ${textColor}`}
             >
               {step}
             </span>

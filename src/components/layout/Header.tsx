@@ -37,8 +37,8 @@ export function Header() {
             acquiro<span className="text-accent">.</span>
           </Link>
           
-          {/* Progress Bar - centered and flexible */}
-          <div className="flex-1 flex justify-end min-w-0 overflow-hidden">
+          {/* Progress Bar - centered and flexible, can shrink on mobile */}
+          <div className="flex-1 flex justify-end min-w-0 overflow-hidden flex-shrink">
             <ProgressBar
               steps={STEP_LABELS}
               currentStep={progressStepIndex}

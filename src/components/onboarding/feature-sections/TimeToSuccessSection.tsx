@@ -98,10 +98,10 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
       setIsAnimating(true);
     }, 500);
 
-    // Mark as settled after animation completes (1.8s duration + 0.5s delay + buffer)
+    // Mark as settled after full animation (day, month, year all complete; year last digit ~0.7s delay + 1.8s)
     const settleTimer = setTimeout(() => {
       setIsSettled(true);
-    }, 500 + 1800 + 300); // delay + duration + small buffer
+    }, 500 + 2500); // delay + full animation + buffer
 
     return () => {
       clearTimeout(timer);
@@ -129,7 +129,7 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
       const digitColumn = [];
       for (let d = 0; d <= 9; d++) {
         digitColumn.push(
-          <div key={d} className="text-3xl font-medium text-[var(--text-primary)] tabular-nums" style={{ height: '1.2em', lineHeight: '1.2em' }}>
+          <div key={d} className="text-2xl md:text-3xl font-medium text-[var(--text-primary)] tabular-nums" style={{ height: '1.2em', lineHeight: '1.2em' }}>
             {d}
           </div>
         );
@@ -161,7 +161,8 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
           className="relative inline-block overflow-hidden"
           style={{ 
             height: '1.2em',
-            width: '0.6em',
+            width: '0.65em',
+            minWidth: '0.5em',
             verticalAlign: 'baseline'
           }}
         >
@@ -191,7 +192,7 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
   const renderMonth = () => {
     // Create column of all 12 months (repeat 3 times for smooth wrap-around in both directions)
     const monthColumn = [...monthNames, ...monthNames, ...monthNames].map((month, index) => (
-      <div key={index} className="text-3xl font-medium text-[var(--text-primary)]" style={{ height: '1.2em', lineHeight: '1.2em', whiteSpace: 'nowrap' }}>
+      <div key={index} className="text-2xl md:text-3xl font-medium text-[var(--text-primary)]" style={{ height: '1.2em', lineHeight: '1.2em', whiteSpace: 'nowrap' }}>
         {month}
       </div>
     ));
@@ -243,7 +244,7 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
       const digitColumn = [];
       for (let d = 0; d <= 9; d++) {
         digitColumn.push(
-          <div key={d} className="text-3xl font-medium text-[var(--text-primary)] tabular-nums" style={{ height: '1.2em', lineHeight: '1.2em' }}>
+          <div key={d} className="text-2xl md:text-3xl font-medium text-[var(--text-primary)] tabular-nums" style={{ height: '1.2em', lineHeight: '1.2em' }}>
             {d}
           </div>
         );
@@ -275,7 +276,8 @@ function RollingDate({ startDate, endDate }: RollingDateProps) {
           className="relative inline-block overflow-hidden"
           style={{ 
             height: '1.2em',
-            width: '0.6em',
+            width: '0.65em',
+            minWidth: '0.5em',
             verticalAlign: 'baseline'
           }}
         >
@@ -471,8 +473,64 @@ export function TimeToSuccessSection() {
             With the right advisor and the right matches, the timeline is shorter than you think.
           </p>
 
-          {/* Horizontal Timeline */}
-          <div className="mt-8 relative pb-24" style={{ minHeight: '200px', overflow: 'visible' }}>
+          {/* Vertical Timeline - Mobile only */}
+          <div className="mt-8 md:hidden w-full max-w-sm mx-auto">
+            <div className="relative">
+              {/* Left column: vertical line and progress */}
+              <div className="absolute left-0 top-0 bottom-0 w-8 flex justify-center">
+                <div className="relative w-0.5 h-full bg-[#333]" style={{ zIndex: 1 }} />
+                <div
+                  className="absolute left-1/2 top-0 w-1 bg-accent rounded-full origin-top -translate-x-1/2"
+                  style={{
+                    height: `${barProgress * 100}%`,
+                    zIndex: 2,
+                    minHeight: barProgress > 0 ? '2px' : '0',
+                  }}
+                />
+              </div>
+              {/* Rows with nodes and labels */}
+              <div className="ml-8">
+                {TIMELINE_STAGES.map((stage, index) => {
+                  const isNodeVisible = visibleNodes.has(index);
+                  const isLabelVisible = isNodeVisible;
+                  return (
+                    <motion.div
+                      key={index}
+                      className="relative flex items-start gap-3 py-3 first:pt-0"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={isLabelVisible ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <div
+                        className={`absolute -left-[26px] top-0.5 ${stage.isFinal ? 'w-6 h-6' : 'w-5 h-5'} rounded-full bg-accent flex items-center justify-center flex-shrink-0 z-20`}
+                      >
+                        {stage.isFinal && isNodeVisible && (
+                          <Check className="w-4 h-4 text-black" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 pl-2">
+                        <div className="text-sm font-medium text-[var(--text-primary)]">
+                          {stage.label}
+                        </div>
+                        <div className="text-xs text-[var(--text-secondary)] mt-0.5">
+                          {stage.isFinal ? (
+                            <span className={showCheckmark ? 'font-semibold text-accent' : ''}>
+                              {dealClosedDate || formatDate(startDate)}
+                            </span>
+                          ) : (
+                            stage.timeframe
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Horizontal Timeline - Desktop only */}
+          <div className="mt-8 relative pb-24 hidden md:block" style={{ minHeight: '200px', overflow: 'visible' }}>
             {/* Background track line - spans full width, starts at first node center, ends at last node center */}
             <div 
               className="absolute h-0.5 bg-[#333]" 

@@ -5,7 +5,7 @@ export function StepNavigation() {
   const { isFirstStep, isLastStep, canProceed, nextStep, prevStep, currentStepIndex, totalSteps, showInterstitial } = useStepNavigation();
   
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-[var(--border)]">
+    <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-4 pt-6 border-t border-[var(--border)]">
       <div>
         {!isFirstStep && (
           <Button variant="ghost" onClick={prevStep}>
@@ -13,7 +13,7 @@ export function StepNavigation() {
           </Button>
         )}
       </div>
-      
+
       <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
         {/* Hide step indicator during interstitials */}
         {!showInterstitial && (
