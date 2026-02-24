@@ -34,9 +34,9 @@ export function Header() {
         <div className="flex items-center justify-between gap-2 sm:gap-6 min-w-0">
           {/* Logo */}
           <Link to="/" className="font-display font-bold text-lg sm:text-[1.6rem] text-[var(--text-primary)] flex-shrink-0 min-h-[44px] flex items-center">
-            acquiro<span className="inline-flex flex-col items-center leading-none">
-              <span className="font-mono text-[10px] sm:text-xs uppercase tracking-wider text-[var(--text-tertiary)]">BETA</span>
-              <span className="text-accent">.</span>
+            <span className="relative inline-flex items-baseline">
+              acquiro<span className="text-accent">.</span>
+              <span className="absolute right-[-1em] bottom-[2.2em] font-mono text-[10px] sm:text-xs uppercase tracking-wider text-[var(--text-tertiary)]">BETA</span>
             </span>
           </Link>
           

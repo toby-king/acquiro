@@ -91,9 +91,9 @@ export function LoginPage() {
             className="font-display font-bold text-[1.6rem] text-text-primary hover:opacity-90 transition-opacity mb-8 inline-flex items-center"
             style={{ fontFamily: 'Petrona, Georgia, serif', fontWeight: 700 }}
           >
-            acquiro<span className="inline-flex flex-col items-center leading-none">
-              <span className="font-mono text-[10px] sm:text-xs uppercase tracking-wider text-[var(--text-tertiary)]">BETA</span>
-              <span className="text-accent">.</span>
+            <span className="relative inline-flex items-baseline">
+              acquiro<span className="text-accent">.</span>
+              <span className="absolute right-[-1em] bottom-[2.2em] font-mono text-[10px] sm:text-xs uppercase tracking-wider text-[var(--text-tertiary)]">BETA</span>
             </span>
           </Link>
           <h1

@@ -9,9 +9,9 @@ export function TermsOfService() {
             to="/"
             className="font-display font-bold text-xl text-[var(--text-primary)] hover:opacity-90 transition-opacity inline-flex items-center"
           >
-            acquiro<span className="inline-flex flex-col items-center leading-none">
-              <span className="font-mono text-[10px] sm:text-xs uppercase tracking-wider text-[var(--text-tertiary)]">BETA</span>
-              <span className="text-accent">.</span>
+            <span className="relative inline-flex items-baseline">
+              acquiro<span className="text-accent">.</span>
+              <span className="absolute right-[-1em] bottom-[2.2em] font-mono text-[10px] sm:text-xs uppercase tracking-wider text-[var(--text-tertiary)]">BETA</span>
             </span>
           </Link>
         </div>
