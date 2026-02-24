@@ -8,13 +8,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export function SettingsPage() {
   const navigate = useNavigate();
-  const { userId, isSubscribed, subscriptionId, setSubscriptionStatus } = useAdvisorStore();
+  const { userId, isSubscribed, subscriptionId, cancelAt, setSubscriptionStatus } = useAdvisorStore();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
-  const canCancel = Boolean(isSubscribed && subscriptionId);
+  const canCancel = Boolean(isSubscribed && subscriptionId && !cancelAt);
   const showUnableToManage = isSubscribed && !subscriptionId;
+  const isCancelling = Boolean(isSubscribed && cancelAt);
 
   const handleCancelClick = () => {
     setCancelError(null);
@@ -30,19 +31,22 @@ export function SettingsPage() {
     if (!subscriptionId || !userId) return;
     setCancelling(true);
     setCancelError(null);
+    let currentPeriodEnd: number;
     try {
-      await cancelSubscription(subscriptionId);
+      const data = await cancelSubscription(subscriptionId);
+      currentPeriodEnd = data.currentPeriodEnd;
     } catch (e) {
       setCancelError('Something went wrong. Please try again.');
       setCancelling(false);
       return;
     }
+    const cancelAtIso = new Date(currentPeriodEnd * 1000).toISOString();
     try {
-      await unsubscribeUser(userId);
+      await unsubscribeUser(userId, cancelAtIso);
     } catch {
       // Still update local state and redirect; Stripe/webhook can sync later
     }
-    setSubscriptionStatus(false, null);
+    setSubscriptionStatus(true, subscriptionId, cancelAtIso);
     setCancelling(false);
     setConfirmOpen(false);
     navigate('/dashboard', { replace: true });
@@ -69,26 +73,52 @@ export function SettingsPage() {
           <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Subscription</h2>
           {isSubscribed && (
             <>
-              <div className="flex items-center gap-2 mb-4">
-                <span
-                  className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0"
-                  aria-hidden
-                />
-                <span className="text-[var(--text-primary)]">Active</span>
-              </div>
-              {showUnableToManage && (
-                <p className="text-sm text-[var(--text-secondary)] mb-4">
-                  Unable to manage subscription. Please contact support.
-                </p>
-              )}
-              {canCancel && (
-                <button
-                  type="button"
-                  onClick={handleCancelClick}
-                  className="min-h-[44px] px-5 py-2.5 rounded-full font-medium bg-red-600/90 text-white hover:bg-red-600 transition-colors"
-                >
-                  Cancel Subscription
-                </button>
+              {isCancelling ? (
+                <div className="mb-4">
+                  <p className="text-[var(--text-primary)] text-sm">
+                    Your subscription is cancelling and will end on{' '}
+                    <time dateTime={cancelAt ?? undefined}>
+                      {cancelAt
+                        ? new Date(cancelAt).toLocaleDateString(undefined, {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })
+                        : ''}
+                    </time>
+                    .
+                  </p>
+                  <Link
+                    to="/offer"
+                    className="mt-3 inline-block min-h-[44px] px-5 py-2.5 rounded-full font-medium bg-accent text-black hover:bg-accent/90 transition-colors"
+                  >
+                    Resubscribe
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0"
+                      aria-hidden
+                    />
+                    <span className="text-[var(--text-primary)]">Active</span>
+                  </div>
+                  {showUnableToManage && (
+                    <p className="text-sm text-[var(--text-secondary)] mb-4">
+                      Unable to manage subscription. Please contact support.
+                    </p>
+                  )}
+                  {canCancel && (
+                    <button
+                      type="button"
+                      onClick={handleCancelClick}
+                      className="min-h-[44px] px-5 py-2.5 rounded-full font-medium bg-red-600/90 text-white hover:bg-red-600 transition-colors"
+                    >
+                      Cancel Subscription
+                    </button>
+                  )}
+                </>
               )}
             </>
           )}

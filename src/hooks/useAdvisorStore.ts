@@ -18,6 +18,8 @@ interface AdvisorStore {
   isSubscribed: boolean | null;
   /** Stripe subscription ID from get_user (for unsubscribe flows) */
   subscriptionId: string | null;
+  /** ISO date string when subscription is set to cancel at period end; null otherwise */
+  cancelAt: string | null;
   showInterstitial: boolean;
   currentInterstitial: InterstitialId | null;
   /** Set to true when interstitial animation (e.g. typing) has completed; blocks Next until ready */
@@ -41,7 +43,7 @@ interface AdvisorStore {
   setUserEmail: (email: string) => void;
   setLeadId: (leadId: string) => void;
   setUserId: (userId: string) => void;
-  setSubscriptionStatus: (isSubscribed: boolean, subscriptionId: string | null) => void;
+  setSubscriptionStatus: (isSubscribed: boolean, subscriptionId: string | null, cancelAt?: string | null) => void;
   setInterstitialReady: (ready: boolean) => void;
   /** Hydrate store from get_agent API (for lead reconnection flow) */
   hydrateFromLead: (leadId: string, config: AdvisorConfig, userName: string | null, userEmail: string | null) => void;
@@ -80,6 +82,7 @@ const sessionPartialize = (state: AdvisorStore) => ({
   userId: state.userId,
   isSubscribed: state.isSubscribed,
   subscriptionId: state.subscriptionId,
+  cancelAt: state.cancelAt,
 });
 
 export const useAdvisorStore = create<AdvisorStore>()(
@@ -95,6 +98,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
   userId: null,
   isSubscribed: null,
   subscriptionId: null,
+  cancelAt: null,
   showInterstitial: false,
   currentInterstitial: null,
   interstitialReady: true,
@@ -150,7 +154,8 @@ export const useAdvisorStore = create<AdvisorStore>()(
   setLeadId: (leadId) => set({ leadId }),
   
   setUserId: (userId) => set({ userId }),
-  setSubscriptionStatus: (isSubscribed, subscriptionId) => set({ isSubscribed, subscriptionId }),
+  setSubscriptionStatus: (isSubscribed, subscriptionId, cancelAt) =>
+    set({ isSubscribed, subscriptionId, cancelAt: cancelAt === undefined ? null : cancelAt }),
   setInterstitialReady: (ready) => set({ interstitialReady: ready }),
   hydrateFromLead: (leadId, config, userName, userEmail) => set({
     leadId,
@@ -289,6 +294,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
     userId: null,
     isSubscribed: null,
     subscriptionId: null,
+    cancelAt: null,
     showInterstitial: false,
     currentInterstitial: null,
     interstitialReady: true,
@@ -303,6 +309,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
     leadId: null,
     isSubscribed: null,
     subscriptionId: null,
+    cancelAt: null,
   }),
 }),
     {

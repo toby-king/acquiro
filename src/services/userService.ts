@@ -153,10 +153,10 @@ export async function updateUser(userId: string, subscriptionId: string): Promis
 // --- unsubscribe_user ---
 
 /**
- * Marks the user as unsubscribed in Bubble (sets is_subscribed to "no").
- * Call after Stripe cancel_at_period_end is set. Accepts { user_id }, returns 200 OK with no body.
+ * Notifies Bubble that the user has set cancel_at_period_end. Sends { user_id, cancel_at }.
+ * Bubble keeps is_subscribed as "yes" and stores cancel_at until the webhook sets is_subscribed to "no".
  */
-export async function unsubscribeUser(userId: string): Promise<void> {
+export async function unsubscribeUser(userId: string, cancelAt?: string | null): Promise<void> {
   if (!userId) {
     throw new Error('User ID is required to unsubscribe');
   }
@@ -164,7 +164,11 @@ export async function unsubscribeUser(userId: string): Promise<void> {
     throw new Error('Bubble API configuration is missing.');
   }
 
-  const body = JSON.stringify({ user_id: userId });
+  const payload: { user_id: string; cancel_at?: string } = { user_id: userId };
+  if (cancelAt != null && cancelAt.trim() !== '') {
+    payload.cancel_at = cancelAt.trim();
+  }
+  const body = JSON.stringify(payload);
   const response = await fetch(UNSUBSCRIBE_USER_URL, {
     method: 'POST',
     headers: {
@@ -193,6 +197,7 @@ interface GetUserResponse {
     email?: string;
     is_subscribed?: string;
     subscription_id?: string | null;
+    cancel_at?: string | null;
     [key: string]: unknown;
   };
 }
@@ -204,6 +209,8 @@ export interface GetUserResult {
   isSubscribed: boolean;
   /** Stripe subscription ID when present */
   subscriptionId: string | null;
+  /** ISO date string when subscription will end (cancel_at); null otherwise */
+  cancelAt: string | null;
 }
 
 /**
@@ -246,11 +253,16 @@ export async function getUser(userId: string): Promise<GetUserResult> {
   const isSubscribed =
     (rawSub != null && (String(rawSub).toLowerCase() === 'yes' || String(rawSub).toLowerCase() === 'true')) ||
     (subscriptionId != null && subscriptionId.length > 0);
+  const cancelAt =
+    res?.cancel_at != null && String(res.cancel_at).trim() !== ''
+      ? String(res.cancel_at).trim()
+      : null;
   return {
     name: (res?.name != null && String(res.name).trim() !== '') ? String(res.name) : null,
     email: (res?.email != null && String(res.email).trim() !== '') ? String(res.email) : null,
     isSubscribed,
     subscriptionId,
+    cancelAt,
   };
 }
 

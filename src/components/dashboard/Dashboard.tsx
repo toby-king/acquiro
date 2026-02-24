@@ -5,20 +5,21 @@ import { AdvisorPanel } from './AdvisorPanel';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, LogOut, Loader2, Settings } from 'lucide-react';
+import { Phone, LogOut, Loader2, Settings, X } from 'lucide-react';
 import { getUser } from '../../services/userService';
 
 type SubscriptionCheckStatus = 'loading' | 'subscribed' | 'unsubscribed';
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const { userId, userName, isSubscribed: storeSubscribed, subscriptionId: storeSubscriptionId, setUserName, setUserEmail, setSubscriptionStatus, logout } = useAdvisorStore();
+  const { userId, userName, isSubscribed: storeSubscribed, subscriptionId: storeSubscriptionId, cancelAt: storeCancelAt, setUserName, setUserEmail, setSubscriptionStatus, logout } = useAdvisorStore();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   // If store already has subscribed + subscriptionId, start as subscribed so we don't flash the overlay while refetching
   const [subscriptionCheckStatus, setSubscriptionCheckStatus] = useState<SubscriptionCheckStatus>(
     () => (userId && storeSubscribed === true && storeSubscriptionId ? 'subscribed' : 'loading')
   );
+  const [cancelBannerDismissed, setCancelBannerDismissed] = useState(false);
 
   // Subscription check + user profile: run on every dashboard mount so we re-check after returning from /offer
   useEffect(() => {
@@ -29,10 +30,10 @@ export function Dashboard() {
     }
 
     getUser(userId)
-      .then(({ name, email, isSubscribed, subscriptionId }) => {
+      .then(({ name, email, isSubscribed, subscriptionId, cancelAt }) => {
         if (name) setUserName(name);
         if (email) setUserEmail(email);
-        setSubscriptionStatus(isSubscribed, subscriptionId);
+        setSubscriptionStatus(isSubscribed, subscriptionId, cancelAt ?? null);
         setSubscriptionCheckStatus(isSubscribed ? 'subscribed' : 'unsubscribed');
       })
       .catch((err) => {
@@ -182,6 +183,39 @@ export function Dashboard() {
           </div>
         </div>
       </motion.div>
+
+      {/* Cancellation banner: subscribed but cancelling at period end */}
+      {!showSubscriptionOverlay && storeCancelAt && !cancelBannerDismissed && (
+        <div className="mx-4 sm:mx-6 mt-4 p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 text-[var(--text-primary)] flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm flex-1 min-w-0">
+            Your subscription will end on{' '}
+            <time dateTime={storeCancelAt}>
+              {new Date(storeCancelAt).toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </time>
+            . You'll lose access to matches and email alerts after this date.
+          </p>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              to="/offer"
+              className="min-h-[40px] px-4 py-2 rounded-full font-medium bg-accent text-black hover:bg-accent/90 transition-colors inline-flex items-center justify-center text-sm whitespace-nowrap"
+            >
+              Resubscribe
+            </Link>
+            <button
+              type="button"
+              onClick={() => setCancelBannerDismissed(true)}
+              className="p-2 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-amber-500/20 transition-colors"
+              aria-label="Dismiss banner"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content - 50/50 Split (only when subscribed; no API calls when unsubscribed) */}
       <div className="flex-1 flex flex-col lg:flex-row relative">

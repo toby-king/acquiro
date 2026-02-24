@@ -59,8 +59,12 @@ export async function createCheckoutSession(
 /**
  * Cancel subscription at period end (user keeps access until current period ends).
  * Calls backend which uses Stripe API with secret key.
+ * Returns currentPeriodEnd (Unix timestamp) for the frontend to store and display.
  */
-export async function cancelSubscription(subscriptionId: string): Promise<{ success: true }> {
+export async function cancelSubscription(subscriptionId: string): Promise<{
+  success: true;
+  currentPeriodEnd: number;
+}> {
   if (!subscriptionId) {
     throw new Error('Subscription ID is required');
   }

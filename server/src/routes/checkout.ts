@@ -128,11 +128,14 @@ router.post('/cancel-subscription', async (req: Request, res: Response) => {
     }
 
     const stripe = getStripe();
-    await stripe.subscriptions.update(subscriptionId.trim(), {
+    const subscription = await stripe.subscriptions.update(subscriptionId.trim(), {
       cancel_at_period_end: true,
     });
 
-    res.json({ success: true });
+    res.json({
+      success: true,
+      currentPeriodEnd: subscription.current_period_end,
+    });
   } catch (error) {
     console.error('Cancel subscription error:', error);
 

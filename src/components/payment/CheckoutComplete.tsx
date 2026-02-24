@@ -50,7 +50,7 @@ export function CheckoutComplete() {
           try {
             console.log('[CheckoutComplete] Re-subscription: updating user in Bubble for userId:', storeUserId, 'subscriptionId:', subscriptionId);
             await updateUser(storeUserId, subscriptionId);
-            setSubscriptionStatus(true, subscriptionId);
+            setSubscriptionStatus(true, subscriptionId, null);
             setStatus('success');
             setTimeout(() => setShowWhatsNext(true), 2000);
           } catch (error) {
