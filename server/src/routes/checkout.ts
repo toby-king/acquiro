@@ -96,10 +96,16 @@ router.get('/session-status', async (req: Request, res: Response) => {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     
     const leadId = (session.metadata?.userId as string) || null;
+    const subscription =
+      typeof session.subscription === 'string'
+        ? session.subscription
+        : session.subscription?.id || null;
+
     res.json({
       status: session.status,
       customerEmail: session.customer_email,
       leadId: leadId || undefined,
+      subscriptionId: subscription || undefined,
     });
     
   } catch (error) {
@@ -110,6 +116,34 @@ router.get('/session-status', async (req: Request, res: Response) => {
     }
     
     res.status(500).json({ error: 'Failed to get session status' });
+  }
+});
+
+// Cancel subscription at period end (user keeps access until period end)
+router.post('/cancel-subscription', async (req: Request, res: Response) => {
+  try {
+    const { subscriptionId } = req.body;
+    if (!subscriptionId || typeof subscriptionId !== 'string') {
+      return res.status(400).json({ error: 'subscriptionId is required' });
+    }
+
+    const stripe = getStripe();
+    const subscription = await stripe.subscriptions.update(subscriptionId.trim(), {
+      cancel_at_period_end: true,
+    });
+
+    res.json({
+      success: true,
+      currentPeriodEnd: subscription.current_period_end,
+    });
+  } catch (error) {
+    console.error('Cancel subscription error:', error);
+
+    if (error instanceof Stripe.errors.StripeError) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(500).json({ error: 'Failed to cancel subscription' });
   }
 });
 

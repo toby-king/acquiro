@@ -5,11 +5,14 @@
 const BASE_URL = import.meta.env.VITE_BUBBLE_API_BASE_URL;
 const API_TOKEN = import.meta.env.VITE_BUBBLE_API_TOKEN;
 const CREATE_USER_URL = `${BASE_URL}/create_user`;
+const UPDATE_USER_URL = `${BASE_URL}/update_user`;
 const GET_USER_URL = `${BASE_URL}/get_user`;
 const SEND_MAGIC_LINK_URL = `${BASE_URL}/send_magic_link`;
+const UNSUBSCRIBE_USER_URL = `${BASE_URL}/unsubscribe_user`;
 
 interface CreateUserPayload {
   lead_id: string;
+  subscription_id?: string;
 }
 
 if (!API_TOKEN || !BASE_URL) {
@@ -32,7 +35,7 @@ interface CreateUserResult {
  * @param leadId - The lead ID to convert to a user
  * @returns Promise that resolves to the API response containing user_id
  */
-export async function createUser(leadId: string): Promise<CreateUserResult | null> {
+export async function createUser(leadId: string, subscriptionId?: string): Promise<CreateUserResult | null> {
   try {
     if (!leadId) {
       throw new Error('Lead ID is required to create user account');
@@ -44,10 +47,11 @@ export async function createUser(leadId: string): Promise<CreateUserResult | nul
 
     const payload: CreateUserPayload = {
       lead_id: leadId,
+      ...(subscriptionId && { subscription_id: subscriptionId }),
     };
 
     const body = JSON.stringify(payload);
-    console.log('[userService] Creating user account in Bubble API for lead:', leadId);
+    console.log('[userService] Creating user account in Bubble API for lead:', leadId, 'subscriptionId:', subscriptionId);
     console.log('[userService] Request:', {
       url: CREATE_USER_URL,
       method: 'POST',
@@ -107,6 +111,79 @@ export async function createUser(leadId: string): Promise<CreateUserResult | nul
   }
 }
 
+// --- update_user (re-subscription) ---
+
+interface UpdateUserPayload {
+  user_id: string;
+  subscription_id: string;
+}
+
+/**
+ * Updates an existing user's subscription in Bubble (re-subscription flow).
+ * Calls PUT /update_user with { user_id, subscription_id }. Bubble sets is_subscribed to "yes" and stores subscription_id.
+ * @param userId - The Bubble user ID
+ * @param subscriptionId - The Stripe subscription ID
+ */
+export async function updateUser(userId: string, subscriptionId: string): Promise<void> {
+  if (!userId || !subscriptionId) {
+    throw new Error('User ID and subscription ID are required to update user');
+  }
+  if (!API_TOKEN || !BASE_URL) {
+    throw new Error('Bubble API configuration is missing.');
+  }
+
+  const payload: UpdateUserPayload = { user_id: userId, subscription_id: subscriptionId };
+  const body = JSON.stringify(payload);
+
+  const response = await fetch(UPDATE_USER_URL, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_TOKEN}`,
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    const responseText = await response.text();
+    throw new Error(`Bubble update_user failed: ${response.status} ${responseText}`);
+  }
+}
+
+// --- unsubscribe_user ---
+
+/**
+ * Notifies Bubble that the user has set cancel_at_period_end. Sends { user_id, cancel_at }.
+ * Bubble keeps is_subscribed as "yes" and stores cancel_at until the webhook sets is_subscribed to "no".
+ */
+export async function unsubscribeUser(userId: string, cancelAt?: string | null): Promise<void> {
+  if (!userId) {
+    throw new Error('User ID is required to unsubscribe');
+  }
+  if (!API_TOKEN || !BASE_URL) {
+    throw new Error('Bubble API configuration is missing.');
+  }
+
+  const payload: { user_id: string; cancel_at?: string } = { user_id: userId };
+  if (cancelAt != null && cancelAt.trim() !== '') {
+    payload.cancel_at = cancelAt.trim();
+  }
+  const body = JSON.stringify(payload);
+  const response = await fetch(UNSUBSCRIBE_USER_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_TOKEN}`,
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    const responseText = await response.text();
+    throw new Error(`Bubble unsubscribe_user failed: ${response.status} ${responseText}`);
+  }
+}
+
 // --- get_user ---
 
 interface GetUserPayload {
@@ -118,6 +195,9 @@ interface GetUserResponse {
   response?: {
     name?: string;
     email?: string;
+    is_subscribed?: string;
+    subscription_id?: string | null;
+    cancel_at?: string | null;
     [key: string]: unknown;
   };
 }
@@ -125,6 +205,12 @@ interface GetUserResponse {
 export interface GetUserResult {
   name: string | null;
   email: string | null;
+  /** true if is_subscribed === 'yes', false otherwise */
+  isSubscribed: boolean;
+  /** Stripe subscription ID when present */
+  subscriptionId: string | null;
+  /** ISO date string when subscription will end (cancel_at); null otherwise */
+  cancelAt: string | null;
 }
 
 /**
@@ -159,9 +245,24 @@ export async function getUser(userId: string): Promise<GetUserResult> {
 
   const data = JSON.parse(responseText) as GetUserResponse;
   const res = data.response;
+  const subscriptionId = (res?.subscription_id != null && String(res.subscription_id).trim() !== '')
+    ? String(res.subscription_id).trim()
+    : null;
+  // Treat as subscribed if is_subscribed is "yes"/"true", or if they have a subscription_id (Bubble may use different formats)
+  const rawSub = res?.is_subscribed;
+  const isSubscribed =
+    (rawSub != null && (String(rawSub).toLowerCase() === 'yes' || String(rawSub).toLowerCase() === 'true')) ||
+    (subscriptionId != null && subscriptionId.length > 0);
+  const cancelAt =
+    res?.cancel_at != null && String(res.cancel_at).trim() !== ''
+      ? String(res.cancel_at).trim()
+      : null;
   return {
     name: (res?.name != null && String(res.name).trim() !== '') ? String(res.name) : null,
     email: (res?.email != null && String(res.email).trim() !== '') ? String(res.email) : null,
+    isSubscribed,
+    subscriptionId,
+    cancelAt,
   };
 }
 

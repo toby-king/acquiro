@@ -3,10 +3,10 @@ import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { Dashboard } from './Dashboard';
 
 /**
- * Protects the dashboard route: only allows access when the user has a persisted
- * session (userId). Redirects to home otherwise so they are not "logged in".
+ * Protects routes that require a logged-in user (userId). Redirects to home otherwise.
+ * Renders children when provided (e.g. Settings page), otherwise renders Dashboard.
  */
-export function DashboardGuard() {
+export function DashboardGuard({ children }: { children?: React.ReactNode }) {
   const userId = useAdvisorStore((s) => s.userId);
   const location = useLocation();
 
@@ -14,5 +14,5 @@ export function DashboardGuard() {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  return <Dashboard />;
+  return <>{children ?? <Dashboard />}</>;
 }

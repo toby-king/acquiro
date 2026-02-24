@@ -63,6 +63,15 @@ npm run dev
 
 Backend will run on `http://localhost:3001`
 
+## Bubble API (create_user)
+
+After a user completes Stripe Checkout, the app calls the Bubble workflow `create_user` with:
+
+- **`lead_id`** (required) – the lead to convert to a user
+- **`subscription_id`** (optional) – the Stripe subscription ID from the checkout session
+
+On the Bubble side, add a `subscription_id` field to your User type if you want to store it. The frontend sends this whenever the checkout session returns a subscription; if it’s missing, the user is still created and a warning is logged.
+
 ## Getting Stripe Price IDs
 
 1. Go to [Stripe Dashboard](https://dashboard.stripe.com)
