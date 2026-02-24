@@ -241,10 +241,10 @@ export async function getUser(userId: string): Promise<GetUserResult> {
   const subscriptionId = (res?.subscription_id != null && String(res.subscription_id).trim() !== '')
     ? String(res.subscription_id).trim()
     : null;
-  // Treat as subscribed if is_subscribed is "yes"/"true"/true, or if they have a subscription_id (Bubble may use different formats)
+  // Treat as subscribed if is_subscribed is "yes"/"true", or if they have a subscription_id (Bubble may use different formats)
   const rawSub = res?.is_subscribed;
   const isSubscribed =
-    (rawSub != null && (String(rawSub).toLowerCase() === 'yes' || String(rawSub).toLowerCase() === 'true' || rawSub === true)) ||
+    (rawSub != null && (String(rawSub).toLowerCase() === 'yes' || String(rawSub).toLowerCase() === 'true')) ||
     (subscriptionId != null && subscriptionId.length > 0);
   return {
     name: (res?.name != null && String(res.name).trim() !== '') ? String(res.name) : null,
