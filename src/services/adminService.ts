@@ -19,11 +19,23 @@ const BACKEND_URL = getBackendUrl();
 
 // --- Bubble admin endpoints (create in Bubble to match this contract) ---
 
-/** GET /get_admin_stats → { total_users, active_subscribers, churned_users } */
+/**
+ * GET /get_admin_stats → { total_users, active_subscribers, churned_users, ... }
+ * Optional additions (Bubble endpoint can be updated to return these):
+ *   signups_over_time: [{ date: string, count: number }]
+ *   listings_by_source: [{ source: string, count: number }]
+ *   listings_over_time: [{ date: string, by_source: { [source: string]: number } }]
+ */
 export interface AdminStatsResponse {
   total_users: number;
   active_subscribers: number;
   churned_users: number;
+  /** New signups per period; Bubble to add when available */
+  signups_over_time?: { date: string; count: number }[];
+  /** Listings count per source; Bubble to add when available */
+  listings_by_source?: { source: string; count: number }[];
+  /** Listings added per period per source; Bubble to add when available */
+  listings_over_time?: { date: string; by_source: Record<string, number> }[];
 }
 
 /**
@@ -50,6 +62,9 @@ export async function getAdminStats(): Promise<AdminStatsResponse> {
     total_users: out.total_users,
     active_subscribers: out.active_subscribers,
     churned_users: out.churned_users,
+    signups_over_time: Array.isArray(out.signups_over_time) ? out.signups_over_time : undefined,
+    listings_by_source: Array.isArray(out.listings_by_source) ? out.listings_by_source : undefined,
+    listings_over_time: Array.isArray(out.listings_over_time) ? out.listings_over_time : undefined,
   };
 }
 
@@ -124,6 +139,22 @@ export async function getMrr(): Promise<MrrResponse> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Failed to fetch MRR' }));
     throw new Error(err.error || 'Failed to fetch MRR');
+  }
+  return res.json();
+}
+
+/** GET /api/admin/revenue → { current_mrr, monthly_revenue: [{ month, revenue }] } — revenue in cents */
+export interface RevenueResponse {
+  current_mrr: number;
+  monthly_revenue: { month: string; revenue: number }[];
+}
+
+/** Fetches current MRR and last 6 months revenue from our backend (Stripe invoices + subscriptions). */
+export async function getRevenue(): Promise<RevenueResponse> {
+  const res = await fetch(`${BACKEND_URL}/api/admin/revenue`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to fetch revenue' }));
+    throw new Error(err.error || 'Failed to fetch revenue');
   }
   return res.json();
 }

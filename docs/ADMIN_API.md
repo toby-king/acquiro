@@ -5,6 +5,7 @@ The admin dashboard at `/admin` expects the following.
 ## Backend (this repo)
 
 - **MRR:** `GET /api/admin/mrr` — implemented in `server/src/routes/admin.ts`; uses Stripe to compute current MRR.
+- **Revenue:** `GET /api/admin/revenue` — returns `{ current_mrr: number, monthly_revenue: [{ month: string, revenue: number }] }` (revenue in cents). Uses Stripe subscriptions for current MRR and paid invoices for last 6 months.
 - **Conversations:** `GET /api/admin/conversations` and `GET /api/admin/conversations/:id` — proxy to ElevenLabs Conversational AI API. Set **ELEVENLABS_API_KEY** in the server environment for the Agent Activity tab to work.
 
 ---
@@ -35,6 +36,12 @@ Create these in Bubble so the admin dashboard can fetch data. Create these in Bu
 - `total_users` (number): Total user count.
 - `active_subscribers` (number): Users where `is_subscribed === "yes"`.
 - `churned_users` (number): Users where `is_subscribed === "no"`.
+
+**Optional (for charts):**
+
+- `signups_over_time` (array): `[{ date: string, count: number }]` — new signups per period for the "Subscriber Growth" line chart.
+- `listings_by_source` (array): `[{ source: string, count: number }]` — counts per source for the "Listings by Source" chart (and summary cards when used with get_listings).
+- `listings_over_time` (array): `[{ date: string, by_source: { [source: string]: number } }]` — new listings per period per source for the "New Listings Over Time" line chart.
 
 If your Bubble API wraps the payload in a `response` object, that’s fine — the frontend accepts either `{ total_users, ... }` or `{ response: { total_users, ... } }`.
 

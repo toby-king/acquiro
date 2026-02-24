@@ -50,6 +50,72 @@ router.get('/mrr', async (_req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/admin/revenue
+ * Returns current_mrr (cents) and monthly_revenue for the last 6 months from paid invoices.
+ * Monthly revenue: sum of paid invoice amounts grouped by month.
+ */
+router.get('/revenue', async (_req: Request, res: Response) => {
+  try {
+    const stripe = getStripe();
+    const now = new Date();
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const startUnix = Math.floor(sixMonthsAgo.getTime() / 1000);
+
+    const monthlyRevenue: Record<string, number> = {};
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      const key = d.toLocaleString('default', { month: 'short', year: 'numeric' });
+      monthlyRevenue[key] = 0;
+    }
+
+    for await (const inv of stripe.invoices.list({
+      status: 'paid',
+      created: { gte: startUnix },
+      limit: 100,
+    })) {
+      if (inv.amount_paid != null && inv.status === 'paid' && inv.created) {
+        const d = new Date(inv.created * 1000);
+        const key = d.toLocaleString('default', { month: 'short', year: 'numeric' });
+        if (key in monthlyRevenue) {
+          monthlyRevenue[key] += inv.amount_paid;
+        }
+      }
+    }
+
+    let currentMrrCents = 0;
+    for await (const sub of stripe.subscriptions.list({ status: 'active', limit: 100 })) {
+      for (const item of sub.items.data) {
+        const plan = item.plan;
+        if (!plan?.amount) continue;
+        let monthlyCents = plan.amount;
+        if (plan.interval === 'year') monthlyCents = Math.round(plan.amount / 12);
+        else if (plan.interval === 'week') monthlyCents = Math.round((plan.amount * 52) / 12);
+        else if (plan.interval === 'day') monthlyCents = Math.round((plan.amount * 365) / 12);
+        currentMrrCents += monthlyCents * (item.quantity ?? 1);
+      }
+    }
+
+    const monthOrder: string[] = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      monthOrder.push(d.toLocaleString('default', { month: 'short', year: 'numeric' }));
+    }
+    const monthly_revenue = monthOrder.map((month) => ({
+      month,
+      revenue: monthlyRevenue[month],
+    }));
+
+    res.json({ current_mrr: currentMrrCents, monthly_revenue });
+  } catch (err) {
+    console.error('[admin] revenue error:', err);
+    if (err instanceof Stripe.errors.StripeError) {
+      return res.status(400).json({ error: err.message });
+    }
+    res.status(500).json({ error: 'Failed to fetch revenue' });
+  }
+});
+
+/**
  * GET /api/admin/conversations?cursor=&page_size=20&agent_id=
  * Proxies to ElevenLabs Conversational AI API to list conversations.
  */

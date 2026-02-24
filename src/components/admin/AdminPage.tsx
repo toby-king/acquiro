@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, FileText, Activity, LayoutDashboard, Settings, LogOut } from 'lucide-react';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
+import './chartConfig';
 import { AdminUsersTab } from './AdminUsersTab';
 import { AdminListingsTab } from './AdminListingsTab';
 import { AdminAgentActivityTab } from './AdminAgentActivityTab';
