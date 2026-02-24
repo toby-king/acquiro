@@ -189,8 +189,8 @@ function ConversationRow({
               </div>
             ) : detail ? (
               <div className="space-y-2 text-sm">
-                {detail.transcript_summary && (
-                  <p className="text-[var(--text-primary)]"><strong>Summary:</strong> {detail.transcript_summary}</p>
+                {detail.transcript_summary != null && detail.transcript_summary !== '' && (
+                  <p className="text-[var(--text-primary)]"><strong>Summary:</strong> {String(detail.transcript_summary)}</p>
                 )}
                 {detail.transcript && Array.isArray(detail.transcript) && detail.transcript.length > 0 ? (
                   <div className="mt-2">
@@ -198,7 +198,7 @@ function ConversationRow({
                     <div className="rounded bg-[var(--bg-primary)] p-3 max-h-60 overflow-y-auto space-y-1">
                       {detail.transcript.map((entry: { role?: string; message?: string }, i: number) => (
                         <p key={i} className="text-[var(--text-primary)]">
-                          <span className="text-accent font-medium">{entry.role ?? '?'}:</span> {entry.message ?? ''}
+                          <span className="text-accent font-medium">{String(entry.role ?? '?')}:</span> {String(entry.message ?? '')}
                         </p>
                       ))}
                     </div>
