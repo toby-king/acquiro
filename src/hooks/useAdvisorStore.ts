@@ -20,6 +20,8 @@ interface AdvisorStore {
   subscriptionId: string | null;
   /** ISO date string when subscription is set to cancel at period end; null otherwise */
   cancelAt: string | null;
+  /** true if user has admin access (from get_user is_admin); used for /admin guard */
+  isAdmin: boolean | null;
   showInterstitial: boolean;
   currentInterstitial: InterstitialId | null;
   /** Set to true when interstitial animation (e.g. typing) has completed; blocks Next until ready */
@@ -44,6 +46,7 @@ interface AdvisorStore {
   setLeadId: (leadId: string) => void;
   setUserId: (userId: string) => void;
   setSubscriptionStatus: (isSubscribed: boolean, subscriptionId: string | null, cancelAt?: string | null) => void;
+  setAdmin: (isAdmin: boolean) => void;
   setInterstitialReady: (ready: boolean) => void;
   /** Hydrate store from get_agent API (for lead reconnection flow) */
   hydrateFromLead: (leadId: string, config: AdvisorConfig, userName: string | null, userEmail: string | null) => void;
@@ -83,6 +86,7 @@ const sessionPartialize = (state: AdvisorStore) => ({
   isSubscribed: state.isSubscribed,
   subscriptionId: state.subscriptionId,
   cancelAt: state.cancelAt,
+  isAdmin: state.isAdmin,
 });
 
 export const useAdvisorStore = create<AdvisorStore>()(
@@ -99,6 +103,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
   isSubscribed: null,
   subscriptionId: null,
   cancelAt: null,
+  isAdmin: null,
   showInterstitial: false,
   currentInterstitial: null,
   interstitialReady: true,
@@ -156,6 +161,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
   setUserId: (userId) => set({ userId }),
   setSubscriptionStatus: (isSubscribed, subscriptionId, cancelAt) =>
     set({ isSubscribed, subscriptionId, cancelAt: cancelAt === undefined ? null : cancelAt }),
+  setAdmin: (isAdmin) => set({ isAdmin }),
   setInterstitialReady: (ready) => set({ interstitialReady: ready }),
   hydrateFromLead: (leadId, config, userName, userEmail) => set({
     leadId,
@@ -295,6 +301,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
     isSubscribed: null,
     subscriptionId: null,
     cancelAt: null,
+    isAdmin: null,
     showInterstitial: false,
     currentInterstitial: null,
     interstitialReady: true,
@@ -310,6 +317,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
     isSubscribed: null,
     subscriptionId: null,
     cancelAt: null,
+    isAdmin: null,
   }),
 }),
     {
