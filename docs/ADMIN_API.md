@@ -49,7 +49,7 @@ If your Bubble API wraps the payload in a `response` object, that’s fine — t
 
 ## 2. Listings (Listings tab)
 
-**Endpoint:** `GET /admin/get_listings`
+**Endpoint:** `GET /get_listings`
 
 **Query parameters:**
 
@@ -60,37 +60,25 @@ If your Bubble API wraps the payload in a `response` object, that’s fine — t
 | `page`     | number | Optional. 1-based page number for pagination.  |
 | `page_size`| number | Optional. Number of results per page (e.g. 10). |
 
-**Response shape:**
+**Actual Bubble response shape** (frontend maps from this):
 
-```json
-{
-  "listings": [
-    {
-      "id": "listing_abc",
-      "title": "Business name or title",
-      "source": "BusinessesForSale",
-      "location": "London, UK",
-      "asking_price": 250000,
-      "date_added": "2025-01-15T10:00:00.000Z"
-    }
-  ],
-  "total_count": 42,
-  "by_source": [
-    { "source": "BusinessesForSale", "count": 20 },
-    { "source": "Rightbiz", "count": 12 }
-  ]
-}
-```
+Bubble returns `{ "status": "success", "response": { "listing": [ ... ] } }`. Each item in `response.listing` uses:
 
-- `listings` (array): Page of listing objects.
-  - `id` (string): Unique ID.
-  - `title` (string): Listing title/name.
-  - `source` (string): Source name.
-  - `location` (string | null): Location text.
-  - `asking_price` (number | null): Asking price.
-  - `date_added` (string): ISO date string.
-- `total_count` (number): Total number of listings (for pagination).
-- `by_source` (array, optional): Counts per source for summary cards. Each item: `{ source: string, count: number }`.
+- `_id` (string): Unique ID.
+- `business_name` (string): Listing title/name.
+- `source` (string): Source identifier (e.g. `"1767631489636x813332504534790800"`).
+- `location` (string): May include newlines/whitespace; frontend trims.
+- `asking_price` (number): Asking price (can be 0).
+- `Created Date` (number): Unix timestamp in milliseconds.
+- Other fields (e.g. `sector`, `region`, `description`, `url`, `image`, `turnover`, `net_profit`, `Modified Date`, etc.) are preserved and shown in the admin row detail.
+
+Optional in response: `response.total_count` (number), `response.by_source` (array of `{ source, count }`). If omitted, the frontend uses `listing.length` for total and derives `by_source` from the current page.
+
+**Normalized shape used by the admin UI:**
+
+- `listings` (array): Each item has `id` (from `_id`), `title` (from `business_name`), `source`, `location` (trimmed), `asking_price`, `date_added` (ISO string from `Created Date`), plus all raw fields for the expandable row.
+- `total_count` (number): From response or `listings.length`.
+- `by_source` (array): From response or computed from current page.
 
 ---
 
@@ -114,6 +102,6 @@ The frontend treats the user as admin only when `is_admin` is truthy (boolean `t
 |-----------------------|--------|----------------------------|
 | `/get_user`           | POST   | Add `is_admin` to response |
 | `/get_admin_stats`    | GET    | User/subscriber counts     |
-| `/admin/get_listings` | GET    | Listings + filters + pagination |
+| `/get_listings`       | GET    | Listings + filters + pagination |
 
 All admin endpoints must be protected by the same auth as your other Bubble workflows (e.g. Bearer token). The frontend sends `Authorization: Bearer <VITE_BUBBLE_API_TOKEN>`.

@@ -68,7 +68,7 @@ export async function getAdminStats(): Promise<AdminStatsResponse> {
   };
 }
 
-/** Single listing row from get_listings */
+/** Single listing row (normalized for admin UI) */
 export interface AdminListing {
   id: string;
   title: string;
@@ -79,11 +79,46 @@ export interface AdminListing {
   [key: string]: unknown;
 }
 
-/** GET /admin/get_listings?search=X&source=Y&page=1 → { listings, total_count, by_source? } */
+/** Raw listing item from Bubble GET /get_listings — response.response.listing[] */
+interface BubbleListingRaw {
+  _id?: string;
+  business_name?: string;
+  source?: string;
+  location?: string;
+  asking_price?: number;
+  'Created Date'?: number;
+  [key: string]: unknown;
+}
+
+function mapBubbleListingToAdmin(raw: BubbleListingRaw): AdminListing {
+  const id = raw._id != null ? String(raw._id) : '';
+  const title = raw.business_name != null ? String(raw.business_name).trim() : '';
+  const source = raw.source != null ? String(raw.source) : '';
+  const location =
+    raw.location != null && String(raw.location).trim() !== '' ? String(raw.location).trim() : null;
+  const asking_price =
+    raw.asking_price != null && typeof raw.asking_price === 'number' ? raw.asking_price : null;
+  const createdMs = raw['Created Date'];
+  const date_added =
+    createdMs != null && typeof createdMs === 'number'
+      ? new Date(createdMs).toISOString()
+      : new Date(0).toISOString();
+  return {
+    id,
+    title,
+    source,
+    location,
+    asking_price,
+    date_added,
+    ...raw,
+  };
+}
+
+/** GET /get_listings → { status, response: { listing: [...] } }. Listing array may include total_count / by_source if Bubble adds them. */
 export interface AdminListingsResponse {
   listings: AdminListing[];
   total_count: number;
-  /** Optional: counts per source for summary cards */
+  /** Counts per source for summary cards; derived from listing array when not in response */
   by_source?: { source: string; count: number }[];
 }
 
@@ -95,8 +130,8 @@ export interface GetAdminListingsParams {
 }
 
 /**
- * Fetches paginated listings from Bubble.
- * Bubble endpoint: GET /admin/get_listings?search=X&source=Y&page=1 — must return listings[], total_count, optionally by_source.
+ * Fetches listings from Bubble GET /get_listings.
+ * Bubble returns { status, response: { listing: [...] } } with each item having _id, business_name, source, location, asking_price, Created Date, etc.
  */
 export async function getAdminListings(params: GetAdminListingsParams = {}): Promise<AdminListingsResponse> {
   if (!API_TOKEN || !BASE_URL) throw new Error('Bubble API configuration is missing.');
@@ -105,24 +140,47 @@ export async function getAdminListings(params: GetAdminListingsParams = {}): Pro
   if (params.source != null && params.source.trim() !== '') q.set('source', params.source.trim());
   if (params.page != null && params.page > 0) q.set('page', String(params.page));
   if (params.page_size != null && params.page_size > 0) q.set('page_size', String(params.page_size));
-  const url = `${BASE_URL.replace(/\/$/, '')}/admin/get_listings?${q.toString()}`;
+  const url = `${BASE_URL.replace(/\/$/, '')}/get_listings?${q.toString()}`;
   const res = await fetch(url, {
     method: 'GET',
     headers: { Authorization: `Bearer ${API_TOKEN}` },
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Admin get_listings failed: ${res.status} ${text}`);
+    throw new Error(`Bubble get_listings failed: ${res.status} ${text}`);
   }
-  const data = (await res.json()) as { response?: AdminListingsResponse } & AdminListingsResponse;
-  const out = data.response ?? data;
-  if (!Array.isArray(out.listings) || typeof out.total_count !== 'number') {
-    throw new Error('Invalid admin listings response shape');
-  }
+  const data = (await res.json()) as {
+    status?: string;
+    response?: {
+      listing?: BubbleListingRaw[];
+      listings?: BubbleListingRaw[];
+      total_count?: number;
+      by_source?: { source: string; count: number }[];
+    };
+  };
+  const resp = data.response;
+  const rawList = resp?.listing ?? resp?.listings ?? [];
+  const rawArray = Array.isArray(rawList) ? rawList : [];
+  const listings = rawArray.map(mapBubbleListingToAdmin);
+  const total_count =
+    typeof resp?.total_count === 'number' ? resp.total_count : listings.length;
+  const by_source =
+    Array.isArray(resp?.by_source) && resp.by_source.length > 0
+      ? resp.by_source
+      : (() => {
+          const counts: Record<string, number> = {};
+          listings.forEach((l) => {
+            const s = l.source || 'Unknown';
+            counts[s] = (counts[s] ?? 0) + 1;
+          });
+          return Object.entries(counts)
+            .map(([source, count]) => ({ source, count }))
+            .sort((a, b) => b.count - a.count);
+        })();
   return {
-    listings: out.listings,
-    total_count: out.total_count,
-    by_source: out.by_source,
+    listings,
+    total_count,
+    by_source,
   };
 }
 
