@@ -198,6 +198,8 @@ interface GetUserResponse {
     is_subscribed?: string;
     subscription_id?: string | null;
     cancel_at?: string | null;
+    /** Set by Bubble for admin users; required for /admin access */
+    is_admin?: string | boolean;
     [key: string]: unknown;
   };
 }
@@ -211,6 +213,8 @@ export interface GetUserResult {
   subscriptionId: string | null;
   /** ISO date string when subscription will end (cancel_at); null otherwise */
   cancelAt: string | null;
+  /** true if user has admin access (is_admin from Bubble) */
+  isAdmin: boolean;
 }
 
 /**
@@ -257,12 +261,17 @@ export async function getUser(userId: string): Promise<GetUserResult> {
     res?.cancel_at != null && String(res.cancel_at).trim() !== ''
       ? String(res.cancel_at).trim()
       : null;
+  const rawAdmin = res?.is_admin;
+  const isAdmin =
+    rawAdmin === true ||
+    (typeof rawAdmin === 'string' && (rawAdmin.toLowerCase() === 'true' || rawAdmin.toLowerCase() === 'yes'));
   return {
     name: (res?.name != null && String(res.name).trim() !== '') ? String(res.name) : null,
     email: (res?.email != null && String(res.email).trim() !== '') ? String(res.email) : null,
     isSubscribed,
     subscriptionId,
     cancelAt,
+    isAdmin: !!isAdmin,
   };
 }
 

@@ -5,14 +5,14 @@ import { AdvisorPanel } from './AdvisorPanel';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, LogOut, Loader2, Settings, X } from 'lucide-react';
+import { Phone, LogOut, Loader2, Settings, X, Shield } from 'lucide-react';
 import { getUser } from '../../services/userService';
 
 type SubscriptionCheckStatus = 'loading' | 'subscribed' | 'unsubscribed';
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const { userId, userName, isSubscribed: storeSubscribed, subscriptionId: storeSubscriptionId, cancelAt: storeCancelAt, setUserName, setUserEmail, setSubscriptionStatus, logout } = useAdvisorStore();
+  const { userId, userName, isSubscribed: storeSubscribed, subscriptionId: storeSubscriptionId, cancelAt: storeCancelAt, isAdmin, setUserName, setUserEmail, setSubscriptionStatus, setAdmin, logout } = useAdvisorStore();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   // If store already has subscribed + subscriptionId, start as subscribed so we don't flash the overlay while refetching
@@ -30,10 +30,11 @@ export function Dashboard() {
     }
 
     getUser(userId)
-      .then(({ name, email, isSubscribed, subscriptionId, cancelAt }) => {
+      .then(({ name, email, isSubscribed, subscriptionId, cancelAt, isAdmin: userIsAdmin }) => {
         if (name) setUserName(name);
         if (email) setUserEmail(email);
         setSubscriptionStatus(isSubscribed, subscriptionId, cancelAt ?? null);
+        setAdmin(userIsAdmin);
         setSubscriptionCheckStatus(isSubscribed ? 'subscribed' : 'unsubscribed');
       })
       .catch((err) => {
@@ -45,7 +46,7 @@ export function Dashboard() {
           setSubscriptionCheckStatus('unsubscribed');
         }
       });
-  }, [userId, setUserName, setUserEmail, setSubscriptionStatus, storeSubscribed, storeSubscriptionId]);
+  }, [userId, setUserName, setUserEmail, setSubscriptionStatus, setAdmin, storeSubscribed, storeSubscriptionId]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -130,9 +131,19 @@ export function Dashboard() {
           </h1>
         </div>
 
-        {/* Right side - Theme and Profile */}
+        {/* Right side - Theme, Admin (if admin), Profile */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
+
+          {isAdmin === true && (
+            <Link
+              to="/admin"
+              className="min-h-[44px] min-w-[44px] rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:text-accent hover:border-accent/50 hover:bg-[var(--bg-secondary)] transition-colors duration-200"
+              aria-label="Admin dashboard"
+            >
+              <Shield size={20} />
+            </Link>
+          )}
 
           {/* User Profile - Avatar with dropdown */}
           <div className="relative" ref={profileRef}>
