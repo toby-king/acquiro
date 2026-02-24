@@ -32,6 +32,8 @@ export interface SessionStatusResponse {
   customerEmail?: string;
   /** Lead ID stored in checkout session metadata (survives redirect from Stripe) */
   leadId?: string;
+  /** Stripe subscription ID created by this checkout session */
+  subscriptionId?: string;
 }
 
 /**

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { getSessionStatus } from '../../services/checkoutService';
-import { createUser } from '../../services/userService';
+import { createUser, updateUser } from '../../services/userService';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { WhatsNextScreen } from '../onboarding/WhatsNextScreen';
 import { motion } from 'framer-motion';
@@ -10,9 +10,10 @@ import { motion } from 'framer-motion';
 export function CheckoutComplete() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { leadId: storeLeadId, setUserId, setLeadId, userName, config } = useAdvisorStore();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const { userId: storeUserId, leadId: storeLeadId, setUserId, setLeadId, setSubscriptionStatus, userName, config } = useAdvisorStore();
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'update_error'>('loading');
   const [showWhatsNext, setShowWhatsNext] = useState(false);
+  const [retryTrigger, setRetryTrigger] = useState(0);
   /** Guard: only run create-user flow once per session (avoids duplicate calls when setLeadId triggers re-render) */
   const processedSessionIdRef = useRef<string | null>(null);
 
@@ -32,24 +33,43 @@ export function CheckoutComplete() {
           return;
         }
 
-        // Only run create-user once per session (effect may re-run when we setLeadId)
+        // Only run post-checkout flow once per session (effect may re-run when we setLeadId)
         if (processedSessionIdRef.current === sessionId) {
           setStatus('success');
           return;
         }
         processedSessionIdRef.current = sessionId;
 
-        // Use leadId from store (same tab) or from session metadata (returned from Stripe redirect)
+        const subscriptionId = data.subscriptionId ?? null;
+        if (!subscriptionId) {
+          console.warn('[CheckoutComplete] ⚠️ No subscriptionId returned from session-status for session:', sessionId);
+        }
+
+        // Re-subscription: existing user (userId in store) → update_user
+        if (storeUserId && subscriptionId) {
+          try {
+            console.log('[CheckoutComplete] Re-subscription: updating user in Bubble for userId:', storeUserId, 'subscriptionId:', subscriptionId);
+            await updateUser(storeUserId, subscriptionId);
+            setSubscriptionStatus(true, subscriptionId);
+            setStatus('success');
+            setTimeout(() => setShowWhatsNext(true), 2000);
+          } catch (error) {
+            console.error('[CheckoutComplete] ❌ Error updating user subscription in Bubble API:', error);
+            setStatus('update_error');
+          }
+          return;
+        }
+
+        // New user: create_user flow (unchanged)
         const leadId = storeLeadId ?? data.leadId ?? null;
         if (leadId && !storeLeadId) {
           setLeadId(leadId);
         }
 
-        // Create user account in Bubble API after successful payment (once per session)
         if (leadId) {
           try {
-            console.log('[CheckoutComplete] Payment successful, creating user account in Bubble API for lead:', leadId);
-            const userResult = await createUser(leadId);
+            console.log('[CheckoutComplete] Payment successful, creating user account in Bubble API for lead:', leadId, 'subscriptionId:', subscriptionId);
+            const userResult = await createUser(leadId, subscriptionId || undefined);
             
             if (userResult?.user_id) {
               setUserId(userResult.user_id);
@@ -74,7 +94,7 @@ export function CheckoutComplete() {
         console.error('[CheckoutComplete] Error verifying payment session:', error);
         setStatus('error');
       });
-  }, [searchParams, storeLeadId, setUserId, setLeadId]);
+  }, [searchParams, storeUserId, storeLeadId, setUserId, setLeadId, setSubscriptionStatus, retryTrigger]);
 
   // Show "What's Next" screen after successful payment
   if (showWhatsNext && status === 'success') {
@@ -120,6 +140,34 @@ export function CheckoutComplete() {
             className="px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-colors"
           >
             Go Back
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (status === 'update_error') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)] px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-md"
+        >
+          <XCircle className="w-16 h-16 text-red-500 mx-auto mb-6" />
+          <h1 className="text-xl md:text-2xl font-bold text-[var(--text-primary)] mb-2">Something went wrong</h1>
+          <p className="text-[var(--text-secondary)] mb-8">
+            We couldn't update your subscription. Please try again.
+          </p>
+          <button
+            onClick={() => {
+              processedSessionIdRef.current = null;
+              setRetryTrigger((t) => t + 1);
+              setStatus('loading');
+            }}
+            className="px-6 py-3 bg-accent text-black font-medium rounded-full hover:bg-accent/90 transition-colors"
+          >
+            Try again
           </button>
         </motion.div>
       </div>

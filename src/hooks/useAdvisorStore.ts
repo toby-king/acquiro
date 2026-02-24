@@ -14,6 +14,10 @@ interface AdvisorStore {
   userEmail: string | null;
   leadId: string | null;
   userId: string | null;
+  /** true = subscribed, false = not subscribed, null = not yet checked */
+  isSubscribed: boolean | null;
+  /** Stripe subscription ID from get_user (for unsubscribe flows) */
+  subscriptionId: string | null;
   showInterstitial: boolean;
   currentInterstitial: InterstitialId | null;
   /** Set to true when interstitial animation (e.g. typing) has completed; blocks Next until ready */
@@ -37,6 +41,7 @@ interface AdvisorStore {
   setUserEmail: (email: string) => void;
   setLeadId: (leadId: string) => void;
   setUserId: (userId: string) => void;
+  setSubscriptionStatus: (isSubscribed: boolean, subscriptionId: string | null) => void;
   setInterstitialReady: (ready: boolean) => void;
   /** Hydrate store from get_agent API (for lead reconnection flow) */
   hydrateFromLead: (leadId: string, config: AdvisorConfig, userName: string | null, userEmail: string | null) => void;
@@ -73,6 +78,8 @@ const initialConfig: AdvisorConfig = {
 
 const sessionPartialize = (state: AdvisorStore) => ({
   userId: state.userId,
+  isSubscribed: state.isSubscribed,
+  subscriptionId: state.subscriptionId,
 });
 
 export const useAdvisorStore = create<AdvisorStore>()(
@@ -86,6 +93,8 @@ export const useAdvisorStore = create<AdvisorStore>()(
   userEmail: null,
   leadId: null,
   userId: null,
+  isSubscribed: null,
+  subscriptionId: null,
   showInterstitial: false,
   currentInterstitial: null,
   interstitialReady: true,
@@ -141,6 +150,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
   setLeadId: (leadId) => set({ leadId }),
   
   setUserId: (userId) => set({ userId }),
+  setSubscriptionStatus: (isSubscribed, subscriptionId) => set({ isSubscribed, subscriptionId }),
   setInterstitialReady: (ready) => set({ interstitialReady: ready }),
   hydrateFromLead: (leadId, config, userName, userEmail) => set({
     leadId,
@@ -277,6 +287,8 @@ export const useAdvisorStore = create<AdvisorStore>()(
     userEmail: null,
     leadId: null,
     userId: null,
+    isSubscribed: null,
+    subscriptionId: null,
     showInterstitial: false,
     currentInterstitial: null,
     interstitialReady: true,
@@ -289,6 +301,8 @@ export const useAdvisorStore = create<AdvisorStore>()(
     userName: null,
     userEmail: null,
     leadId: null,
+    isSubscribed: null,
+    subscriptionId: null,
   }),
 }),
     {

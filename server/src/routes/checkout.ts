@@ -96,10 +96,16 @@ router.get('/session-status', async (req: Request, res: Response) => {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     
     const leadId = (session.metadata?.userId as string) || null;
+    const subscription =
+      typeof session.subscription === 'string'
+        ? session.subscription
+        : session.subscription?.id || null;
+
     res.json({
       status: session.status,
       customerEmail: session.customer_email,
       leadId: leadId || undefined,
+      subscriptionId: subscription || undefined,
     });
     
   } catch (error) {

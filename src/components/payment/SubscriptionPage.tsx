@@ -27,7 +27,7 @@ interface SubscriptionPageProps {
 }
 
 export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, onBack }: SubscriptionPageProps) {
-  const { leadId, userEmail, config } = useAdvisorStore();
+  const { leadId, userId: storeUserId, userEmail, config } = useAdvisorStore();
   const navigate = useNavigate();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [showCheckout, setShowCheckout] = useState(false);
@@ -62,13 +62,13 @@ export function SubscriptionPage({ advisorName, onSelectPlan, onTalkToAdvisor, o
     if (clientSecretRef.current) return clientSecretRef.current;
     const params: CreateCheckoutSessionParams = {
       billingPeriod,
-      userId: leadId || undefined,
+      userId: leadId || storeUserId || undefined,
       userEmail: userEmail || undefined,
     };
     const { clientSecret } = await createCheckoutSession(params);
     clientSecretRef.current = clientSecret;
     return clientSecret;
-  }, [billingPeriod, leadId, userEmail]);
+  }, [billingPeriod, leadId, storeUserId, userEmail]);
 
   const handleBack = () => {
     if (onBack) {
