@@ -57,6 +57,27 @@ export async function createCheckoutSession(
 }
 
 /**
+ * Cancel subscription at period end (user keeps access until current period ends).
+ * Calls backend which uses Stripe API with secret key.
+ */
+export async function cancelSubscription(subscriptionId: string): Promise<{ success: true }> {
+  if (!subscriptionId) {
+    throw new Error('Subscription ID is required');
+  }
+  const response = await fetch(`${API_URL}/api/checkout/cancel-subscription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subscriptionId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to cancel subscription' }));
+    throw new Error(error.error || 'Failed to cancel subscription');
+  }
+  return response.json();
+}
+
+/**
  * Get checkout session status
  */
 export async function getSessionStatus(sessionId: string): Promise<SessionStatusResponse> {

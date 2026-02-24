@@ -119,4 +119,29 @@ router.get('/session-status', async (req: Request, res: Response) => {
   }
 });
 
+// Cancel subscription at period end (user keeps access until period end)
+router.post('/cancel-subscription', async (req: Request, res: Response) => {
+  try {
+    const { subscriptionId } = req.body;
+    if (!subscriptionId || typeof subscriptionId !== 'string') {
+      return res.status(400).json({ error: 'subscriptionId is required' });
+    }
+
+    const stripe = getStripe();
+    await stripe.subscriptions.update(subscriptionId.trim(), {
+      cancel_at_period_end: true,
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Cancel subscription error:', error);
+
+    if (error instanceof Stripe.errors.StripeError) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(500).json({ error: 'Failed to cancel subscription' });
+  }
+});
+
 export default router;

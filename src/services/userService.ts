@@ -8,6 +8,7 @@ const CREATE_USER_URL = `${BASE_URL}/create_user`;
 const UPDATE_USER_URL = `${BASE_URL}/update_user`;
 const GET_USER_URL = `${BASE_URL}/get_user`;
 const SEND_MAGIC_LINK_URL = `${BASE_URL}/send_magic_link`;
+const UNSUBSCRIBE_USER_URL = `${BASE_URL}/unsubscribe_user`;
 
 interface CreateUserPayload {
   lead_id: string;
@@ -149,6 +150,36 @@ export async function updateUser(userId: string, subscriptionId: string): Promis
   }
 }
 
+// --- unsubscribe_user ---
+
+/**
+ * Marks the user as unsubscribed in Bubble (sets is_subscribed to "no").
+ * Call after Stripe cancel_at_period_end is set. Accepts { user_id }, returns 200 OK with no body.
+ */
+export async function unsubscribeUser(userId: string): Promise<void> {
+  if (!userId) {
+    throw new Error('User ID is required to unsubscribe');
+  }
+  if (!API_TOKEN || !BASE_URL) {
+    throw new Error('Bubble API configuration is missing.');
+  }
+
+  const body = JSON.stringify({ user_id: userId });
+  const response = await fetch(UNSUBSCRIBE_USER_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_TOKEN}`,
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    const responseText = await response.text();
+    throw new Error(`Bubble unsubscribe_user failed: ${response.status} ${responseText}`);
+  }
+}
+
 // --- get_user ---
 
 interface GetUserPayload {
@@ -207,10 +238,14 @@ export async function getUser(userId: string): Promise<GetUserResult> {
 
   const data = JSON.parse(responseText) as GetUserResponse;
   const res = data.response;
-  const isSubscribed = (res?.is_subscribed != null && String(res.is_subscribed).toLowerCase() === 'yes');
   const subscriptionId = (res?.subscription_id != null && String(res.subscription_id).trim() !== '')
     ? String(res.subscription_id).trim()
     : null;
+  // Treat as subscribed if is_subscribed is "yes"/"true"/true, or if they have a subscription_id (Bubble may use different formats)
+  const rawSub = res?.is_subscribed;
+  const isSubscribed =
+    (rawSub != null && (String(rawSub).toLowerCase() === 'yes' || String(rawSub).toLowerCase() === 'true' || rawSub === true)) ||
+    (subscriptionId != null && subscriptionId.length > 0);
   return {
     name: (res?.name != null && String(res.name).trim() !== '') ? String(res.name) : null,
     email: (res?.email != null && String(res.email).trim() !== '') ? String(res.email) : null,

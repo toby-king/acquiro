@@ -5,22 +5,28 @@ import { AdvisorPanel } from './AdvisorPanel';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, LogOut, Loader2 } from 'lucide-react';
+import { Phone, LogOut, Loader2, Settings } from 'lucide-react';
 import { getUser } from '../../services/userService';
 
 type SubscriptionCheckStatus = 'loading' | 'subscribed' | 'unsubscribed';
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const { userId, userName, setUserName, setUserEmail, setSubscriptionStatus, logout } = useAdvisorStore();
+  const { userId, userName, isSubscribed: storeSubscribed, subscriptionId: storeSubscriptionId, setUserName, setUserEmail, setSubscriptionStatus, logout } = useAdvisorStore();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
-  const [subscriptionCheckStatus, setSubscriptionCheckStatus] = useState<SubscriptionCheckStatus>('loading');
+  // If store already has subscribed + subscriptionId, start as subscribed so we don't flash the overlay while refetching
+  const [subscriptionCheckStatus, setSubscriptionCheckStatus] = useState<SubscriptionCheckStatus>(
+    () => (userId && storeSubscribed === true && storeSubscriptionId ? 'subscribed' : 'loading')
+  );
 
   // Subscription check + user profile: run on every dashboard mount so we re-check after returning from /offer
   useEffect(() => {
     if (!userId) return;
-    setSubscriptionCheckStatus('loading');
+    // Only show loading if we don't have a clear subscribed state in store
+    if (!(storeSubscribed === true && storeSubscriptionId)) {
+      setSubscriptionCheckStatus('loading');
+    }
 
     getUser(userId)
       .then(({ name, email, isSubscribed, subscriptionId }) => {
@@ -31,9 +37,14 @@ export function Dashboard() {
       })
       .catch((err) => {
         console.error('[Dashboard] Failed to fetch user / subscription status:', err);
-        setSubscriptionCheckStatus('unsubscribed');
+        // Don't treat API failure as unsubscribed if we have a valid subscription in store (avoids locking user out)
+        if (storeSubscribed === true && storeSubscriptionId) {
+          setSubscriptionCheckStatus('subscribed');
+        } else {
+          setSubscriptionCheckStatus('unsubscribed');
+        }
       });
-  }, [userId, setUserName, setUserEmail, setSubscriptionStatus]);
+  }, [userId, setUserName, setUserEmail, setSubscriptionStatus, storeSubscribed, storeSubscriptionId]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -146,6 +157,14 @@ export function Dashboard() {
                   transition={{ duration: 0.15 }}
                   className="absolute right-0 top-full mt-2 py-1 min-w-[160px] rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] shadow-lg z-50"
                 >
+                  <Link
+                    to="/settings"
+                    onClick={() => setProfileOpen(false)}
+                    className="w-full px-4 py-2.5 flex items-center gap-2 text-left text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors text-sm"
+                  >
+                    <Settings size={16} />
+                    Settings
+                  </Link>
                   <button
                     onClick={() => {
                       setProfileOpen(false);
