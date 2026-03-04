@@ -1,15 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, FileText, Activity, LayoutDashboard, Settings, LogOut } from 'lucide-react';
+import { Users, FileText, Activity, Globe, LayoutDashboard, Settings, LogOut } from 'lucide-react';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
 import './chartConfig';
 import { AdminUsersTab } from './AdminUsersTab';
 import { AdminListingsTab } from './AdminListingsTab';
 import { AdminAgentActivityTab } from './AdminAgentActivityTab';
+import { AdminSourcesTab } from './AdminSourcesTab';
 
-type AdminTab = 'users' | 'listings' | 'activity';
+type AdminTab = 'users' | 'listings' | 'activity' | 'sources';
 
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
@@ -111,6 +112,7 @@ export function AdminPage() {
               { id: 'users' as const, label: 'Users', icon: Users },
               { id: 'listings' as const, label: 'Listings', icon: FileText },
               { id: 'activity' as const, label: 'Agent Activity', icon: Activity },
+              { id: 'sources' as const, label: 'Sources', icon: Globe },
             ] as const
           ).map(({ id, label, icon: Icon }) => (
             <button
@@ -134,6 +136,7 @@ export function AdminPage() {
         {activeTab === 'users' && <AdminUsersTab />}
         {activeTab === 'listings' && <AdminListingsTab />}
         {activeTab === 'activity' && <AdminAgentActivityTab />}
+        {activeTab === 'sources' && <AdminSourcesTab />}
       </main>
     </div>
   );

@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 
 /*
- * AdvisorOrb v2 — Gaseous gradient orb.
+ * AdvisorOrb v4 — Gaseous gradient orb + waveform ring.
  * Drop-in replacement: same prop interface as original.
  *
  * Derives internal state from existing props:
- *   isSpeaking + isInCall → "speaking"
- *   isInCall + !isSpeaking → "listening"
- *   isActivated (no call)  → "idle" with higher intensity
+ *   isSpeaking + isInCall → "speaking"  (energetic waveform)
+ *   isInCall + !isSpeaking → "listening" (gentle waveform)
+ *   isActivated (no call)  → "idle" (no waveform)
  *   absorb event           → "absorb" (brief pulse)
+ *
+ * Waveform renders as a solid coloured ring outside the orb,
+ * pulsing in/out without spinning. Orb stays perfectly round.
  *
  * Listens for 'orb-absorb' CustomEvent dispatched by useAbsorption.
  */
@@ -38,15 +41,35 @@ interface StateConfig {
   scale: number;
   glow: number;
   pulseMs: number;
+  waveAmp: number;
+  waveFreqs: number[];
+  waveWeights: number[];
 }
 
 const STATE_CONFIGS: Record<OrbState, StateConfig> = {
-  idle:      { speed: 1,   scale: 1,    glow: 0.3,  pulseMs: 4000 },
-  listening: { speed: 1.6, scale: 1.04, glow: 0.55, pulseMs: 1800 },
-  speaking:  { speed: 1.8, scale: 1.07, glow: 0.65, pulseMs: 1200 },
-  absorb:    { speed: 3.0, scale: 1.12, glow: 0.9,  pulseMs: 300  },
-  error:     { speed: 0.4, scale: 0.94, glow: 0.8,  pulseMs: 3000 },
+  idle: {
+    speed: 1, scale: 1, glow: 0.3, pulseMs: 4000,
+    waveAmp: 0, waveFreqs: [2, 3], waveWeights: [0.5, 0.5],
+  },
+  listening: {
+    speed: 1.6, scale: 1.04, glow: 0.55, pulseMs: 1800,
+    waveAmp: 0.35, waveFreqs: [2, 3, 5], waveWeights: [0.5, 0.3, 0.2],
+  },
+  speaking: {
+    speed: 1.8, scale: 1.07, glow: 0.65, pulseMs: 1200,
+    waveAmp: 0.7, waveFreqs: [3, 5, 7, 11, 13], waveWeights: [0.3, 0.25, 0.2, 0.15, 0.1],
+  },
+  absorb: {
+    speed: 3.0, scale: 1.12, glow: 0.9, pulseMs: 300,
+    waveAmp: 0.45, waveFreqs: [4, 7], waveWeights: [0.6, 0.4],
+  },
+  error: {
+    speed: 0.4, scale: 0.94, glow: 0.8, pulseMs: 3000,
+    waveAmp: 0.02, waveFreqs: [2], waveWeights: [1],
+  },
 };
+
+const WAVE_SAMPLES = 128;
 
 // ─── Palettes ───────────────────────────────────────────────
 
@@ -98,6 +121,23 @@ function createOffscreen(w: number, h: number): HTMLCanvasElement | OffscreenCan
   return c;
 }
 
+function generateWaveform(
+  time: number, freqs: number[], weights: number[], volume: number,
+): Float32Array {
+  const out = new Float32Array(WAVE_SAMPLES);
+  for (let i = 0; i < WAVE_SAMPLES; i++) {
+    const angle = (i / WAVE_SAMPLES) * Math.PI * 2;
+    let v = 0;
+    for (let f = 0; f < freqs.length; f++) {
+      const spatial = Math.sin(angle * freqs[f] + f * 1.7);
+      const temporal = 0.5 + 0.5 * Math.sin(time * (1.2 + f * 0.7));
+      v += spatial * temporal * weights[f];
+    }
+    out[i] = (Math.max(0, v) * 0.875 + 0.125) * volume;
+  }
+  return out;
+}
+
 // ─── Component ──────────────────────────────────────────────
 
 export function AdvisorOrb({
@@ -119,6 +159,7 @@ export function AdvisorOrb({
   const transRef = useRef({ from: 'idle' as OrbState, to: 'idle' as OrbState, progress: 1 });
   const prevStateRef = useRef<OrbState>('idle');
   const [isAbsorbing, setIsAbsorbing] = useState(false);
+  const waveAmpRef = useRef(0);
 
   // Derive orb state from props
   const derivedState: OrbState = (() => {
@@ -151,8 +192,6 @@ export function AdvisorOrb({
     ? PROFANITY_PALETTE
     : PALETTE_SETS[paletteIndex % PALETTE_SETS.length];
 
-  const config = STATE_CONFIGS[derivedState];
-
   // ─── Canvas render loop ─────────────────────────────────
 
   useEffect(() => {
@@ -160,21 +199,27 @@ export function AdvisorOrb({
     if (!canvas) return;
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const pxSize = Math.round(size * dpr);
+
+    // Canvas is 2x orb size to allow waveform overshoot
+    const canvasScale = 2.0;
+    const cssSize = Math.round(size * canvasScale);
+    const pxSize = Math.round(cssSize * dpr);
     canvas.width = pxSize;
     canvas.height = pxSize;
+    canvas.style.width = cssSize + 'px';
+    canvas.style.height = cssSize + 'px';
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const colors = palette.map(hexToRgb);
     const renderScale = 0.5;
-    const rSize = Math.round(pxSize * renderScale);
+    const rSize = Math.max(16, Math.round(pxSize * renderScale));
     const offCanvas = createOffscreen(rSize, rSize);
     const offCtx = (offCanvas as HTMLCanvasElement).getContext('2d')!;
     const cx = rSize / 2;
     const cy = rSize / 2;
-    const radius = rSize / 2 - 2;
+    const orbR = (size / 2) * dpr * renderScale;
 
     function draw() {
       // Transition interpolation
@@ -188,14 +233,22 @@ export function AdvisorOrb({
       const speed = lerp(fromCfg.speed, toCfg.speed, e) * particleSpeed;
       const sc = lerp(fromCfg.scale, toCfg.scale, e);
 
+      // Waveform amplitude — smooth transition
+      const targetAmp = lerp(fromCfg.waveAmp, toCfg.waveAmp, e);
+      const volumeMod = isInCall && agentVolume > 0 ? 0.4 + agentVolume * 0.6 : 1;
+      waveAmpRef.current += (targetAmp * volumeMod - waveAmpRef.current) * 0.06;
+      const curAmp = waveAmpRef.current;
+
       // Voice reactivity — modulate speed slightly
       const voiceBoost = isInCall && agentVolume > 0 ? agentVolume * 0.5 : 0;
       timeRef.current += 0.013 * (speed + voiceBoost);
       const time = timeRef.current;
 
+      // ─── Pixel fill: perfectly round orb ───
+
       const imgData = offCtx.createImageData(rSize, rSize);
       const data = imgData.data;
-      const scaledR = radius * sc;
+      const baseR = orbR * sc;
       const numColors = colors.length;
 
       for (let py = 0; py < rSize; py++) {
@@ -204,14 +257,14 @@ export function AdvisorOrb({
         for (let px = 0; px < rSize; px++) {
           const dx = px - cx;
           const distSq = dx * dx + dySq;
-          if (distSq > (scaledR + 3) * (scaledR + 3)) continue;
+          if (distSq > (baseR + 3) * (baseR + 3)) continue;
 
           const dist = Math.sqrt(distSq);
-          if (dist > scaledR + 2) continue;
+          if (dist > baseR + 2) continue;
 
-          const nx = dx / scaledR;
-          const ny = dy / scaledR;
-          const nd = dist / scaledR;
+          const nx = dx / baseR;
+          const ny = dy / baseR;
+          const nd = dist / baseR;
 
           const n1 = gasNoise(nx * 2.5, ny * 2.5, time, 0, 0);
           const n2 = gasNoise(nx * 3.2, ny * 3.2, time * 1.3, 7.3, -4.1);
@@ -236,7 +289,7 @@ export function AdvisorOrb({
           b = Math.min(255, b * bri);
 
           let alpha = 1;
-          if (nd > 0.92) alpha = Math.max(0, (1 - nd) / 0.08);
+          if (nd > 0.97) alpha = Math.max(0, (1 - nd) / 0.03);
 
           const i = (py * rSize + px) * 4;
           data[i] = r;
@@ -248,6 +301,75 @@ export function AdvisorOrb({
 
       offCtx.putImageData(imgData, 0, 0);
       ctx!.clearRect(0, 0, pxSize, pxSize);
+
+      // ─── Waveform ring (drawn BEFORE orb so orb sits on top) ───
+
+      if (curAmp > 0.003) {
+        const waveform = generateWaveform(time, toCfg.waveFreqs, toCfg.waveWeights, curAmp);
+        const upscale = pxSize / rSize;
+        const wcx = pxSize / 2;
+        const wcy = pxSize / 2;
+        const waveBaseR = baseR * upscale;
+        const innerR = waveBaseR - 3;
+        const maxWaveHeight = waveBaseR * 1.0;
+
+        // Waveform colour — palette[1] lightened 40% toward white
+        const baseColor = colors[1];
+        const waveColor: [number, number, number] = [
+          Math.round(baseColor[0] + (255 - baseColor[0]) * 0.4),
+          Math.round(baseColor[1] + (255 - baseColor[1]) * 0.4),
+          Math.round(baseColor[2] + (255 - baseColor[2]) * 0.4),
+        ];
+
+        // Single filled ring shape
+        ctx!.beginPath();
+        // Outer edge (waveform)
+        for (let i = 0; i <= WAVE_SAMPLES; i++) {
+          const idx = i % WAVE_SAMPLES;
+          const a = (idx / WAVE_SAMPLES) * Math.PI * 2;
+          const d = waveform[idx] * maxWaveHeight;
+          const rr = waveBaseR + d;
+          const x = wcx + Math.cos(a) * rr;
+          const y = wcy + Math.sin(a) * rr;
+          if (i === 0) ctx!.moveTo(x, y); else ctx!.lineTo(x, y);
+        }
+        ctx!.closePath();
+
+        // Inner circle cutout (counter-clockwise)
+        ctx!.moveTo(wcx + innerR, wcy);
+        for (let i = WAVE_SAMPLES; i >= 0; i--) {
+          const a = (i / WAVE_SAMPLES) * Math.PI * 2;
+          ctx!.lineTo(wcx + Math.cos(a) * innerR, wcy + Math.sin(a) * innerR);
+        }
+        ctx!.closePath();
+
+        ctx!.fillStyle = `rgba(${waveColor[0]}, ${waveColor[1]}, ${waveColor[2]}, 0.15)`;
+        ctx!.fill();
+
+        // Soft glow behind waveform
+        ctx!.globalCompositeOperation = 'lighter';
+        const glowSteps = 3;
+        for (let g = glowSteps; g >= 1; g--) {
+          const glowAlpha = 0.06 * (1 - g / (glowSteps + 1));
+          ctx!.beginPath();
+          for (let i = 0; i <= WAVE_SAMPLES; i++) {
+            const idx = i % WAVE_SAMPLES;
+            const a = (idx / WAVE_SAMPLES) * Math.PI * 2;
+            const d = waveform[idx] * maxWaveHeight;
+            const rr = waveBaseR + d + g * 4;
+            const x = wcx + Math.cos(a) * rr;
+            const y = wcy + Math.sin(a) * rr;
+            if (i === 0) ctx!.moveTo(x, y); else ctx!.lineTo(x, y);
+          }
+          ctx!.closePath();
+          ctx!.fillStyle = `rgba(${waveColor[0]}, ${waveColor[1]}, ${waveColor[2]}, ${glowAlpha})`;
+          ctx!.fill();
+        }
+        ctx!.globalCompositeOperation = 'source-over';
+      }
+
+      // ─── Upscale orb on top ───
+
       ctx!.imageSmoothingEnabled = true;
       ctx!.imageSmoothingQuality = 'high';
       ctx!.drawImage(offCanvas as HTMLCanvasElement, 0, 0, rSize, rSize, 0, 0, pxSize, pxSize);
@@ -257,15 +379,12 @@ export function AdvisorOrb({
 
     animRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animRef.current);
-  }, [size, palette, particleSpeed, isInCall, agentVolume]);
+  }, [size, palette, particleSpeed, isInCall, agentVolume, isSpeaking]);
 
-  // ─── Glow ───────────────────────────────────────────────
+  // ─── Layout ─────────────────────────────────────────────
 
-  const glowBase = config.glow * glowMultiplier;
-  const voiceGlow = isInCall && agentVolume > 0 ? agentVolume * 0.3 : 0;
-  const totalGlow = Math.min(1, glowBase + voiceGlow);
-  const glowHex = Math.round(totalGlow * 200).toString(16).padStart(2, '0');
-  const glowColor = allowProfanity ? '#ef4444' : palette[1];
+  const canvasCSS = Math.round(size * 2.0);
+  const offset = Math.round((canvasCSS - size) / 2);
 
   return (
     <div className={`relative ${className}`} data-orb>
@@ -273,35 +392,18 @@ export function AdvisorOrb({
         className="relative mx-auto"
         style={{ width: size, height: size }}
       >
-        {/* Outer glow */}
-        <div
-          className="absolute rounded-full pointer-events-none"
-          style={{
-            inset: -size * 0.15,
-            background: `radial-gradient(circle, ${glowColor}${glowHex} 0%, transparent 70%)`,
-            animation: `orbPulse ${config.pulseMs}ms ease-in-out infinite`,
-            transition: 'all 0.6s ease',
-          }}
-        />
-
-        {/* Canvas */}
+        {/* Canvas — oversized, centered with negative offset */}
         <canvas
           ref={canvasRef}
           style={{
-            width: size,
-            height: size,
-            borderRadius: '50%',
+            position: 'absolute',
+            left: -offset,
+            top: -offset,
             display: 'block',
+            pointerEvents: 'none',
           }}
         />
       </div>
-
-      <style>{`
-        @keyframes orbPulse {
-          0%, 100% { transform: scale(1); opacity: 0.55; }
-          50% { transform: scale(1.15); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }
