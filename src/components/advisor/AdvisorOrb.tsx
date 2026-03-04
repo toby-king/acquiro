@@ -349,8 +349,9 @@ export function AdvisorOrb({
         // Soft glow behind waveform
         ctx!.globalCompositeOperation = 'lighter';
         const glowSteps = 3;
+        const glowScale = Math.max(0.25, Math.min(glowMultiplier, 2.5));
         for (let g = glowSteps; g >= 1; g--) {
-          const glowAlpha = 0.06 * (1 - g / (glowSteps + 1));
+          const glowAlpha = 0.06 * glowScale * (1 - g / (glowSteps + 1));
           ctx!.beginPath();
           for (let i = 0; i <= WAVE_SAMPLES; i++) {
             const idx = i % WAVE_SAMPLES;
