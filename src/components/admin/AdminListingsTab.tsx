@@ -249,7 +249,7 @@ export function AdminListingsTab() {
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-primary)] disabled:opacity-50 hover:bg-[var(--bg-card)]"
+                className="px-3 py-1.5 rounded-full border border-[var(--border)] text-[var(--text-primary)] disabled:opacity-50 hover:bg-[var(--bg-card)]"
               >
                 Previous
               </button>
@@ -260,7 +260,7 @@ export function AdminListingsTab() {
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-primary)] disabled:opacity-50 hover:bg-[var(--bg-card)]"
+                className="px-3 py-1.5 rounded-full border border-[var(--border)] text-[var(--text-primary)] disabled:opacity-50 hover:bg-[var(--bg-card)]"
               >
                 Next
               </button>

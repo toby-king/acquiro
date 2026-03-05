@@ -76,7 +76,7 @@ function ActionButton({
   variant?: 'primary' | 'secondary';
 }) {
   const base =
-    'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
   const styles =
     variant === 'primary'
       ? 'bg-accent text-black hover:bg-accent/90'
@@ -117,20 +117,116 @@ function useActionStatus(durationMs = 3000) {
   return { status, run };
 }
 
+// ─── Scheduler card helpers ───────────────────────────────────────────────────
+
+function tzOffsetMs(tz: string, date: Date): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric',
+    hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false,
+  }).formatToParts(date);
+  const get = (t: string) => parseInt(parts.find(p => p.type === t)?.value ?? '0');
+  let h = get('hour'); if (h === 24) h = 0;
+  const local = Date.UTC(get('year'), get('month') - 1, get('day'), h, get('minute'), get('second'));
+  return date.getTime() - local;
+}
+
+function computeNextRun(cron: string, tz: string): Date | null {
+  const parts = cron.trim().split(/\s+/);
+  if (parts.length !== 5) return null;
+  const minute = parseInt(parts[0], 10);
+  const hour = parseInt(parts[1], 10);
+  if (isNaN(minute) || isNaN(hour)) return null;
+
+  const now = new Date();
+  for (let d = 0; d <= 1; d++) {
+    const localDate = new Date(now.getTime() + d * 86_400_000)
+      .toLocaleDateString('en-CA', { timeZone: tz });
+    const [y, m, day] = localDate.split('-').map(Number);
+    const naive = new Date(Date.UTC(y, m - 1, day, hour, minute, 0));
+    const result = new Date(naive.getTime() + tzOffsetMs(tz, naive));
+    if (result > now) return result;
+  }
+  return null;
+}
+
+function fmtRelative(date: Date, now: Date): string {
+  const mins = Math.floor((now.getTime() - date.getTime()) / 60_000);
+  if (mins < 1)  return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)  return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function fmtAbsolute(date: Date): string {
+  return date.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function fmtNextLabel(date: Date, now: Date): string {
+  const diffH = (date.getTime() - now.getTime()) / 3_600_000;
+  const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  if (diffH < 24) return timeStr;
+  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + timeStr;
+}
+
+function fmtCountdown(date: Date, now: Date): string {
+  const ms = date.getTime() - now.getTime();
+  if (ms <= 0) return 'Due now';
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  return h > 0 ? `in ${h}h ${m}m` : `in ${m}m`;
+}
+
+// ─── Stat cell ────────────────────────────────────────────────────────────────
+
+function StatCell({
+  label, value, sub, valueClass, loading,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  valueClass?: string;
+  loading?: boolean;
+}) {
+  const isEmpty = value === '—';
+  return (
+    <div className="px-5 py-4">
+      <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">{label}</p>
+      {loading ? (
+        <div className="h-6 w-20 rounded bg-[var(--bg-secondary)] animate-pulse" />
+      ) : (
+        <>
+          <p className={`text-xl font-semibold tabular-nums ${
+            isEmpty ? 'text-[var(--text-tertiary)]' : (valueClass ?? 'text-[var(--text-primary)]')
+          }`}>
+            {value}
+          </p>
+          {sub && <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{sub}</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Scheduler card ───────────────────────────────────────────────────────────
 
 function SchedulerCard() {
-  const [info, setInfo]       = useState<SchedulerStatus | null>(null);
-  const [fetchError, setFetchError] = useState(false);
+  const [info, setInfo]             = useState<SchedulerStatus | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [toggling, setToggling]     = useState(false);
+  const [now, setNow]               = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const load = useCallback(async () => {
     try {
-      setFetchError(false);
-      const s = await getSchedulerStatus();
-      setInfo(s);
-    } catch {
-      setFetchError(true);
+      setFetchError(null);
+      setInfo(await getSchedulerStatus());
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : String(err));
     }
   }, []);
 
@@ -143,49 +239,109 @@ function SchedulerCard() {
       await setSchedulerEnabled(enabled);
       setInfo((prev) => prev ? { ...prev, schedulerEnabled: enabled } : prev);
     } catch {
-      // no-op — keep previous state
+      // keep previous state
     } finally {
       setToggling(false);
     }
   };
 
+  const nextRun   = info ? computeNextRun(info.cronExpression, info.timezone) : null;
+  const loading   = !info && !fetchError;
+  const enabled   = info?.schedulerEnabled ?? false;
+
+  // Derived stat values
+  const lastRunValue = info?.lastRun ? fmtRelative(new Date(info.lastRun), now) : '—';
+  const lastRunSub   = info?.lastRun ? fmtAbsolute(new Date(info.lastRun)) : undefined;
+  const nextRunValue = nextRun ? fmtNextLabel(nextRun, now) : '—';
+  const nextRunSub   = nextRun && enabled
+    ? fmtCountdown(nextRun, now)
+    : (info && !enabled ? 'Scheduler off' : undefined);
+  const addedValue    = info?.lastRunAdded    != null ? `+${info.lastRunAdded.toLocaleString()}`    : '—';
+  const archivedValue = info?.lastRunArchived != null ? info.lastRunArchived.toLocaleString() : '—';
+
   return (
-    <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-[var(--text-primary)]">Daily scheduler</p>
-        {fetchError ? (
-          <p className="text-xs text-red-400 mt-1">Could not reach scraper server</p>
-        ) : !info ? (
-          <p className="text-xs text-[var(--text-tertiary)] mt-1 flex items-center gap-1.5">
-            <Loader2 size={11} className="animate-spin" /> Fetching status…
-          </p>
-        ) : (
-          <p className="text-xs text-[var(--text-secondary)] mt-1">
-            <span className="font-mono">{info.cronExpression}</span>
-            {' · '}{info.timezone}
-          </p>
-        )}
+    <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 flex items-center justify-between gap-4 border-b border-[var(--border)]">
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Animated status dot */}
+          <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+            {enabled && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-60" />
+            )}
+            <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${enabled ? 'bg-accent' : 'bg-[var(--border)]'}`} />
+          </span>
+
+          <div className="min-w-0">
+            <p className="font-semibold text-[var(--text-primary)]">Daily Pipeline</p>
+            {fetchError ? (
+              <p className="text-xs text-red-400 mt-0.5" title={fetchError}>
+                Could not reach scraper — {fetchError}
+              </p>
+            ) : loading ? (
+              <p className="text-xs text-[var(--text-tertiary)] mt-0.5 flex items-center gap-1.5">
+                <Loader2 size={10} className="animate-spin" /> Fetching…
+              </p>
+            ) : (
+              <p className="text-xs text-[var(--text-tertiary)] mt-0.5 font-mono">
+                {info!.cronExpression} · {info!.timezone}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {info && (
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+              enabled
+                ? 'bg-accent/10 text-accent'
+                : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)]'
+            }`}>
+              {enabled ? 'Enabled' : 'Disabled'}
+            </span>
+          )}
+          <Toggle
+            enabled={enabled}
+            onChange={handleToggle}
+            disabled={!info || toggling}
+          />
+          <button
+            type="button"
+            onClick={load}
+            className="p-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
+            aria-label="Refresh status"
+          >
+            <RefreshCw size={14} />
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {info && (
-          <span className={`text-sm font-medium ${info.schedulerEnabled ? 'text-accent' : 'text-[var(--text-tertiary)]'}`}>
-            {info.schedulerEnabled ? 'Enabled' : 'Disabled'}
-          </span>
-        )}
-        <Toggle
-          enabled={info?.schedulerEnabled ?? false}
-          onChange={handleToggle}
-          disabled={!info || toggling}
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-[var(--border)]">
+        <StatCell
+          label="Last run"
+          value={lastRunValue}
+          sub={lastRunSub}
+          loading={loading}
         />
-        <button
-          type="button"
-          onClick={load}
-          className="p-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
-          aria-label="Refresh status"
-        >
-          <RefreshCw size={14} />
-        </button>
+        <StatCell
+          label="Next run"
+          value={nextRunValue}
+          sub={nextRunSub}
+          valueClass={enabled ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'}
+          loading={loading}
+        />
+        <StatCell
+          label="Added last run"
+          value={addedValue}
+          valueClass="text-accent"
+          loading={loading}
+        />
+        <StatCell
+          label="Archived last run"
+          value={archivedValue}
+          loading={loading}
+        />
       </div>
     </div>
   );

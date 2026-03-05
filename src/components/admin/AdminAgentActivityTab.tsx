@@ -256,7 +256,7 @@ export function AdminAgentActivityTab() {
               type="button"
               onClick={loadMore}
               disabled={loading}
-              className="px-4 py-2 rounded-lg border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-card)] disabled:opacity-50"
+              className="px-4 py-2 rounded-full border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-card)] disabled:opacity-50"
             >
               {loading ? 'Loading…' : 'Load more'}
             </button>

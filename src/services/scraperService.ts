@@ -7,6 +7,12 @@ export interface SchedulerStatus {
   schedulerEnabled: boolean;
   cronExpression: string;
   timezone: string;
+  /** ISO string of when the pipeline last completed — not yet returned by server */
+  lastRun?: string | null;
+  /** Total listings added in the last pipeline run — not yet returned by server */
+  lastRunAdded?: number | null;
+  /** Total listings archived in the last pipeline run — not yet returned by server */
+  lastRunArchived?: number | null;
 }
 
 function adminHeaders() {
