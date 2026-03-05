@@ -159,14 +159,14 @@ function fmtRelative(date: Date, now: Date): string {
 }
 
 function fmtAbsolute(date: Date): string {
-  return date.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+  return date.toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' });
 }
 
 function fmtNextLabel(date: Date, now: Date): string {
   const diffH = (date.getTime() - now.getTime()) / 3_600_000;
-  const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   if (diffH < 24) return timeStr;
-  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + timeStr;
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' · ' + timeStr;
 }
 
 function fmtCountdown(date: Date, now: Date): string {
@@ -283,11 +283,7 @@ function SchedulerCard() {
               <p className="text-xs text-[var(--text-tertiary)] mt-0.5 flex items-center gap-1.5">
                 <Loader2 size={10} className="animate-spin" /> Fetching…
               </p>
-            ) : (
-              <p className="text-xs text-[var(--text-tertiary)] mt-0.5 font-mono">
-                {info!.cronExpression} · {info!.timezone}
-              </p>
-            )}
+            ) : null}
           </div>
         </div>
 
