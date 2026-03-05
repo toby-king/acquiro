@@ -258,6 +258,7 @@ function SchedulerCard() {
     : (info && !enabled ? 'Scheduler off' : undefined);
   const addedValue    = info?.lastRunAdded    != null ? `+${info.lastRunAdded.toLocaleString()}`    : '—';
   const archivedValue = info?.lastRunArchived != null ? info.lastRunArchived.toLocaleString() : '—';
+  const matchesValue  = info?.lastRunMatches  != null ? info.lastRunMatches.toLocaleString()  : '—';
 
   return (
     <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden">
@@ -317,7 +318,7 @@ function SchedulerCard() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-[var(--border)]">
+      <div className="grid grid-cols-2 sm:grid-cols-5 divide-x divide-y sm:divide-y-0 divide-[var(--border)]">
         <StatCell
           label="Last run"
           value={lastRunValue}
@@ -340,6 +341,11 @@ function SchedulerCard() {
         <StatCell
           label="Archived last run"
           value={archivedValue}
+          loading={loading}
+        />
+        <StatCell
+          label="Matches last run"
+          value={matchesValue}
           loading={loading}
         />
       </div>

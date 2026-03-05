@@ -13,6 +13,8 @@ export interface SchedulerStatus {
   lastRunAdded?: number | null;
   /** Total listings archived in the last pipeline run — not yet returned by server */
   lastRunArchived?: number | null;
+  /** Total matches generated across all users in the last pipeline run */
+  lastRunMatches?: number | null;
 }
 
 function adminHeaders() {
