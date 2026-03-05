@@ -1,133 +1,48 @@
-import { useState } from 'react';
-import { RefreshCw, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  RefreshCw, Play, Zap, Users, CheckCircle2, AlertCircle, Loader2,
+} from 'lucide-react';
+import {
+  getSchedulerStatus,
+  setSchedulerEnabled,
+  runPipeline,
+  runScrape,
+  runMatches,
+  scrapeSource,
+  type SchedulerStatus,
+  type SourceKey,
+} from '../../services/scraperService';
 
-type ScraperStatus = 'idle' | 'running' | 'error';
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ScraperSource {
-  id: string;
-  name: string;
+type ActionStatus = 'idle' | 'loading' | 'success' | 'error';
+
+interface SourceDef {
+  key: SourceKey;
+  label: string;
   url: string;
-  status: ScraperStatus;
-  enabled: boolean;
-  lastRun: string;
-  nextRunInHours: number;
-  recordsAdded: number;
-  recordsArchived: number;
 }
 
-const DUMMY_SOURCES: ScraperSource[] = [
-  {
-    id: 'daltons',
-    name: 'Daltons Business',
-    url: 'daltonsbusiness.com',
-    status: 'idle',
-    enabled: true,
-    lastRun: '2026-03-04T06:00:00Z',
-    nextRunInHours: 2,
-    recordsAdded: 143,
-    recordsArchived: 31,
-  },
-  {
-    id: 'businessesforsale',
-    name: 'BusinessesForSale.com',
-    url: 'businessesforsale.com',
-    status: 'idle',
-    enabled: true,
-    lastRun: '2026-03-04T06:15:00Z',
-    nextRunInHours: 3,
-    recordsAdded: 87,
-    recordsArchived: 14,
-  },
-  {
-    id: 'christie',
-    name: 'Christie & Co',
-    url: 'christie.com',
-    status: 'running',
-    enabled: true,
-    lastRun: '2026-03-04T07:30:00Z',
-    nextRunInHours: 0,
-    recordsAdded: 22,
-    recordsArchived: 5,
-  },
-  {
-    id: 'rightmove',
-    name: 'Rightmove Commercial',
-    url: 'rightmove.co.uk',
-    status: 'idle',
-    enabled: true,
-    lastRun: '2026-03-04T05:45:00Z',
-    nextRunInHours: 5,
-    recordsAdded: 211,
-    recordsArchived: 68,
-  },
-  {
-    id: 'businessforsale',
-    name: 'BusinessForSale.com',
-    url: 'businessforsale.com',
-    status: 'error',
-    enabled: true,
-    lastRun: '2026-03-03T06:00:00Z',
-    nextRunInHours: 0,
-    recordsAdded: 0,
-    recordsArchived: 0,
-  },
-  {
-    id: 'fleximize',
-    name: 'Fleximize Marketplace',
-    url: 'fleximize.com',
-    status: 'idle',
-    enabled: false,
-    lastRun: '2026-03-01T06:00:00Z',
-    nextRunInHours: 0,
-    recordsAdded: 9,
-    recordsArchived: 3,
-  },
-  {
-    id: 'zoopla',
-    name: 'Zoopla Commercial',
-    url: 'zoopla.co.uk',
-    status: 'idle',
-    enabled: false,
-    lastRun: '2026-03-02T06:00:00Z',
-    nextRunInHours: 0,
-    recordsAdded: 34,
-    recordsArchived: 11,
-  },
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const SOURCES: SourceDef[] = [
+  { key: 'rightbiz',          label: 'Rightbiz',            url: 'rightbiz.co.uk' },
+  { key: 'cogogo',            label: 'CoGoGo',              url: 'cogogo.com' },
+  { key: 'daltons',           label: 'Daltons Business',    url: 'daltonsbusiness.com' },
+  { key: 'businessesforsale', label: 'BusinessesForSale',   url: 'businessesforsale.com' },
 ];
 
-function StatusBadge({ status }: { status: ScraperStatus }) {
-  if (status === 'running') {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-accent/10 text-accent">
-        <RefreshCw size={11} className="animate-spin" />
-        Running
-      </span>
-    );
-  }
-  if (status === 'error') {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400">
-        <AlertCircle size={11} />
-        Error
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
-      <CheckCircle2 size={11} />
-      Idle
-    </span>
-  );
-}
+// ─── Small helpers ────────────────────────────────────────────────────────────
 
-function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ enabled, onChange, disabled }: { enabled: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={enabled}
+      disabled={disabled}
       onClick={() => onChange(!enabled)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] ${
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] disabled:opacity-40 disabled:cursor-not-allowed ${
         enabled ? 'bg-accent' : 'bg-[var(--border)]'
       }`}
     >
@@ -140,122 +55,272 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
   );
 }
 
-function formatLastRun(isoString: string): string {
-  const date = new Date(isoString);
-  return date.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+function StatusDot({ status }: { status: ActionStatus }) {
+  if (status === 'loading') return <Loader2 size={14} className="animate-spin text-accent" />;
+  if (status === 'success') return <CheckCircle2 size={14} className="text-green-400" />;
+  if (status === 'error')   return <AlertCircle  size={14} className="text-red-400" />;
+  return null;
 }
 
-function formatNextRun(enabled: boolean, status: ScraperStatus, hoursUntil: number): string {
-  if (!enabled) return '—';
-  if (status === 'running') return 'Now';
-  if (status === 'error') return 'Paused (error)';
-  if (hoursUntil <= 0) return '< 1 hour';
-  return `in ~${hoursUntil}h`;
-}
-
-export function AdminSourcesTab() {
-  const [sources, setSources] = useState<ScraperSource[]>(DUMMY_SOURCES);
-
-  const toggleSource = (id: string, enabled: boolean) => {
-    setSources((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, enabled } : s))
-    );
-  };
-
-  const activeCount = sources.filter((s) => s.enabled).length;
-  const totalAdded = sources.filter((s) => s.enabled).reduce((sum, s) => sum + s.recordsAdded, 0);
-  const totalArchived = sources.filter((s) => s.enabled).reduce((sum, s) => sum + s.recordsArchived, 0);
-  const errorCount = sources.filter((s) => s.enabled && s.status === 'error').length;
+function ActionButton({
+  onClick,
+  status,
+  icon: Icon,
+  label,
+  variant = 'secondary',
+}: {
+  onClick: () => void;
+  status: ActionStatus;
+  icon: React.ElementType;
+  label: string;
+  variant?: 'primary' | 'secondary';
+}) {
+  const base =
+    'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+  const styles =
+    variant === 'primary'
+      ? 'bg-accent text-black hover:bg-accent/90'
+      : 'bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-card)]';
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-[var(--text-primary)]">Sources</h2>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={status === 'loading'}
+      className={`${base} ${styles}`}
+    >
+      {status === 'loading' ? (
+        <Loader2 size={15} className="animate-spin" />
+      ) : (
+        <Icon size={15} />
+      )}
+      {label}
+    </button>
+  );
+}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] p-4">
-          <p className="text-[var(--text-secondary)] text-sm">Active scrapers</p>
-          <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">{activeCount} / {sources.length}</p>
-        </div>
-        <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] p-4">
-          <p className="text-[var(--text-secondary)] text-sm">Records added (last run)</p>
-          <p className="text-2xl font-bold text-accent mt-1">+{totalAdded.toLocaleString()}</p>
-        </div>
-        <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] p-4">
-          <p className="text-[var(--text-secondary)] text-sm">Records archived (last run)</p>
-          <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">{totalArchived.toLocaleString()}</p>
-        </div>
-        <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] p-4">
-          <p className="text-[var(--text-secondary)] text-sm">Sources with errors</p>
-          <p className={`text-2xl font-bold mt-1 ${errorCount > 0 ? 'text-red-400' : 'text-[var(--text-primary)]'}`}>
-            {errorCount}
+function useActionStatus(durationMs = 3000) {
+  const [status, setStatus] = useState<ActionStatus>('idle');
+
+  const run = useCallback(async (fn: () => Promise<void>) => {
+    setStatus('loading');
+    try {
+      await fn();
+      setStatus('success');
+    } catch {
+      setStatus('error');
+    } finally {
+      setTimeout(() => setStatus('idle'), durationMs);
+    }
+  }, [durationMs]);
+
+  return { status, run };
+}
+
+// ─── Scheduler card ───────────────────────────────────────────────────────────
+
+function SchedulerCard() {
+  const [info, setInfo]       = useState<SchedulerStatus | null>(null);
+  const [fetchError, setFetchError] = useState(false);
+  const [toggling, setToggling]     = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      setFetchError(false);
+      const s = await getSchedulerStatus();
+      setInfo(s);
+    } catch {
+      setFetchError(true);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleToggle = async (enabled: boolean) => {
+    if (!info) return;
+    setToggling(true);
+    try {
+      await setSchedulerEnabled(enabled);
+      setInfo((prev) => prev ? { ...prev, schedulerEnabled: enabled } : prev);
+    } catch {
+      // no-op — keep previous state
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-[var(--text-primary)]">Daily scheduler</p>
+        {fetchError ? (
+          <p className="text-xs text-red-400 mt-1">Could not reach scraper server</p>
+        ) : !info ? (
+          <p className="text-xs text-[var(--text-tertiary)] mt-1 flex items-center gap-1.5">
+            <Loader2 size={11} className="animate-spin" /> Fetching status…
           </p>
-        </div>
+        ) : (
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
+            <span className="font-mono">{info.cronExpression}</span>
+            {' · '}{info.timezone}
+          </p>
+        )}
       </div>
 
-      <div className="rounded-xl border border-[var(--border)] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-[var(--bg-secondary)] border-b border-[var(--border)]">
-                <th className="text-left p-3 font-medium text-[var(--text-primary)]">Source</th>
-                <th className="text-left p-3 font-medium text-[var(--text-primary)]">Status</th>
-                <th className="text-left p-3 font-medium text-[var(--text-primary)]">Last run</th>
-                <th className="text-left p-3 font-medium text-[var(--text-primary)]">Next run</th>
-                <th className="text-right p-3 font-medium text-[var(--text-primary)]">Added</th>
-                <th className="text-right p-3 font-medium text-[var(--text-primary)]">Archived</th>
-                <th className="text-center p-3 font-medium text-[var(--text-primary)]">Enabled</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sources.map((source) => (
-                <tr
-                  key={source.id}
-                  className={`border-b border-[var(--border)] transition-colors ${
-                    source.enabled ? '' : 'opacity-50'
-                  }`}
-                >
-                  <td className="p-3">
-                    <p className="font-medium text-[var(--text-primary)]">{source.name}</p>
-                    <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{source.url}</p>
-                  </td>
-                  <td className="p-3">
-                    <StatusBadge status={source.enabled ? source.status : 'idle'} />
-                  </td>
-                  <td className="p-3 text-[var(--text-secondary)]">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Clock size={12} className="text-[var(--text-tertiary)]" />
-                      {formatLastRun(source.lastRun)}
-                    </span>
-                  </td>
-                  <td className="p-3 text-[var(--text-secondary)]">
-                    {formatNextRun(source.enabled, source.status, source.nextRunInHours)}
-                  </td>
-                  <td className="p-3 text-right">
-                    {source.recordsAdded > 0 ? (
-                      <span className="text-accent font-medium">+{source.recordsAdded.toLocaleString()}</span>
-                    ) : (
-                      <span className="text-[var(--text-tertiary)]">—</span>
-                    )}
-                  </td>
-                  <td className="p-3 text-right text-[var(--text-secondary)]">
-                    {source.recordsArchived > 0 ? source.recordsArchived.toLocaleString() : <span className="text-[var(--text-tertiary)]">—</span>}
-                  </td>
-                  <td className="p-3 flex justify-center">
-                    <Toggle
-                      enabled={source.enabled}
-                      onChange={(v) => toggleSource(source.id, v)}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="flex items-center gap-3">
+        {info && (
+          <span className={`text-sm font-medium ${info.schedulerEnabled ? 'text-accent' : 'text-[var(--text-tertiary)]'}`}>
+            {info.schedulerEnabled ? 'Enabled' : 'Disabled'}
+          </span>
+        )}
+        <Toggle
+          enabled={info?.schedulerEnabled ?? false}
+          onChange={handleToggle}
+          disabled={!info || toggling}
+        />
+        <button
+          type="button"
+          onClick={load}
+          className="p-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
+          aria-label="Refresh status"
+        >
+          <RefreshCw size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Pipeline controls ────────────────────────────────────────────────────────
+
+function PipelineControls() {
+  const pipeline = useActionStatus();
+  const scrape   = useActionStatus();
+  const matches  = useActionStatus();
+
+  return (
+    <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] p-5 space-y-4">
+      <div>
+        <p className="font-semibold text-[var(--text-primary)]">Manual triggers</p>
+        <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
+          All jobs run in the background — the server responds immediately.
+        </p>
       </div>
 
-      <p className="text-xs text-[var(--text-tertiary)]">
-        Scrapers run automatically every 24 hours. Toggling a scraper off will prevent it from running on the next scheduled cycle.
-      </p>
+      <div className="flex flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <ActionButton
+            onClick={() => pipeline.run(runPipeline)}
+            status={pipeline.status}
+            icon={Zap}
+            label="Run full pipeline"
+            variant="primary"
+          />
+          <StatusDot status={pipeline.status} />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <ActionButton
+            onClick={() => scrape.run(runScrape)}
+            status={scrape.status}
+            icon={Play}
+            label="Scrape only"
+          />
+          <StatusDot status={scrape.status} />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <ActionButton
+            onClick={() => matches.run(runMatches)}
+            status={matches.status}
+            icon={Users}
+            label="Match only"
+          />
+          <StatusDot status={matches.status} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Per-source controls ──────────────────────────────────────────────────────
+
+function SourceRow({ source }: { source: SourceDef }) {
+  const { status, run } = useActionStatus();
+  const [pages, setPages] = useState(5);
+
+  return (
+    <tr className="border-b border-[var(--border)] last:border-0">
+      <td className="p-3">
+        <p className="font-medium text-[var(--text-primary)]">{source.label}</p>
+        <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{source.url}</p>
+      </td>
+
+      <td className="p-3">
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-[var(--text-secondary)] whitespace-nowrap">Pages</label>
+          <input
+            type="number"
+            min={1}
+            max={50}
+            value={pages}
+            onChange={(e) => setPages(Math.max(1, Math.min(50, Number(e.target.value))))}
+            className="w-16 px-2 py-1 text-xs rounded-md border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+        </div>
+      </td>
+
+      <td className="p-3 text-right">
+        <div className="inline-flex items-center gap-2">
+          <StatusDot status={status} />
+          <ActionButton
+            onClick={() => run(() => scrapeSource(source.key, pages))}
+            status={status}
+            icon={Play}
+            label="Scrape now"
+          />
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function SourcesTable() {
+  return (
+    <div className="rounded-xl border border-[var(--border)] overflow-hidden">
+      <div className="px-5 py-4 border-b border-[var(--border)] bg-[var(--bg-card)]">
+        <p className="font-semibold text-[var(--text-primary)]">Sources</p>
+        <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Scrape a single source on demand.</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-[var(--bg-secondary)] border-b border-[var(--border)]">
+              <th className="text-left p-3 font-medium text-[var(--text-secondary)]">Source</th>
+              <th className="text-left p-3 font-medium text-[var(--text-secondary)]">Pages</th>
+              <th className="text-right p-3 font-medium text-[var(--text-secondary)]">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {SOURCES.map((s) => (
+              <SourceRow key={s.key} source={s} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── Tab root ─────────────────────────────────────────────────────────────────
+
+export function AdminSourcesTab() {
+  return (
+    <div className="space-y-6">
+      <h2 className="text-lg font-semibold text-[var(--text-primary)]">Sources & Scraper</h2>
+      <SchedulerCard />
+      <PipelineControls />
+      <SourcesTable />
     </div>
   );
 }
