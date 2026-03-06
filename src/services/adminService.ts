@@ -187,10 +187,10 @@ export async function getAdminListings(params: GetAdminListingsParams = {}): Pro
   // Compute listings_over_time from full dataset (grouped by month + source)
   const byMonthSource: Record<string, Record<string, number>> = {};
   all.forEach((l) => {
-    const month = l.date_added.substring(0, 7); // e.g. "2024-01"
-    if (!byMonthSource[month]) byMonthSource[month] = {};
+    const day = l.date_added.substring(0, 10); // e.g. "2024-01-15"
+    if (!byMonthSource[day]) byMonthSource[day] = {};
     const s = l.source || 'Unknown';
-    byMonthSource[month][s] = (byMonthSource[month][s] ?? 0) + 1;
+    byMonthSource[day][s] = (byMonthSource[day][s] ?? 0) + 1;
   });
   const listings_over_time = Object.entries(byMonthSource)
     .sort(([a], [b]) => a.localeCompare(b))

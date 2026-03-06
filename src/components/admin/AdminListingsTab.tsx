@@ -90,6 +90,29 @@ export function AdminListingsTab() {
       ).sort()
     : [];
 
+  // Show full-page loading UI on first load (no data yet)
+  if (loading && !data) {
+    const pct = progress ? Math.min(100, Math.round((progress.loaded / progress.total) * 100)) : 0;
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-4 w-full">
+        <p className="text-sm text-[var(--text-secondary)]">
+          {progress
+            ? `Loading ${progress.loaded.toLocaleString()} / ${progress.total.toLocaleString()} listings…`
+            : 'Loading listings…'}
+        </p>
+        <div className="w-full h-2 rounded-full bg-[var(--bg-card)] overflow-hidden">
+          <div
+            className="h-full bg-accent rounded-full transition-all duration-300"
+            style={{ width: progress ? `${pct}%` : '5%' }}
+          />
+        </div>
+        {progress && (
+          <p className="text-xs text-[var(--text-tertiary)]">{pct}%</p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-semibold text-[var(--text-primary)]">Listings</h2>
@@ -110,11 +133,7 @@ export function AdminListingsTab() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard
-          title="Listings by Source"
-          loading={loading}
-          empty={bySource.length === 0}
-        >
+        <ChartCard title="Listings by Source" loading={false} empty={bySource.length === 0}>
           {bySource.length > 0 && (
             <div className="h-full min-h-[200px]">
               <Bar
@@ -128,19 +147,12 @@ export function AdminListingsTab() {
                     },
                   ],
                 }}
-                options={{
-                  ...chartDefaultOptions,
-                  indexAxis: 'y',
-                }}
+                options={{ ...chartDefaultOptions, indexAxis: 'y' }}
               />
             </div>
           )}
         </ChartCard>
-        <ChartCard
-          title="New Listings Over Time"
-          loading={loading}
-          empty={overTime.length === 0 || sourceNames.length === 0}
-        >
+        <ChartCard title="New Listings per Day" loading={false} empty={overTime.length === 0 || sourceNames.length === 0}>
           {overTime.length > 0 && sourceNames.length > 0 && (
             <div className="h-full min-h-[200px]">
               <Line
@@ -148,11 +160,12 @@ export function AdminListingsTab() {
                   labels: overTime.map((d) => d.date),
                   datasets: sourceNames.map((source, i) => ({
                     label: source,
-                    data: overTime.map((d) => (d.by_source?.[source] ?? 0)),
+                    data: overTime.map((d) => d.by_source?.[source] ?? 0),
                     borderColor: CHART_COLORS[i % CHART_COLORS.length],
                     backgroundColor: CHART_COLORS[i % CHART_COLORS.length] + '20',
                     fill: false,
                     tension: 0.3,
+                    pointRadius: 2,
                   })),
                 }}
                 options={chartDefaultOptions}
@@ -167,20 +180,14 @@ export function AdminListingsTab() {
           type="search"
           placeholder="Search by title or location..."
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           className="min-w-[200px] flex-1 max-w-md px-3 py-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] text-sm"
         />
         <input
           type="text"
           placeholder="Filter by source"
           value={sourceFilter}
-          onChange={(e) => {
-            setSourceFilter(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }}
           className="w-40 px-3 py-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] text-sm"
         />
       </div>
@@ -189,24 +196,7 @@ export function AdminListingsTab() {
         <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-4 text-red-400 text-sm">{error}</div>
       )}
 
-      {loading ? (
-        <div className="space-y-3 py-4">
-          <div className="flex items-center gap-2 text-[var(--text-secondary)] text-sm">
-            <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
-            {progress
-              ? `Loading ${progress.loaded.toLocaleString()} / ${progress.total.toLocaleString()} listings…`
-              : 'Loading listings…'}
-          </div>
-          {progress && (
-            <div className="h-1.5 w-full max-w-sm rounded-full bg-[var(--bg-card)] overflow-hidden">
-              <div
-                className="h-full bg-accent rounded-full transition-all duration-300"
-                style={{ width: `${Math.min(100, Math.round((progress.loaded / progress.total) * 100))}%` }}
-              />
-            </div>
-          )}
-        </div>
-      ) : data ? (
+      {data && (
         <>
           <div className="rounded-xl border border-[var(--border)] overflow-hidden">
             <div className="overflow-x-auto">
@@ -266,7 +256,7 @@ export function AdminListingsTab() {
             </div>
           )}
         </>
-      ) : null}
+      )}
     </div>
   );
 }
