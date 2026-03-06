@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, FileText, Activity, Globe, LayoutDashboard, Settings, LogOut } from 'lucide-react';
+import { Users, FileText, Activity, Globe, LayoutDashboard, Settings, LogOut, Mail } from 'lucide-react';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
 import './chartConfig';
@@ -9,8 +9,9 @@ import { AdminUsersTab } from './AdminUsersTab';
 import { AdminListingsTab } from './AdminListingsTab';
 import { AdminAgentActivityTab } from './AdminAgentActivityTab';
 import { AdminSourcesTab } from './AdminSourcesTab';
+import { AdminLangcliffeTab } from './AdminLangcliffeTab';
 
-type AdminTab = 'users' | 'listings' | 'activity' | 'sources';
+type AdminTab = 'users' | 'listings' | 'activity' | 'sources' | 'langcliffe';
 
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
@@ -113,6 +114,7 @@ export function AdminPage() {
               { id: 'listings' as const, label: 'Listings', icon: FileText },
               { id: 'activity' as const, label: 'Agent Activity', icon: Activity },
               { id: 'sources' as const, label: 'Sources', icon: Globe },
+              { id: 'langcliffe' as const, label: 'Langcliffe', icon: Mail },
             ] as const
           ).map(({ id, label, icon: Icon }) => (
             <button
@@ -137,6 +139,7 @@ export function AdminPage() {
         {activeTab === 'listings' && <AdminListingsTab />}
         {activeTab === 'activity' && <AdminAgentActivityTab />}
         {activeTab === 'sources' && <AdminSourcesTab />}
+        {activeTab === 'langcliffe' && <AdminLangcliffeTab />}
       </main>
     </div>
   );

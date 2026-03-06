@@ -1,0 +1,257 @@
+import { useState, useEffect, useCallback } from 'react';
+import { RefreshCw, CheckCircle2, XCircle, Loader2, Mail, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  getLangcliffeQueue,
+  approveOutreach,
+  rejectOutreach,
+  type OutreachDraft,
+} from '../../services/langcliffeService';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type CardAction = 'idle' | 'approving' | 'rejecting' | 'rewriting';
+
+// ─── Draft card ───────────────────────────────────────────────────────────────
+
+function DraftCard({
+  draft,
+  onActionComplete,
+}: {
+  draft: OutreachDraft;
+  onActionComplete: () => void;
+}) {
+  const [action, setAction]           = useState<CardAction>('idle');
+  const [feedback, setFeedback]       = useState('');
+  const [showReject, setShowReject]   = useState(false);
+  const [expanded, setExpanded]       = useState(false);
+  const [currentDraft, setCurrentDraft] = useState(draft.draft_body_text);
+  const [error, setError]             = useState<string | null>(null);
+
+  const busy = action !== 'idle';
+
+  const handleApprove = async () => {
+    setError(null);
+    setAction('approving');
+    try {
+      await approveOutreach(draft._id);
+      onActionComplete();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Approve failed');
+      setAction('idle');
+    }
+  };
+
+  const handleReject = async () => {
+    setError(null);
+    setAction('rewriting');
+    try {
+      const newDraft = await rejectOutreach(draft._id, feedback || undefined);
+      setCurrentDraft(newDraft);
+      setFeedback('');
+      setShowReject(false);
+      setAction('idle');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Rewrite failed');
+      setAction('idle');
+    }
+  };
+
+  const ref = draft.listing_id_text.replace('langcliffe-', '');
+  const createdAt = new Date(draft['Created Date']).toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
+
+  return (
+    <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden">
+      {/* Card header */}
+      <div className="px-5 py-4 flex items-start justify-between gap-4 border-b border-[var(--border)]">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-[var(--text-primary)] truncate">
+              {draft.business_name_text}
+            </p>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400 font-medium flex-shrink-0">
+              Ref {ref}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 mt-1 text-xs text-[var(--text-tertiary)]">
+            <Mail size={11} />
+            <span>{draft.langcliffe_contact_text}</span>
+            <span className="mx-1">·</span>
+            <span>{createdAt}</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="flex-shrink-0 p-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
+          aria-label={expanded ? 'Collapse draft' : 'Expand draft'}
+        >
+          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+      </div>
+
+      {/* Draft body */}
+      {expanded && (
+        <div className="px-5 py-4 border-b border-[var(--border)]">
+          <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
+            Draft email body
+          </p>
+          <pre className="whitespace-pre-wrap text-sm text-[var(--text-primary)] font-sans leading-relaxed bg-[var(--bg-secondary)] rounded-lg p-4">
+            {currentDraft}
+          </pre>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="px-5 py-3 flex flex-col gap-3">
+        {error && (
+          <p className="text-xs text-red-400">{error}</p>
+        )}
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Approve */}
+          <button
+            type="button"
+            onClick={handleApprove}
+            disabled={busy}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-accent text-black hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {action === 'approving' ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <CheckCircle2 size={14} />
+            )}
+            {action === 'approving' ? 'Sending…' : 'Approve & Send'}
+          </button>
+
+          {/* Reject / rewrite */}
+          <button
+            type="button"
+            onClick={() => setShowReject((s) => !s)}
+            disabled={busy}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-card)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <XCircle size={14} />
+            Reject & Rewrite
+          </button>
+
+          {action === 'rewriting' && (
+            <span className="text-xs text-[var(--text-tertiary)] flex items-center gap-1.5">
+              <Loader2 size={12} className="animate-spin" /> Regenerating draft…
+            </span>
+          )}
+        </div>
+
+        {/* Reject feedback panel */}
+        {showReject && (
+          <div className="space-y-2">
+            <textarea
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              placeholder="Optional feedback for the rewrite (e.g. 'Make it shorter and mention our sector experience')"
+              rows={3}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+            />
+            <button
+              type="button"
+              onClick={handleReject}
+              disabled={busy}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {action === 'rewriting' ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <XCircle size={14} />
+              )}
+              Confirm reject & rewrite
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Tab root ─────────────────────────────────────────────────────────────────
+
+export function AdminLangcliffeTab() {
+  const [queue, setQueue]     = useState<OutreachDraft[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getLangcliffeQueue();
+      setQueue(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load queue');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Langcliffe Outreach Queue</h2>
+          <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
+            Review AI-generated draft emails before they are sent to Langcliffe contacts.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={load}
+          disabled={loading}
+          className="p-2 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] border border-[var(--border)] transition-colors disabled:opacity-50"
+          aria-label="Refresh queue"
+        >
+          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+        </button>
+      </div>
+
+      {loading && (
+        <div className="flex items-center gap-2 text-sm text-[var(--text-tertiary)]">
+          <Loader2 size={14} className="animate-spin" />
+          Loading queue…
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-5 py-4 text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && queue.length === 0 && (
+        <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] px-5 py-10 text-center">
+          <p className="text-[var(--text-secondary)] text-sm">No pending outreach drafts.</p>
+          <p className="text-[var(--text-tertiary)] text-xs mt-1">
+            Drafts appear here when a forwarded Langcliffe teaser matches a subscriber's criteria.
+          </p>
+        </div>
+      )}
+
+      {!loading && queue.length > 0 && (
+        <div className="space-y-4">
+          <p className="text-xs text-[var(--text-tertiary)]">
+            {queue.length} pending draft{queue.length !== 1 ? 's' : ''}
+          </p>
+          {queue.map((draft) => (
+            <DraftCard
+              key={draft._id}
+              draft={draft}
+              onActionComplete={load}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
