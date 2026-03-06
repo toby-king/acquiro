@@ -79,46 +79,63 @@ export interface AdminListing {
   [key: string]: unknown;
 }
 
-/** Raw listing item from Bubble GET /get_listings — response.response.listing[] */
-interface BubbleListingRaw {
-  _id?: string;
-  business_name?: string;
-  source?: string;
-  location?: string;
-  asking_price?: number;
-  'Created Date'?: number;
+/** Raw listing from Bubble Data API obj/Business */
+interface BubbleDataListing {
+  _id: string;
+  business_name_text?: string;
+  listing_id_text?: string;
+  location_text?: string;
+  asking_price_number?: number;
+  'Created Date'?: string; // ISO string from Data API
   [key: string]: unknown;
 }
 
-function mapBubbleListingToAdmin(raw: BubbleListingRaw): AdminListing {
-  const id = raw._id != null ? String(raw._id) : '';
-  const title = raw.business_name != null ? String(raw.business_name).trim() : '';
-  const source = raw.source != null ? String(raw.source) : '';
-  const location =
-    raw.location != null && String(raw.location).trim() !== '' ? String(raw.location).trim() : null;
-  const asking_price =
-    raw.asking_price != null && typeof raw.asking_price === 'number' ? raw.asking_price : null;
-  const createdMs = raw['Created Date'];
-  const date_added =
-    createdMs != null && typeof createdMs === 'number'
-      ? new Date(createdMs).toISOString()
-      : new Date(0).toISOString();
-  return {
-    id,
-    title,
-    source,
-    location,
-    asking_price,
-    date_added,
-    ...raw,
-  };
+function mapBubbleDataListingToAdmin(raw: BubbleDataListing): AdminListing {
+  const id = raw._id ?? '';
+  const title = raw.business_name_text?.trim() ?? '';
+  // Derive source from listing_id_text prefix, e.g. "rightbiz_645229" → "rightbiz", "langcliffe-288658" → "langcliffe"
+  const listingId = raw.listing_id_text ?? '';
+  const source = listingId.split(/[_-]/)[0] ?? '';
+  const location = raw.location_text?.trim() || null;
+  const asking_price = typeof raw.asking_price_number === 'number' ? raw.asking_price_number : null;
+  const date_added = raw['Created Date'] ?? new Date(0).toISOString();
+  return { id, title, source, location, asking_price, date_added, ...raw };
 }
 
-/** GET /get_listings → { status, response: { listing: [...] } }. Listing array may include total_count / by_source if Bubble adds them. */
+/** Bubble Data API base — derived from workflow base by replacing /wf with /obj */
+const BUBBLE_DATA_BASE = BASE_URL ? BASE_URL.replace(/\/wf(\/.*)?$/, '/obj') : '';
+
+/** In-memory cache for all listings (5-minute TTL) */
+let listingsCache: { data: AdminListing[]; fetchedAt: number } | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function fetchAllListings(): Promise<AdminListing[]> {
+  if (listingsCache && Date.now() - listingsCache.fetchedAt < CACHE_TTL_MS) {
+    return listingsCache.data;
+  }
+  const all: AdminListing[] = [];
+  let cursor = 0;
+  while (true) {
+    const url = `${BUBBLE_DATA_BASE}/Business?limit=100&cursor=${cursor}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${API_TOKEN}` } });
+    if (!res.ok) throw new Error(`Bubble Data API failed: ${res.status}`);
+    const json = (await res.json()) as {
+      response: { cursor: number; results: BubbleDataListing[]; count: number; remaining: number };
+    };
+    const { results, count, remaining } = json.response;
+    all.push(...results.map(mapBubbleDataListingToAdmin));
+    if (remaining <= 0) break;
+    cursor += count;
+  }
+  listingsCache = { data: all, fetchedAt: Date.now() };
+  return all;
+}
+
+/** Listings response returned to the admin UI */
 export interface AdminListingsResponse {
   listings: AdminListing[];
   total_count: number;
-  /** Counts per source for summary cards; derived from listing array when not in response */
+  /** Counts per source for summary cards */
   by_source?: { source: string; count: number }[];
 }
 
@@ -130,58 +147,44 @@ export interface GetAdminListingsParams {
 }
 
 /**
- * Fetches listings from Bubble GET /get_listings.
- * Bubble returns { status, response: { listing: [...] } } with each item having _id, business_name, source, location, asking_price, Created Date, etc.
+ * Fetches all listings from Bubble Data API (obj/Business) with cursor-based pagination,
+ * caches the full dataset for 5 minutes, then applies search/filter/pagination client-side.
  */
 export async function getAdminListings(params: GetAdminListingsParams = {}): Promise<AdminListingsResponse> {
   if (!API_TOKEN || !BASE_URL) throw new Error('Bubble API configuration is missing.');
-  const q = new URLSearchParams();
-  if (params.search != null && params.search.trim() !== '') q.set('search', params.search.trim());
-  if (params.source != null && params.source.trim() !== '') q.set('source', params.source.trim());
-  if (params.page != null && params.page > 0) q.set('page', String(params.page));
-  if (params.page_size != null && params.page_size > 0) q.set('page_size', String(params.page_size));
-  const url = `${BASE_URL.replace(/\/$/, '')}/get_listings?${q.toString()}`;
-  const res = await fetch(url, {
-    method: 'GET',
-    headers: { Authorization: `Bearer ${API_TOKEN}` },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Bubble get_listings failed: ${res.status} ${text}`);
+
+  const all = await fetchAllListings();
+
+  // Client-side filtering
+  const search = params.search?.toLowerCase().trim() ?? '';
+  const sourceFilter = params.source?.toLowerCase().trim() ?? '';
+  let filtered = all;
+  if (search) {
+    filtered = filtered.filter(
+      (l) => l.title.toLowerCase().includes(search) || (l.location ?? '').toLowerCase().includes(search),
+    );
   }
-  const data = (await res.json()) as {
-    status?: string;
-    response?: {
-      listing?: BubbleListingRaw[];
-      listings?: BubbleListingRaw[];
-      total_count?: number;
-      by_source?: { source: string; count: number }[];
-    };
-  };
-  const resp = data.response;
-  const rawList = resp?.listing ?? resp?.listings ?? [];
-  const rawArray = Array.isArray(rawList) ? rawList : [];
-  const listings = rawArray.map(mapBubbleListingToAdmin);
-  const total_count =
-    typeof resp?.total_count === 'number' ? resp.total_count : listings.length;
-  const by_source =
-    Array.isArray(resp?.by_source) && resp.by_source.length > 0
-      ? resp.by_source
-      : (() => {
-          const counts: Record<string, number> = {};
-          listings.forEach((l) => {
-            const s = l.source || 'Unknown';
-            counts[s] = (counts[s] ?? 0) + 1;
-          });
-          return Object.entries(counts)
-            .map(([source, count]) => ({ source, count }))
-            .sort((a, b) => b.count - a.count);
-        })();
-  return {
-    listings,
-    total_count,
-    by_source,
-  };
+  if (sourceFilter) {
+    filtered = filtered.filter((l) => l.source.toLowerCase().includes(sourceFilter));
+  }
+
+  // By-source counts from full (unfiltered) dataset for summary cards
+  const counts: Record<string, number> = {};
+  all.forEach((l) => {
+    const s = l.source || 'Unknown';
+    counts[s] = (counts[s] ?? 0) + 1;
+  });
+  const by_source = Object.entries(counts)
+    .map(([source, count]) => ({ source, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // Pagination
+  const page_size = params.page_size ?? 10;
+  const page = Math.max(1, params.page ?? 1);
+  const start = (page - 1) * page_size;
+  const listings = filtered.slice(start, start + page_size);
+
+  return { listings, total_count: filtered.length, by_source };
 }
 
 // --- Backend (Stripe MRR, ElevenLabs) ---
