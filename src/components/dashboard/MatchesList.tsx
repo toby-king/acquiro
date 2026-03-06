@@ -5,10 +5,13 @@ import { fetchMatches, dismissMatch, Match } from '../../services/matchesService
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { Loader2, RefreshCw } from 'lucide-react';
 
+const PAGE_SIZE = 4;
+
 export function MatchesList() {
   // Use userId (Bubble user id set after payment) for matches API – do not use leadId
   const { userId, requestCallWithMatch } = useAdvisorStore();
   const [matches, setMatches] = useState<Match[]>([]);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +58,10 @@ export function MatchesList() {
   const matchesHeader = (
     <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4 min-w-0">
       <div className="hidden sm:block" />
-      <h2 className="text-lg md:text-xl font-semibold text-[var(--text-primary)] text-center order-first sm:order-none">Your Matches.</h2>
+      <div className="flex flex-col items-center order-first sm:order-none">
+        <h2 className="text-lg md:text-xl font-semibold text-[var(--text-primary)] text-center">Your Matches.</h2>
+        <p className="text-sm text-[var(--text-tertiary)] mt-0.5">(Click a listing to discuss it with your agent)</p>
+      </div>
         <div className="flex justify-end sm:order-last">
         <button
           type="button"
@@ -124,13 +130,17 @@ export function MatchesList() {
     );
   }
 
+  const totalPages = Math.max(1, Math.ceil(matches.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageMatches = matches.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   return (
     <div>
       {matchesHeader}
 
       <div className="space-y-3">
         <AnimatePresence mode="popLayout">
-          {matches.map((match, index) => (
+          {pageMatches.map((match, index) => (
             <motion.div
               key={match.id}
               layout
@@ -152,6 +162,30 @@ export function MatchesList() {
           ))}
         </AnimatePresence>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 mt-4">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage <= 1}
+            className="px-4 py-1.5 rounded-full border border-[var(--border)] text-sm text-[var(--text-primary)] disabled:opacity-40 hover:bg-[var(--bg-secondary)] transition-colors"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-[var(--text-secondary)]">
+            {safePage} / {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage >= totalPages}
+            className="px-4 py-1.5 rounded-full border border-[var(--border)] text-sm text-[var(--text-primary)] disabled:opacity-40 hover:bg-[var(--bg-secondary)] transition-colors"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

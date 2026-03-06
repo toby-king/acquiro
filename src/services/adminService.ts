@@ -138,10 +138,11 @@ async function fetchAllListings(onProgress?: (loaded: number, total: number) => 
 export interface AdminListingsResponse {
   listings: AdminListing[];
   total_count: number;
-  /** Counts per source for summary cards */
   by_source?: { source: string; count: number }[];
-  /** New listings per month per source, sorted ascending, for the over-time chart */
   listings_over_time?: { date: string; by_source: Record<string, number> }[];
+  added_today: number;
+  added_this_week: number;
+  avg_asking_price: number | null;
 }
 
 export interface GetAdminListingsParams {
@@ -196,13 +197,21 @@ export async function getAdminListings(params: GetAdminListingsParams = {}): Pro
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, by_source]) => ({ date, by_source }));
 
+  // Summary stats from full (unfiltered) dataset
+  const today = new Date().toISOString().substring(0, 10);
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+  const added_today = all.filter((l) => l.date_added.substring(0, 10) === today).length;
+  const added_this_week = all.filter((l) => l.date_added.substring(0, 10) >= weekAgo).length;
+  const prices = all.map((l) => l.asking_price).filter((p): p is number => p != null && p > 0);
+  const avg_asking_price = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : null;
+
   // Pagination
   const page_size = params.page_size ?? 10;
   const page = Math.max(1, params.page ?? 1);
   const start = (page - 1) * page_size;
   const listings = filtered.slice(start, start + page_size);
 
-  return { listings, total_count: filtered.length, by_source, listings_over_time };
+  return { listings, total_count: filtered.length, by_source, listings_over_time, added_today, added_this_week, avg_asking_price };
 }
 
 // --- Backend (Stripe MRR, ElevenLabs) ---

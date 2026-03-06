@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, FileText, Activity, Globe, LayoutDashboard, Settings, LogOut, Mail } from 'lucide-react';
+import { Users, FileText, Activity, Globe, ArrowLeft, Settings, LogOut, Mail } from 'lucide-react';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
 import './chartConfig';
@@ -50,13 +50,6 @@ export function AdminPage() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link
-            to="/dashboard"
-            className="min-h-[44px] min-w-[44px] rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:text-accent hover:border-accent/50 hover:bg-[var(--bg-secondary)] transition-colors duration-200"
-            aria-label="Dashboard"
-          >
-            <LayoutDashboard size={20} />
-          </Link>
           <div className="relative" ref={profileRef}>
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -107,6 +100,7 @@ export function AdminPage() {
       </header>
 
       <nav className="border-b border-[var(--border)] px-4 sm:px-6">
+        <div className="flex items-center justify-between">
         <div className="flex gap-1">
           {(
             [
@@ -131,6 +125,14 @@ export function AdminPage() {
               {label}
             </button>
           ))}
+        </div>
+        <Link
+          to="/dashboard"
+          className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors py-3 flex-shrink-0"
+        >
+          <ArrowLeft size={15} />
+          Back to dashboard
+        </Link>
         </div>
       </nav>
 

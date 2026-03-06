@@ -118,15 +118,19 @@ export function AdminListingsTab() {
       <h2 className="text-lg font-semibold text-[var(--text-primary)]">Listings</h2>
 
       {data && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] p-4">
-            <p className="text-[var(--text-secondary)] text-sm">Total listings</p>
-            <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">{data.total_count.toLocaleString()}</p>
-          </div>
-          {data.by_source?.map(({ source, count }) => (
-            <div key={source} className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] p-4">
-              <p className="text-[var(--text-secondary)] text-sm truncate" title={source}>{source}</p>
-              <p className="text-xl font-bold text-[var(--text-primary)] mt-1">{count.toLocaleString()}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: 'Total listings', value: data.total_count.toLocaleString() },
+            { label: 'Added today', value: data.added_today.toLocaleString() },
+            { label: 'Added this week', value: data.added_this_week.toLocaleString() },
+            {
+              label: 'Avg. asking price',
+              value: data.avg_asking_price != null ? `£${data.avg_asking_price.toLocaleString()}` : '—',
+            },
+          ].map(({ label, value }) => (
+            <div key={label} className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] p-4">
+              <p className="text-[var(--text-secondary)] text-sm">{label}</p>
+              <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">{value}</p>
             </div>
           ))}
         </div>
