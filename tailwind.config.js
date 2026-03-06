@@ -19,8 +19,8 @@ export default {
           muted: "#5E5B55",
         },
         accent: {
-          DEFAULT: "#c6ff4a",
-          dark: "#9FCC3B",
+          DEFAULT: "var(--accent)",
+          dark: "var(--accent-dark)",
           light: "#d4ff72",
           glow: "rgba(198, 255, 74, 0.15)",
           "glow-strong": "rgba(198, 255, 74, 0.3)",

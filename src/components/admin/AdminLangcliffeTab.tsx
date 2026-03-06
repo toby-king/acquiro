@@ -58,7 +58,7 @@ function DraftCard({
 
   const ref = draft.listing_id_text.replace('langcliffe-', '');
   const createdAt = new Date(draft['Created Date']).toLocaleDateString('en-GB', {
-    day: '2-digit', month: 'short', year: 'numeric',
+    day: 'numeric', month: 'numeric', year: '2-digit',
   });
 
   return (

@@ -145,11 +145,16 @@ export interface AdminListingsResponse {
   avg_asking_price: number | null;
 }
 
+export type AdminSortKey = 'title' | 'source' | 'location' | 'asking_price' | 'date_added';
+export type AdminSortDir = 'asc' | 'desc';
+
 export interface GetAdminListingsParams {
   search?: string;
   source?: string;
   page?: number;
   page_size?: number;
+  sort_by?: AdminSortKey;
+  sort_dir?: AdminSortDir;
   onProgress?: (loaded: number, total: number) => void;
 }
 
@@ -204,6 +209,18 @@ export async function getAdminListings(params: GetAdminListingsParams = {}): Pro
   const added_this_week = all.filter((l) => l.date_added.substring(0, 10) >= weekAgo).length;
   const prices = all.map((l) => l.asking_price).filter((p): p is number => p != null && p > 0);
   const avg_asking_price = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : null;
+
+  // Client-side sorting
+  if (params.sort_by) {
+    const key = params.sort_by;
+    const dir = params.sort_dir === 'desc' ? -1 : 1;
+    filtered = filtered.slice().sort((a, b) => {
+      const av = a[key] ?? '';
+      const bv = b[key] ?? '';
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+      return String(av).localeCompare(String(bv)) * dir;
+    });
+  }
 
   // Pagination
   const page_size = params.page_size ?? 10;

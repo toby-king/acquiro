@@ -159,14 +159,14 @@ function fmtRelative(date: Date, now: Date): string {
 }
 
 function fmtAbsolute(date: Date): string {
-  return date.toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' });
+  return date.toLocaleString('en-GB', { day: 'numeric', month: 'numeric', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 function fmtNextLabel(date: Date, now: Date): string {
   const diffH = (date.getTime() - now.getTime()) / 3_600_000;
   const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   if (diffH < 24) return timeStr;
-  return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' · ' + timeStr;
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: '2-digit' }) + ' · ' + timeStr;
 }
 
 function fmtCountdown(date: Date, now: Date): string {

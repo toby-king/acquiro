@@ -281,9 +281,9 @@ function ConversationRow({
   onToggle: () => void;
 }) {
   const time = row.start_time_unix_secs
-    ? new Date(row.start_time_unix_secs * 1000).toLocaleString(undefined, {
-        dateStyle: 'short',
-        timeStyle: 'short',
+    ? new Date(row.start_time_unix_secs * 1000).toLocaleString('en-GB', {
+        day: 'numeric', month: 'numeric', year: '2-digit',
+        hour: '2-digit', minute: '2-digit',
       })
     : '—';
   const duration =

@@ -6,7 +6,8 @@ import {
   type AdminListingsResponse,
 } from '../../services/adminService';
 import { chartDefaultOptions, CHART_COLOR_PRIMARY, CHART_COLORS } from './chartConfig';
-import { Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
+import type { AdminSortKey, AdminSortDir } from '../../services/adminService';
 
 const PAGE_SIZE = 10;
 
@@ -48,6 +49,8 @@ export function AdminListingsTab() {
   const [progress, setProgress] = useState<{ loaded: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<AdminSortKey>('date_added');
+  const [sortDir, setSortDir] = useState<AdminSortDir>('desc');
 
   useEffect(() => {
     let cancelled = false;
@@ -59,6 +62,8 @@ export function AdminListingsTab() {
       source: sourceFilter || undefined,
       page,
       page_size: PAGE_SIZE,
+      sort_by: sortBy,
+      sort_dir: sortDir,
       onProgress: (loaded, total) => {
         if (!cancelled) setProgress({ loaded, total });
       },
@@ -78,9 +83,19 @@ export function AdminListingsTab() {
     return () => {
       cancelled = true;
     };
-  }, [search, sourceFilter, page]);
+  }, [search, sourceFilter, page, sortBy, sortDir]);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total_count / PAGE_SIZE)) : 1;
+
+  function handleSort(col: AdminSortKey) {
+    if (sortBy === col) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(col);
+      setSortDir('asc');
+    }
+    setPage(1);
+  }
 
   const bySource = data?.by_source?.slice().sort((a, b) => b.count - a.count) ?? [];
   const overTime = data?.listings_over_time ?? [];
@@ -207,11 +222,30 @@ export function AdminListingsTab() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-[var(--bg-secondary)] border-b border-[var(--border)]">
-                    <th className="text-left p-3 font-medium text-[var(--text-primary)]">Title</th>
-                    <th className="text-left p-3 font-medium text-[var(--text-primary)]">Source</th>
-                    <th className="text-left p-3 font-medium text-[var(--text-primary)]">Location</th>
-                    <th className="text-left p-3 font-medium text-[var(--text-primary)]">Asking price</th>
-                    <th className="text-left p-3 font-medium text-[var(--text-primary)]">Date added</th>
+                    {(
+                      [
+                        { label: 'Title', col: 'title' },
+                        { label: 'Source', col: 'source' },
+                        { label: 'Location', col: 'location' },
+                        { label: 'Asking price', col: 'asking_price' },
+                        { label: 'Date added', col: 'date_added' },
+                      ] as { label: string; col: AdminSortKey }[]
+                    ).map(({ label, col }) => (
+                      <th
+                        key={col}
+                        className="text-left p-3 font-medium text-[var(--text-primary)] cursor-pointer select-none hover:text-accent"
+                        onClick={() => handleSort(col)}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {label}
+                          {sortBy === col
+                            ? sortDir === 'asc'
+                              ? <ChevronUp size={14} />
+                              : <ChevronDown size={14} />
+                            : <ChevronsUpDown size={14} className="opacity-30" />}
+                        </span>
+                      </th>
+                    ))}
                     <th className="w-10 p-2" />
                   </tr>
                 </thead>
@@ -265,6 +299,113 @@ export function AdminListingsTab() {
   );
 }
 
+function fmt(val: unknown): string {
+  if (val == null || val === '') return '—';
+  if (typeof val === 'number') return val.toLocaleString();
+  if (typeof val === 'boolean') return val ? 'Yes' : 'No';
+  if (typeof val === 'string') {
+    const d = new Date(val);
+    if (/^\d{4}-\d{2}-\d{2}T/.test(val) && !isNaN(d.getTime()))
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: '2-digit' });
+    return val;
+  }
+  return String(val);
+}
+
+const KNOWN_FIELDS = new Set([
+  'id', 'title', 'source', 'location', 'asking_price', 'date_added',
+  '_id', 'business_name_text', 'listing_id_text', 'location_text',
+  'asking_price_number', 'Created Date', 'Modified Date',
+]);
+
+function ListingDetail({ row }: { row: AdminListing }) {
+  const url = row['url_text'] as string | undefined;
+  const description = row['description_text'] as string | undefined;
+  const sector = row['sector_text'] as string | undefined;
+  const tenure = row['tenure_text'] as string | undefined;
+  const turnover = row['turnover_text'] ?? (row['turnover_number'] != null ? `£${Number(row['turnover_number']).toLocaleString()}` : undefined);
+  const ebitda = row['ebitda_text'] ?? (row['ebitda_number'] != null ? `£${Number(row['ebitda_number']).toLocaleString()}` : undefined);
+  const netProfit = row['net_profit_text'] ?? (row['net_profit_number'] != null ? `£${Number(row['net_profit_number']).toLocaleString()}` : undefined);
+  const rent = row['rent_text'] ?? (row['rent_number'] != null ? `£${Number(row['rent_number']).toLocaleString()}` : undefined);
+
+  const highlights: { label: string; value: unknown }[] = [
+    { label: 'Listing ID', value: row['listing_id_text'] },
+    { label: 'Source', value: row.source },
+    { label: 'Location', value: row.location },
+    { label: 'Sector', value: sector },
+    { label: 'Tenure', value: tenure },
+    { label: 'Asking price', value: row.asking_price != null ? `£${Number(row.asking_price).toLocaleString()}` : null },
+    { label: 'Turnover', value: turnover },
+    { label: 'EBITDA', value: ebitda },
+    { label: 'Net profit', value: netProfit },
+    { label: 'Rent', value: rent },
+    { label: 'Date added', value: row.date_added },
+  ];
+
+  const knownValueKeys = new Set([
+    ...Array.from(KNOWN_FIELDS),
+    'url_text', 'description_text', 'sector_text', 'tenure_text',
+    'turnover_text', 'turnover_number', 'ebitda_text', 'ebitda_number',
+    'net_profit_text', 'net_profit_number', 'rent_text', 'rent_number',
+  ]);
+  const extra = Object.entries(row).filter(
+    ([k, v]) => !knownValueKeys.has(k) && v != null && v !== '' && !Array.isArray(v)
+  );
+
+  return (
+    <div className="space-y-4 text-sm">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <p className="font-semibold text-[var(--text-primary)] text-base">{row.title || '—'}</p>
+        {url && (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 text-xs text-accent underline hover:opacity-80"
+            onClick={(e) => e.stopPropagation()}
+          >
+            View source ↗
+          </a>
+        )}
+      </div>
+
+      {/* Key fields grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-2">
+        {highlights.map(({ label, value }) => (
+          <div key={label}>
+            <p className="text-[var(--text-tertiary)] text-xs uppercase tracking-wide">{label}</p>
+            <p className="text-[var(--text-primary)] mt-0.5">{fmt(value)}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Description */}
+      {description && (
+        <div>
+          <p className="text-[var(--text-tertiary)] text-xs uppercase tracking-wide mb-1">Description</p>
+          <p className="text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">{description}</p>
+        </div>
+      )}
+
+      {/* Remaining fields */}
+      {extra.length > 0 && (
+        <div>
+          <p className="text-[var(--text-tertiary)] text-xs uppercase tracking-wide mb-2">Additional fields</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1.5">
+            {extra.map(([k, v]) => (
+              <div key={k}>
+                <p className="text-[var(--text-tertiary)] text-xs">{k}</p>
+                <p className="text-[var(--text-secondary)] text-xs mt-0.5 break-all">{fmt(v)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ListingRow({
   row,
   expanded,
@@ -281,7 +422,7 @@ function ListingRow({
         : String(row.asking_price)
       : '—';
   const date = row.date_added
-    ? new Date(row.date_added).toLocaleDateString(undefined, { dateStyle: 'short' })
+    ? new Date(row.date_added).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: '2-digit' })
     : '—';
 
   return (
@@ -304,9 +445,7 @@ function ListingRow({
       {expanded && (
         <tr className="bg-[var(--bg-secondary)]/50 border-b border-[var(--border)]">
           <td colSpan={6} className="p-4">
-            <pre className="text-xs text-[var(--text-secondary)] overflow-x-auto whitespace-pre-wrap">
-              {JSON.stringify(row, null, 2)}
-            </pre>
+            <ListingDetail row={row} />
           </td>
         </tr>
       )}
