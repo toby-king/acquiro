@@ -109,12 +109,13 @@ const BUBBLE_DATA_BASE = BASE_URL ? BASE_URL.replace(/\/wf(\/.*)?$/, '/obj') : '
 let listingsCache: { data: AdminListing[]; fetchedAt: number } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-async function fetchAllListings(): Promise<AdminListing[]> {
+async function fetchAllListings(onProgress?: (loaded: number, total: number) => void): Promise<AdminListing[]> {
   if (listingsCache && Date.now() - listingsCache.fetchedAt < CACHE_TTL_MS) {
     return listingsCache.data;
   }
   const all: AdminListing[] = [];
   let cursor = 0;
+  let knownTotal: number | null = null;
   while (true) {
     const url = `${BUBBLE_DATA_BASE}/Business?limit=100&cursor=${cursor}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${API_TOKEN}` } });
@@ -124,6 +125,8 @@ async function fetchAllListings(): Promise<AdminListing[]> {
     };
     const { results, count, remaining } = json.response;
     all.push(...results.map(mapBubbleDataListingToAdmin));
+    if (knownTotal === null) knownTotal = count + remaining;
+    onProgress?.(all.length, knownTotal);
     if (remaining <= 0) break;
     cursor += count;
   }
@@ -137,6 +140,8 @@ export interface AdminListingsResponse {
   total_count: number;
   /** Counts per source for summary cards */
   by_source?: { source: string; count: number }[];
+  /** New listings per month per source, sorted ascending, for the over-time chart */
+  listings_over_time?: { date: string; by_source: Record<string, number> }[];
 }
 
 export interface GetAdminListingsParams {
@@ -144,6 +149,7 @@ export interface GetAdminListingsParams {
   source?: string;
   page?: number;
   page_size?: number;
+  onProgress?: (loaded: number, total: number) => void;
 }
 
 /**
@@ -153,7 +159,7 @@ export interface GetAdminListingsParams {
 export async function getAdminListings(params: GetAdminListingsParams = {}): Promise<AdminListingsResponse> {
   if (!API_TOKEN || !BASE_URL) throw new Error('Bubble API configuration is missing.');
 
-  const all = await fetchAllListings();
+  const all = await fetchAllListings(params.onProgress);
 
   // Client-side filtering
   const search = params.search?.toLowerCase().trim() ?? '';
@@ -178,13 +184,25 @@ export async function getAdminListings(params: GetAdminListingsParams = {}): Pro
     .map(([source, count]) => ({ source, count }))
     .sort((a, b) => b.count - a.count);
 
+  // Compute listings_over_time from full dataset (grouped by month + source)
+  const byMonthSource: Record<string, Record<string, number>> = {};
+  all.forEach((l) => {
+    const month = l.date_added.substring(0, 7); // e.g. "2024-01"
+    if (!byMonthSource[month]) byMonthSource[month] = {};
+    const s = l.source || 'Unknown';
+    byMonthSource[month][s] = (byMonthSource[month][s] ?? 0) + 1;
+  });
+  const listings_over_time = Object.entries(byMonthSource)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, by_source]) => ({ date, by_source }));
+
   // Pagination
   const page_size = params.page_size ?? 10;
   const page = Math.max(1, params.page ?? 1);
   const start = (page - 1) * page_size;
   const listings = filtered.slice(start, start + page_size);
 
-  return { listings, total_count: filtered.length, by_source };
+  return { listings, total_count: filtered.length, by_source, listings_over_time };
 }
 
 // --- Backend (Stripe MRR, ElevenLabs) ---

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import {
   getAdminListings,
-  getAdminStats,
   type AdminListing,
   type AdminListingsResponse,
 } from '../../services/adminService';
@@ -45,9 +44,8 @@ export function AdminListingsTab() {
   const [sourceFilter, setSourceFilter] = useState('');
   const [page, setPage] = useState(1);
   const [data, setData] = useState<AdminListingsResponse | null>(null);
-  const [listingStats, setListingStats] = useState<{ listings_by_source?: { source: string; count: number }[]; listings_over_time?: { date: string; by_source: Record<string, number> }[] } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingChartStats, setLoadingChartStats] = useState(true);
+  const [progress, setProgress] = useState<{ loaded: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -55,11 +53,15 @@ export function AdminListingsTab() {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setProgress(null);
     getAdminListings({
       search: search || undefined,
       source: sourceFilter || undefined,
       page,
       page_size: PAGE_SIZE,
+      onProgress: (loaded, total) => {
+        if (!cancelled) setProgress({ loaded, total });
+      },
     })
       .then((res) => {
         if (!cancelled) setData(res);
@@ -68,35 +70,20 @@ export function AdminListingsTab() {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load listings');
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setProgress(null);
+        }
       });
     return () => {
       cancelled = true;
     };
   }, [search, sourceFilter, page]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoadingChartStats(true);
-    getAdminStats()
-      .then((s) => {
-        if (!cancelled) setListingStats({ listings_by_source: s.listings_by_source, listings_over_time: s.listings_over_time });
-      })
-      .catch(() => {
-        if (!cancelled) setListingStats(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingChartStats(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const totalPages = data ? Math.max(1, Math.ceil(data.total_count / PAGE_SIZE)) : 1;
 
-  const bySource = listingStats?.listings_by_source?.slice().sort((a, b) => b.count - a.count) ?? [];
-  const overTime = listingStats?.listings_over_time ?? [];
+  const bySource = data?.by_source?.slice().sort((a, b) => b.count - a.count) ?? [];
+  const overTime = data?.listings_over_time ?? [];
   const sourceNames = overTime.length
     ? Array.from(
         new Set(overTime.flatMap((d) => Object.keys(d.by_source ?? {})))
@@ -125,7 +112,7 @@ export function AdminListingsTab() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ChartCard
           title="Listings by Source"
-          loading={loadingChartStats}
+          loading={loading}
           empty={bySource.length === 0}
         >
           {bySource.length > 0 && (
@@ -151,7 +138,7 @@ export function AdminListingsTab() {
         </ChartCard>
         <ChartCard
           title="New Listings Over Time"
-          loading={loadingChartStats}
+          loading={loading}
           empty={overTime.length === 0 || sourceNames.length === 0}
         >
           {overTime.length > 0 && sourceNames.length > 0 && (
@@ -203,9 +190,21 @@ export function AdminListingsTab() {
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-[var(--text-secondary)] py-8">
-          <Loader2 className="w-6 h-6 animate-spin" />
-          Loading listings…
+        <div className="space-y-3 py-4">
+          <div className="flex items-center gap-2 text-[var(--text-secondary)] text-sm">
+            <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+            {progress
+              ? `Loading ${progress.loaded.toLocaleString()} / ${progress.total.toLocaleString()} listings…`
+              : 'Loading listings…'}
+          </div>
+          {progress && (
+            <div className="h-1.5 w-full max-w-sm rounded-full bg-[var(--bg-card)] overflow-hidden">
+              <div
+                className="h-full bg-accent rounded-full transition-all duration-300"
+                style={{ width: `${Math.min(100, Math.round((progress.loaded / progress.total) * 100))}%` }}
+              />
+            </div>
+          )}
         </div>
       ) : data ? (
         <>
