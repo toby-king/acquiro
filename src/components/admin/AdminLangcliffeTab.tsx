@@ -99,11 +99,6 @@ function DraftCard({
             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400 font-medium flex-shrink-0">
               Ref {ref}
             </span>
-            {isReply && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-medium flex-shrink-0">
-                Reply
-              </span>
-            )}
           </div>
           <div className="flex items-center gap-1.5 mt-1 text-xs text-[var(--text-tertiary)]">
             <Mail size={11} />
@@ -279,9 +274,72 @@ function DraftCard({
   );
 }
 
+// ─── Section ──────────────────────────────────────────────────────────────────
+
+function QueueSection({
+  title,
+  description,
+  color,
+  items,
+  onActionComplete,
+}: {
+  title: string;
+  description: string;
+  color: string;
+  items: OutreachDraft[];
+  onActionComplete: () => void;
+}) {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <div className="rounded-xl border border-[var(--border)] overflow-hidden">
+      {/* Section header */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-4 px-5 py-3 bg-[var(--bg-secondary)] hover:bg-[var(--bg-card)] transition-colors"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <span className={`text-sm font-semibold ${color}`}>{title}</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+            color === 'text-amber-400' ? 'bg-amber-400/10 text-amber-400' : 'bg-blue-400/10 text-blue-400'
+          }`}>
+            {items.length}
+          </span>
+          <span className="text-xs text-[var(--text-tertiary)] hidden sm:block">{description}</span>
+        </div>
+        {open ? <ChevronUp size={15} className="text-[var(--text-tertiary)] flex-shrink-0" /> : <ChevronDown size={15} className="text-[var(--text-tertiary)] flex-shrink-0" />}
+      </button>
+
+      {/* Cards */}
+      {open && (
+        <div className="p-4 space-y-4 bg-[var(--bg-primary)]">
+          {items.length === 0 ? (
+            <p className="text-xs text-[var(--text-tertiary)] text-center py-4">No items in this section.</p>
+          ) : (
+            items.map((draft) => (
+              <DraftCard key={draft._id} draft={draft} onActionComplete={onActionComplete} />
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Tab root ─────────────────────────────────────────────────────────────────
 
-export function AdminLangcliffeTab() {
+const SECTIONS: {
+  key: OutreachDraft['status_text'];
+  title: string;
+  description: string;
+  color: string;
+}[] = [
+  { key: 'pending_reply', title: 'Replies',  description: 'Responses from Langcliffe contacts',        color: 'text-blue-400'  },
+  { key: 'pending',       title: 'Teasers',  description: 'Initial outreach drafts awaiting approval', color: 'text-amber-400' },
+];
+
+export function AdminLangcliffeTab({ onCountChange }: { onCountChange?: (count: number) => void }) {
   const [queue, setQueue]     = useState<OutreachDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
@@ -292,14 +350,17 @@ export function AdminLangcliffeTab() {
     try {
       const data = await getLangcliffeQueue();
       setQueue(data);
+      onCountChange?.(data.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load queue');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onCountChange]);
 
   useEffect(() => { load(); }, [load]);
+
+  const totalPending = queue.length;
 
   return (
     <div className="space-y-6">
@@ -334,7 +395,7 @@ export function AdminLangcliffeTab() {
         </div>
       )}
 
-      {!loading && !error && queue.length === 0 && (
+      {!loading && !error && totalPending === 0 && (
         <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] px-5 py-10 text-center">
           <p className="text-[var(--text-secondary)] text-sm">No pending outreach drafts.</p>
           <p className="text-[var(--text-tertiary)] text-xs mt-1">
@@ -343,18 +404,25 @@ export function AdminLangcliffeTab() {
         </div>
       )}
 
-      {!loading && queue.length > 0 && (
+      {!loading && totalPending > 0 && (
         <div className="space-y-4">
           <p className="text-xs text-[var(--text-tertiary)]">
-            {queue.length} pending draft{queue.length !== 1 ? 's' : ''}
+            {totalPending} item{totalPending !== 1 ? 's' : ''} pending approval
           </p>
-          {queue.map((draft) => (
-            <DraftCard
-              key={draft._id}
-              draft={draft}
-              onActionComplete={load}
-            />
-          ))}
+          {SECTIONS.map((section) => {
+            const items = queue.filter((d) => d.status_text === section.key);
+            if (items.length === 0) return null;
+            return (
+              <QueueSection
+                key={section.key}
+                title={section.title}
+                description={section.description}
+                color={section.color}
+                items={items}
+                onActionComplete={load}
+              />
+            );
+          })}
         </div>
       )}
     </div>

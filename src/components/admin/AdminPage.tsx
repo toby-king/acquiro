@@ -10,15 +10,22 @@ import { AdminListingsTab } from './AdminListingsTab';
 import { AdminAgentActivityTab } from './AdminAgentActivityTab';
 import { AdminSourcesTab } from './AdminSourcesTab';
 import { AdminLangcliffeTab } from './AdminLangcliffeTab';
+import { getLangcliffeQueue } from '../../services/langcliffeService';
 
 type AdminTab = 'users' | 'listings' | 'activity' | 'sources' | 'langcliffe';
 
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
   const [profileOpen, setProfileOpen] = useState(false);
+  const [langcliffeCount, setLangcliffeCount] = useState(0);
+
+  useEffect(() => {
+    getLangcliffeQueue().then((q) => setLangcliffeCount(q.length)).catch(() => {});
+  }, []);
   const profileRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { userName, logout } = useAdvisorStore();
+
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -123,6 +130,11 @@ export function AdminPage() {
             >
               <Icon size={18} />
               {label}
+              {id === 'langcliffe' && langcliffeCount > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent text-black leading-none">
+                  {langcliffeCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -141,7 +153,7 @@ export function AdminPage() {
         {activeTab === 'listings' && <AdminListingsTab />}
         {activeTab === 'activity' && <AdminAgentActivityTab />}
         {activeTab === 'sources' && <AdminSourcesTab />}
-        {activeTab === 'langcliffe' && <AdminLangcliffeTab />}
+        {activeTab === 'langcliffe' && <AdminLangcliffeTab onCountChange={setLangcliffeCount} />}
       </main>
     </div>
   );
