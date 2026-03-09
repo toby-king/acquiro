@@ -50,6 +50,9 @@ function LangcliffeSetup({ userId, connected, onMarkConnected, markingConnected 
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactEmailSaving, setContactEmailSaving] = useState(false);
+  const [contactEmailSaved, setContactEmailSaved] = useState(false);
 
   useEffect(() => {
     Promise.all([getMyAgent(userId), getMyBuyerInfo(userId)])
@@ -58,11 +61,26 @@ function LangcliffeSetup({ userId, connected, onMarkConnected, markingConnected 
         if (buyerInfo) {
           setBuyerInfoId(buyerInfo._id);
           setOverview(buyerInfo.company_overview_text ?? '');
+          setContactEmail(buyerInfo.langcliffe_contact_email_text ?? '');
         }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [userId]);
+
+  const handleSaveContactEmail = async () => {
+    if (!buyerInfoId) return;
+    setContactEmailSaving(true);
+    try {
+      await updateBuyerInfo(buyerInfoId, { langcliffe_contact_email_text: contactEmail.trim().toLowerCase() });
+      setContactEmailSaved(true);
+      setTimeout(() => setContactEmailSaved(false), 2000);
+    } catch {
+      // fail silently
+    } finally {
+      setContactEmailSaving(false);
+    }
+  };
 
   const handleGenerateFromWebsite = async () => {
     if (!websiteUrl.trim()) return;
@@ -127,6 +145,35 @@ function LangcliffeSetup({ userId, connected, onMarkConnected, markingConnected 
         {/* Step 2 */}
         <li className="flex gap-4">
           <span className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+          <div className="flex-1 min-w-0 space-y-3">
+            <div>
+              <p className="text-[var(--text-primary)] font-medium">Enter your Langcliffe contact's email</p>
+              <p className="mt-1">This is the email address Langcliffe use to send you the daily list and to reply to your advisor's outreach. You'll find it in any email you've received from them.</p>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="contact@langcliffeinternational.com"
+                className="flex-1 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] text-sm focus:outline-none focus:ring-1 focus:ring-accent min-w-0"
+              />
+              <button
+                type="button"
+                onClick={handleSaveContactEmail}
+                disabled={contactEmailSaving || !buyerInfoId || !contactEmail.trim()}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium bg-accent text-black hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+              >
+                {contactEmailSaving ? <Loader2 size={13} className="animate-spin" /> : contactEmailSaved ? <Check size={13} /> : null}
+                {contactEmailSaving ? 'Saving…' : contactEmailSaved ? 'Saved' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </li>
+
+        {/* Step 3 */}
+        <li className="flex gap-4">
+          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent text-xs font-bold flex items-center justify-center mt-0.5">3</span>
           <div className="flex-1 min-w-0">
             <p className="text-[var(--text-primary)] font-medium">Your advisor's forwarding address</p>
             <p className="mt-1">This is the email address your forwarding rule will send to. Copy it before moving to the next step.</p>
@@ -149,9 +196,9 @@ function LangcliffeSetup({ userId, connected, onMarkConnected, markingConnected 
           </div>
         </li>
 
-        {/* Step 3 */}
+        {/* Step 4 */}
         <li className="flex gap-4">
-          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent text-xs font-bold flex items-center justify-center mt-0.5">3</span>
+          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent text-xs font-bold flex items-center justify-center mt-0.5">4</span>
           <div>
             <p className="text-[var(--text-primary)] font-medium">Set up email forwarding</p>
             <p className="mt-1">
@@ -165,9 +212,9 @@ function LangcliffeSetup({ userId, connected, onMarkConnected, markingConnected 
           </div>
         </li>
 
-        {/* Step 4 */}
+        {/* Step 5 */}
         <li className="flex gap-4">
-          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent text-xs font-bold flex items-center justify-center mt-0.5">4</span>
+          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent text-xs font-bold flex items-center justify-center mt-0.5">5</span>
           <div className="flex-1 min-w-0 space-y-3">
             <div>
               <p className="text-[var(--text-primary)] font-medium">Add your company overview</p>
@@ -211,9 +258,9 @@ function LangcliffeSetup({ userId, connected, onMarkConnected, markingConnected 
           </div>
         </li>
 
-        {/* Step 5 */}
+        {/* Step 6 */}
         <li className="flex gap-4">
-          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent text-xs font-bold flex items-center justify-center mt-0.5">5</span>
+          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-accent/10 text-accent text-xs font-bold flex items-center justify-center mt-0.5">6</span>
           <div>
             <p className="text-[var(--text-primary)] font-medium">You're done</p>
             <p className="mt-1">

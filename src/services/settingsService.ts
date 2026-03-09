@@ -99,6 +99,7 @@ export interface BuyerInfoRecord {
   max_investment_number?: number;
   industry_preferences_list_option_sectors?: string[];
   excluded_sectors_list_option_sectors?: string[];
+  langcliffe_contact_email_text?: string;
   [key: string]: unknown;
 }
 
