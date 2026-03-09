@@ -1,15 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, CheckCircle2, XCircle, Loader2, Mail, ChevronDown, ChevronUp } from 'lucide-react';
+import { RefreshCw, CheckCircle2, XCircle, Loader2, Mail, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import {
   getLangcliffeQueue,
   approveOutreach,
+  approveReply,
   rejectOutreach,
+  rejectReply,
+  deleteOutreach,
   type OutreachDraft,
 } from '../../services/langcliffeService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type CardAction = 'idle' | 'approving' | 'rejecting' | 'rewriting';
+type CardAction = 'idle' | 'approving' | 'rejecting' | 'rewriting' | 'deleting';
 
 // ─── Draft card ───────────────────────────────────────────────────────────────
 
@@ -20,12 +23,17 @@ function DraftCard({
   draft: OutreachDraft;
   onActionComplete: () => void;
 }) {
-  const [action, setAction]           = useState<CardAction>('idle');
-  const [feedback, setFeedback]       = useState('');
-  const [showReject, setShowReject]   = useState(false);
-  const [expanded, setExpanded]       = useState(false);
-  const [currentDraft, setCurrentDraft] = useState(draft.draft_body_text);
-  const [error, setError]             = useState<string | null>(null);
+  const isReply = draft.status_text === 'pending_reply';
+
+  const [action, setAction]             = useState<CardAction>('idle');
+  const [feedback, setFeedback]         = useState('');
+  const [showReject, setShowReject]     = useState(false);
+  const [showDelete, setShowDelete]     = useState(false);
+  const [expanded, setExpanded]         = useState(false);
+  const [currentDraft, setCurrentDraft] = useState(
+    isReply ? (draft.reply_draft_text ?? '') : draft.draft_body_text,
+  );
+  const [error, setError]               = useState<string | null>(null);
 
   const busy = action !== 'idle';
 
@@ -33,10 +41,26 @@ function DraftCard({
     setError(null);
     setAction('approving');
     try {
-      await approveOutreach(draft._id);
+      if (isReply) {
+        await approveReply(draft._id);
+      } else {
+        await approveOutreach(draft._id);
+      }
       onActionComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Approve failed');
+      setAction('idle');
+    }
+  };
+
+  const handleDelete = async () => {
+    setError(null);
+    setAction('deleting');
+    try {
+      await deleteOutreach(draft._id);
+      onActionComplete();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Delete failed');
       setAction('idle');
     }
   };
@@ -45,7 +69,9 @@ function DraftCard({
     setError(null);
     setAction('rewriting');
     try {
-      const newDraft = await rejectOutreach(draft._id, feedback || undefined);
+      const newDraft = isReply
+        ? await rejectReply(draft._id, feedback || undefined)
+        : await rejectOutreach(draft._id, feedback || undefined);
       setCurrentDraft(newDraft);
       setFeedback('');
       setShowReject(false);
@@ -56,13 +82,13 @@ function DraftCard({
     }
   };
 
-  const ref = draft.listing_id_text.replace('langcliffe-', '');
+  const ref = draft.listing_id_text.replace('langcliffe_', '').replace('langcliffe-', '');
   const createdAt = new Date(draft['Created Date']).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'numeric', year: '2-digit',
   });
 
   return (
-    <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden">
+    <div className={`rounded-xl bg-[var(--bg-card)] border overflow-hidden ${isReply ? 'border-blue-500/30' : 'border-[var(--border)]'}`}>
       {/* Card header */}
       <div className="px-5 py-4 flex items-start justify-between gap-4 border-b border-[var(--border)]">
         <div className="min-w-0">
@@ -73,6 +99,11 @@ function DraftCard({
             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400 font-medium flex-shrink-0">
               Ref {ref}
             </span>
+            {isReply && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-medium flex-shrink-0">
+                Reply
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5 mt-1 text-xs text-[var(--text-tertiary)]">
             <Mail size={11} />
@@ -86,7 +117,7 @@ function DraftCard({
           type="button"
           onClick={() => setExpanded((e) => !e)}
           className="flex-shrink-0 p-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
-          aria-label={expanded ? 'Collapse draft' : 'Expand draft'}
+          aria-label={expanded ? 'Collapse' : 'Expand'}
         >
           {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
@@ -95,7 +126,8 @@ function DraftCard({
       {/* Expanded body */}
       {expanded && (
         <>
-          {draft.inbound_email_text && (
+          {/* Initial outreach: show original Langcliffe teaser */}
+          {!isReply && draft.inbound_email_text && (
             <div className="px-5 py-4 border-b border-[var(--border)]">
               <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
                 Original email
@@ -105,9 +137,23 @@ function DraftCard({
               </pre>
             </div>
           )}
+
+          {/* Reply: show Langcliffe's message */}
+          {isReply && draft.langcliffe_reply_body_text && (
+            <div className="px-5 py-4 border-b border-[var(--border)]">
+              <p className="text-xs font-medium text-blue-400 uppercase tracking-wider mb-2">
+                Langcliffe's message
+              </p>
+              <pre className="whitespace-pre-wrap text-sm text-[var(--text-secondary)] font-sans leading-relaxed bg-[var(--bg-secondary)] rounded-lg p-4 max-h-64 overflow-y-auto">
+                {draft.langcliffe_reply_body_text}
+              </pre>
+            </div>
+          )}
+
+          {/* Draft / reply draft */}
           <div className="px-5 py-4 border-b border-[var(--border)]">
             <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
-              Draft email body
+              {isReply ? 'Draft reply' : 'Draft email body'}
             </p>
             <pre className="whitespace-pre-wrap text-sm text-[var(--text-primary)] font-sans leading-relaxed bg-[var(--bg-secondary)] rounded-lg p-4">
               {currentDraft}
@@ -135,7 +181,7 @@ function DraftCard({
             ) : (
               <CheckCircle2 size={14} />
             )}
-            {action === 'approving' ? 'Sending…' : 'Approve & Send'}
+            {action === 'approving' ? 'Sending…' : isReply ? 'Approve & Send Reply' : 'Approve & Send'}
           </button>
 
           {/* Reject / rewrite */}
@@ -149,12 +195,59 @@ function DraftCard({
             Reject & Rewrite
           </button>
 
+          {/* Delete */}
+          <button
+            type="button"
+            onClick={() => setShowDelete((s) => !s)}
+            disabled={busy}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-tertiary)] hover:text-red-400 hover:border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {action === 'deleting' ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Trash2 size={14} />
+            )}
+            Delete
+          </button>
+
           {action === 'rewriting' && (
             <span className="text-xs text-[var(--text-tertiary)] flex items-center gap-1.5">
-              <Loader2 size={12} className="animate-spin" /> Regenerating draft…
+              <Loader2 size={12} className="animate-spin" /> Regenerating…
             </span>
           )}
         </div>
+
+        {/* Delete confirmation panel */}
+        {showDelete && (
+          <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 space-y-2">
+            <p className="text-xs text-red-400 font-medium">
+              Warning: this will permanently delete the draft and stop any conversation with Langcliffe about this opportunity.
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={busy}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {action === 'deleting' ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Trash2 size={14} />
+                )}
+                Confirm delete
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDelete(false)}
+                disabled={busy}
+                className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Reject feedback panel */}
         {showReject && (

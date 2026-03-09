@@ -6,6 +6,9 @@ import { AdvisorConfig } from '../types/advisor';
 
 const API_URL = `${import.meta.env.VITE_BUBBLE_API_BASE_URL}/create_agent`;
 const API_TOKEN = import.meta.env.VITE_BUBBLE_API_TOKEN;
+// Derive the Bubble data API base from the workflow URL (/wf → /obj)
+const BUBBLE_DATA_BASE = (import.meta.env.VITE_BUBBLE_API_BASE_URL as string)
+  ?.replace(/\/wf(\/.*)?$/, '/obj') ?? '';
 
 if (!API_TOKEN || !import.meta.env.VITE_BUBBLE_API_BASE_URL) {
   console.error('Missing required environment variables: VITE_BUBBLE_API_TOKEN and/or VITE_BUBBLE_API_BASE_URL');
@@ -14,6 +17,7 @@ if (!API_TOKEN || !import.meta.env.VITE_BUBBLE_API_BASE_URL) {
 interface CreateAgentPayload {
   lead_id: string;
   name: string;
+  email: string;
   challenge_style: string;
   profanity: string;
   traits: string;
@@ -27,50 +31,95 @@ interface CreateAgentResponse {
 }
 
 /**
+ * Sanitises an agent name into a valid email local-part.
+ * "Sophia O'Brien" → "sophiaobrien"
+ */
+function sanitiseAgentName(name: string): string {
+  return (name || 'agent')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics
+    .replace(/[^a-zA-Z0-9]/g, '')    // remove spaces + special chars
+    .toLowerCase() || 'agent';
+}
+
+/**
+ * Checks whether an email address is already in use by an existing agent in Bubble.
+ */
+async function agentEmailTaken(email: string): Promise<boolean> {
+  const constraints = JSON.stringify([
+    { key: 'email_text', constraint_type: 'equals', value: email },
+  ]);
+  const url = `${BUBBLE_DATA_BASE}/Agents?constraints=${encodeURIComponent(constraints)}&limit=1`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${API_TOKEN}` },
+  });
+  if (!res.ok) throw new Error(`Bubble agent lookup failed: ${res.status}`);
+  const data = await res.json() as { response?: { count?: number } };
+  return (data.response?.count ?? 0) > 0;
+}
+
+/**
+ * Returns a unique @acquiro-agent.com address for the given agent name.
+ * Tries {name}@acquiro-agent.com first, then {name}.a@ … {name}.z@
+ * (the letter suffix reads as a last initial and still looks human).
+ */
+async function generateAgentEmail(agentName: string): Promise<string> {
+  const base = sanitiseAgentName(agentName);
+  const domain = 'acquiro-agent.com';
+
+  const candidates = [
+    `${base}@${domain}`,
+    ...'abcdefghijklmnopqrstuvwxyz'.split('').map((l) => `${base}.${l}@${domain}`),
+  ];
+
+  for (const candidate of candidates) {
+    if (!(await agentEmailTaken(candidate))) return candidate;
+  }
+
+  // Extremely unlikely fallback — all 27 variants taken
+  return candidates[candidates.length - 1];
+}
+
+/**
  * Formats custom stats into a concatenated string with titles
  */
 function formatCustomStats(customStats: AdvisorConfig['customStats']): string {
   if (!customStats) return '';
-  
-  const statsArray = [
+  return [
     `patience: ${customStats.patience}`,
     `analytical: ${customStats.analytical}`,
     `warmth: ${customStats.warmth}`,
     `directness: ${customStats.directness}`,
     `verbosity: ${customStats.verbosity}`,
-  ];
-  
-  return statsArray.join(', ');
+  ].join(', ');
 }
 
 /**
- * Creates an agent by sending configuration data to the Bubble API
- * @param leadId - The lead ID from the created lead
- * @param config - The advisor configuration containing all agent settings
- * @returns Promise that resolves to the API response
+ * Creates an agent by sending configuration data to the Bubble API.
+ * Generates and assigns a unique @acquiro-agent.com email before creation.
  */
 export async function createAgent(
   leadId: string,
   config: AdvisorConfig
 ): Promise<CreateAgentResponse | null> {
   try {
-    // Build the payload with all values as strings
+    const agentName = config.advisorName || 'agent';
+    const email = await generateAgentEmail(agentName);
+
     const payload: CreateAgentPayload = {
       lead_id: leadId,
-      name: config.advisorName || '',
+      name: agentName,
+      email,
       challenge_style: config.challengeStyle || '',
       profanity: config.allowProfanity.toString(),
-      traits: config.traits.embrace.join(', '), // Concatenate embraced traits
+      traits: config.traits.embrace.join(', '),
       type: config.type || '',
       voice: config.voice?.id || '',
     };
 
-    // Add personality field based on whether preset or custom
     if (config.personality) {
-      // Use personality preset ID
       payload.personality = config.personality.name;
     } else if (config.customStats) {
-      // Concatenate custom stats with their titles
       payload.personality = formatCustomStats(config.customStats);
     }
 
@@ -88,15 +137,10 @@ export async function createAgent(
     }
 
     const data = await response.json() as CreateAgentResponse;
-    
-    // Optionally log success (in production, you might want to remove console logs)
     console.log('Agent created successfully:', payload);
-    
     return data;
   } catch (error) {
-    // Log error but don't throw - we don't want to interrupt the user flow
     console.error('Failed to create agent:', error);
-    // In a production app, you might want to send this to an error tracking service
     return null;
   }
 }
