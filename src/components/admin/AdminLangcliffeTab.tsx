@@ -43,6 +43,20 @@ function DraftCard({
   });
   const [error, setError]               = useState<string | null>(null);
 
+  // Sync draft text when the underlying record is refreshed (e.g. replacement NDA)
+  useEffect(() => {
+    if (action === 'rewriting') return; // don't overwrite while a local rewrite is in flight
+    const fresh = isNdaAck
+      ? (draft.acknowledgment_draft_text ?? '')
+      : isNdaReturn
+      ? (draft.nda_return_draft_text ?? '')
+      : isReply
+      ? (draft.reply_draft_text ?? '')
+      : draft.draft_body_text;
+    setCurrentDraft(fresh);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.acknowledgment_draft_text, draft.nda_return_draft_text, draft.reply_draft_text, draft.draft_body_text]);
+
   const busy = action !== 'idle';
 
   const handleApprove = async () => {
@@ -109,7 +123,12 @@ function DraftCard({
   return (
     <div className={`rounded-xl bg-[var(--bg-card)] border overflow-hidden ${borderClass}`}>
       {/* Card header */}
-      <div className="px-5 py-4 flex items-start justify-between gap-4 border-b border-[var(--border)]">
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        className="w-full px-5 py-4 flex items-start justify-between gap-4 border-b border-[var(--border)] text-left hover:bg-[var(--bg-secondary)] transition-colors"
+        aria-label={expanded ? 'Collapse' : 'Expand'}
+      >
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-semibold text-[var(--text-primary)] truncate">
@@ -126,16 +145,10 @@ function DraftCard({
             <span>{createdAt}</span>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setExpanded((e) => !e)}
-          className="flex-shrink-0 p-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
-          aria-label={expanded ? 'Collapse' : 'Expand'}
-        >
+        <span className="flex-shrink-0 p-1.5 text-[var(--text-tertiary)]">
           {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-      </div>
+        </span>
+      </button>
 
       {/* Expanded body */}
       {expanded && (
@@ -411,11 +424,7 @@ export function AdminLangcliffeTab({ onCountChange }: { onCountChange?: (count: 
     setError(null);
     try {
       const data = await getLangcliffeQueue();
-      setQueue((prev) => {
-        const prevIds = prev.map((d) => d._id).join(',');
-        const nextIds = data.map((d) => d._id).join(',');
-        return prevIds === nextIds ? prev : data;
-      });
+      setQueue(data);
       onCountChange?.(data.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load queue');
