@@ -9,7 +9,7 @@ export interface UserNotification {
   title_text: string;
   body_text: string;
   status_text: 'unread' | 'actioned';
-  outreach_langcliffeoutreach: string;
+  langcliffe_outreach_text: string;
   'Created Date': string;
   // Populated from the linked outreach record:
   nda_file_url?: string;

@@ -30,7 +30,7 @@ function NotificationItem({
     setUploadState('uploading');
     setErrorMsg('');
     try {
-      await uploadSignedNDA(notification.outreach_langcliffeoutreach, file);
+      await uploadSignedNDA(notification.langcliffe_outreach_text, file);
       await markNotificationActioned(notification._id);
       setUploadState('done');
       setTimeout(onDismiss, 2000);
@@ -136,7 +136,7 @@ export function NotificationTray({ userId }: { userId: string }) {
           return prevIds === nextIds ? prev : notifs;
         });
 
-        const outreachIds = [...new Set(notifs.map((n) => n.outreach_langcliffeoutreach).filter(Boolean))];
+        const outreachIds = [...new Set(notifs.map((n) => n.langcliffe_outreach_text).filter(Boolean))];
         if (outreachIds.length > 0) {
           try {
             const queue = await getLangcliffeQueue();
@@ -226,7 +226,7 @@ export function NotificationTray({ userId }: { userId: string }) {
                   <NotificationItem
                     key={n._id}
                     notification={n}
-                    ndaFileUrl={ndaUrls[n.outreach_langcliffeoutreach] ?? null}
+                    ndaFileUrl={ndaUrls[n.langcliffe_outreach_text] ?? null}
                     onDismiss={() => setDismissed((prev) => new Set([...prev, n._id]))}
                   />
                 ))
