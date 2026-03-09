@@ -406,12 +406,16 @@ export function AdminLangcliffeTab({ onCountChange }: { onCountChange?: (count: 
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (showSpinner = false) => {
+    if (showSpinner) setLoading(true);
     setError(null);
     try {
       const data = await getLangcliffeQueue();
-      setQueue(data);
+      setQueue((prev) => {
+        const prevIds = prev.map((d) => d._id).join(',');
+        const nextIds = data.map((d) => d._id).join(',');
+        return prevIds === nextIds ? prev : data;
+      });
       onCountChange?.(data.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load queue');
@@ -420,7 +424,16 @@ export function AdminLangcliffeTab({ onCountChange }: { onCountChange?: (count: 
     }
   }, [onCountChange]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load(true);
+    const interval = setInterval(() => { if (!document.hidden) load(); }, 30_000);
+    const handleVisibility = () => { if (!document.hidden) load(); };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [load]);
 
   const totalPending = queue.length;
 
@@ -435,7 +448,7 @@ export function AdminLangcliffeTab({ onCountChange }: { onCountChange?: (count: 
         </div>
         <button
           type="button"
-          onClick={load}
+          onClick={() => load(true)}
           disabled={loading}
           className="p-2 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] border border-[var(--border)] transition-colors disabled:opacity-50"
           aria-label="Refresh queue"

@@ -125,26 +125,45 @@ export function NotificationTray({ userId }: { userId: string }) {
 
   useEffect(() => {
     if (!userId) return;
-    getUserNotifications(userId)
-      .then(async (notifs) => {
-        setNotifications(notifs);
 
-        const ndaMap: Record<string, string | null> = {};
+    const fetchNotifications = async () => {
+      if (document.hidden) return;
+      try {
+        const notifs = await getUserNotifications(userId);
+        setNotifications((prev) => {
+          const prevIds = prev.map((n) => n._id).join(',');
+          const nextIds = notifs.map((n) => n._id).join(',');
+          return prevIds === nextIds ? prev : notifs;
+        });
+
         const outreachIds = [...new Set(notifs.map((n) => n.outreach_langcliffeoutreach).filter(Boolean))];
         if (outreachIds.length > 0) {
           try {
             const queue = await getLangcliffeQueue();
+            const ndaMap: Record<string, string | null> = {};
             for (const id of outreachIds) {
               const outreach = queue.find((o) => o._id === id);
               ndaMap[id] = outreach?.nda_file_file ?? null;
             }
+            setNdaUrls(ndaMap);
           } catch {
-            for (const id of outreachIds) ndaMap[id] = null;
+            // keep existing urls on error
           }
         }
-        setNdaUrls(ndaMap);
-      })
-      .catch(() => {});
+      } catch {
+        // keep existing notifications on error
+      }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30_000);
+    const handleVisibility = () => { if (!document.hidden) fetchNotifications(); };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [userId]);
 
   useEffect(() => {
