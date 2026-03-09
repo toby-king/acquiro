@@ -6,6 +6,7 @@ import App from './App.tsx'
 import { LandingPage } from './components/landing/LandingPage.tsx'
 import { DashboardGuard } from './components/dashboard/DashboardGuard.tsx'
 import { SettingsPage } from './components/settings/SettingsPage.tsx'
+import { IntegrationsPage } from './components/integrations/IntegrationsPage.tsx'
 import { AdminGuard } from './components/admin/AdminGuard.tsx'
 import { AdminPage } from './components/admin/AdminPage.tsx'
 import { LoginPage } from './components/auth/LoginPage.tsx'
@@ -32,6 +33,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/login" element={<LoginPage />} />
         <Route path="/dashboard" element={<DashboardGuard />} />
         <Route path="/settings" element={<DashboardGuard><SettingsPage /></DashboardGuard>} />
+        <Route path="/integrations" element={<DashboardGuard><IntegrationsPage /></DashboardGuard>} />
         <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
         <Route path="/subscription/complete" element={<CheckoutComplete />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />

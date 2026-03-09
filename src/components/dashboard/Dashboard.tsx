@@ -5,7 +5,7 @@ import { AdvisorPanel } from './AdvisorPanel';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, LogOut, Loader2, Settings, X, Shield } from 'lucide-react';
+import { Phone, LogOut, Loader2, Settings, X, Shield, Puzzle } from 'lucide-react';
 import { getUser } from '../../services/userService';
 import { NotificationTray } from './NotificationTray';
 
@@ -176,6 +176,14 @@ export function Dashboard() {
                       <div className="my-1 border-t border-[var(--border)]" />
                     </>
                   )}
+                  <Link
+                    to="/integrations"
+                    onClick={() => setProfileOpen(false)}
+                    className="w-full px-4 py-2.5 flex items-center gap-2 text-left text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors text-sm"
+                  >
+                    <Puzzle size={16} />
+                    Integrations
+                  </Link>
                   <Link
                     to="/settings"
                     onClick={() => setProfileOpen(false)}
