@@ -42,6 +42,15 @@ export async function markNotificationActioned(notificationId: string): Promise<
   if (!res.ok) throw new Error(`Failed to mark notification actioned: ${res.status}`);
 }
 
+export async function getNdaFileUrl(outreachId: string): Promise<string | null> {
+  const res = await fetch(`${BUBBLE_DATA_BASE}/LangcliffeOutreach/${outreachId}`, {
+    headers: { Authorization: `Bearer ${API_TOKEN}` },
+  });
+  if (!res.ok) return null;
+  const json = await res.json();
+  return json.response?.nda_file_text ?? null;
+}
+
 export async function uploadSignedNDA(outreachId: string, file: File): Promise<void> {
   const formData = new FormData();
   formData.append('file', file);

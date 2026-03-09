@@ -5,9 +5,9 @@ import {
   getUserNotifications,
   markNotificationActioned,
   uploadSignedNDA,
+  getNdaFileUrl,
   type UserNotification,
 } from '../../services/notificationService';
-import { getLangcliffeQueue } from '../../services/langcliffeService';
 
 type UploadState = 'idle' | 'uploading' | 'done' | 'error';
 
@@ -130,7 +130,6 @@ export function NotificationTray({ userId }: { userId: string }) {
       if (document.hidden) return;
       try {
         const notifs = await getUserNotifications(userId);
-        if (notifs.length > 0) console.log('[NotificationTray] raw notification:', notifs[0]);
         setNotifications((prev) => {
           const prevIds = prev.map((n) => n._id).join(',');
           const nextIds = notifs.map((n) => n._id).join(',');
@@ -139,17 +138,11 @@ export function NotificationTray({ userId }: { userId: string }) {
 
         const outreachIds = [...new Set(notifs.map((n) => n.langcliffe_outreach_text).filter(Boolean))];
         if (outreachIds.length > 0) {
-          try {
-            const queue = await getLangcliffeQueue();
-            const ndaMap: Record<string, string | null> = {};
-            for (const id of outreachIds) {
-              const outreach = queue.find((o) => o._id === id);
-              ndaMap[id] = outreach?.nda_file_text ?? null;
-            }
-            setNdaUrls(ndaMap);
-          } catch {
-            // keep existing urls on error
-          }
+          const ndaMap: Record<string, string | null> = {};
+          await Promise.all(outreachIds.map(async (id) => {
+            ndaMap[id] = await getNdaFileUrl(id);
+          }));
+          setNdaUrls(ndaMap);
         }
       } catch {
         // keep existing notifications on error
