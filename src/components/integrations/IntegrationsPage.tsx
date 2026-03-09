@@ -42,7 +42,7 @@ function LangcliffeCard({ userId }: { userId: string }) {
     getMyAgent(userId)
       .then((agent) => {
         if (agent) {
-          const name = agent.name_text ?? agent.name ?? 'agent';
+          const name = agent.name_text ?? 'agent';
           setAgentEmail(`${sanitiseAgentName(name)}@acquiro-agent.com`);
         }
       })
