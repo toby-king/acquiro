@@ -1,6 +1,6 @@
 const PRODUCTION_BACKEND = 'https://acquiro-backend.vercel.app';
 
-function getApiUrl(): string {
+export function getApiUrl(): string {
   // When served from a real domain (not localhost), always use production backend.
   // This avoids "Failed to fetch" when VITE_API_URL was set to localhost in build.
   if (typeof window !== 'undefined') {
