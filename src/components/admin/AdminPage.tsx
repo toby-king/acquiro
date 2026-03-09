@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, FileText, Activity, Globe, ArrowLeft, Settings, LogOut, Mail } from 'lucide-react';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
+import { NotificationTray } from '../dashboard/NotificationTray';
 import './chartConfig';
 import { AdminUsersTab } from './AdminUsersTab';
 import { AdminListingsTab } from './AdminListingsTab';
@@ -24,7 +25,7 @@ export function AdminPage() {
   }, []);
   const profileRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { userName, logout } = useAdvisorStore();
+  const { userName, userId, logout } = useAdvisorStore();
 
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export function AdminPage() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          {userId && <NotificationTray userId={userId} />}
           <div className="relative" ref={profileRef}>
             <motion.button
               whileHover={{ scale: 1.05 }}
