@@ -92,16 +92,28 @@ function DraftCard({
         </button>
       </div>
 
-      {/* Draft body */}
+      {/* Expanded body */}
       {expanded && (
-        <div className="px-5 py-4 border-b border-[var(--border)]">
-          <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
-            Draft email body
-          </p>
-          <pre className="whitespace-pre-wrap text-sm text-[var(--text-primary)] font-sans leading-relaxed bg-[var(--bg-secondary)] rounded-lg p-4">
-            {currentDraft}
-          </pre>
-        </div>
+        <>
+          {draft.inbound_email_text && (
+            <div className="px-5 py-4 border-b border-[var(--border)]">
+              <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
+                Original email
+              </p>
+              <pre className="whitespace-pre-wrap text-sm text-[var(--text-secondary)] font-sans leading-relaxed bg-[var(--bg-secondary)] rounded-lg p-4 max-h-64 overflow-y-auto">
+                {draft.inbound_email_text}
+              </pre>
+            </div>
+          )}
+          <div className="px-5 py-4 border-b border-[var(--border)]">
+            <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
+              Draft email body
+            </p>
+            <pre className="whitespace-pre-wrap text-sm text-[var(--text-primary)] font-sans leading-relaxed bg-[var(--bg-secondary)] rounded-lg p-4">
+              {currentDraft}
+            </pre>
+          </div>
+        </>
       )}
 
       {/* Actions */}

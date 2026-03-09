@@ -8,6 +8,7 @@ export interface OutreachDraft {
   langcliffe_contact_text: string;
   user_user: string;
   draft_body_text: string;
+  inbound_email_text?: string;
   status_text: 'pending' | 'sent' | 'rejected';
   'Created Date': string;
 }
