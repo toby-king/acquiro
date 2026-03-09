@@ -40,6 +40,7 @@ export interface UserProfile {
   _id: string;
   name_text?: string;
   email?: string; // read-only — lives in authentication.email.email
+  langcliffe_connected_boolean?: boolean;
 }
 
 interface RawUserResponse {
@@ -56,10 +57,11 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
     _id: raw._id,
     name_text: raw.name_text,
     email: raw.authentication?.email?.email,
+    langcliffe_connected_boolean: raw.langcliffe_connected_boolean as boolean | undefined,
   };
 }
 
-export async function updateUserProfile(userId: string, fields: { name_text?: string }): Promise<void> {
+export async function updateUserProfile(userId: string, fields: { name_text?: string; langcliffe_connected_boolean?: boolean }): Promise<void> {
   await dataPatch(`/User/${bareId(userId)}`, fields as Record<string, unknown>);
 }
 
