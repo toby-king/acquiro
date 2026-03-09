@@ -143,7 +143,7 @@ export function NotificationTray({ userId }: { userId: string }) {
             const ndaMap: Record<string, string | null> = {};
             for (const id of outreachIds) {
               const outreach = queue.find((o) => o._id === id);
-              ndaMap[id] = outreach?.nda_file_file ?? null;
+              ndaMap[id] = outreach?.nda_file_text ?? null;
             }
             setNdaUrls(ndaMap);
           } catch {

@@ -165,13 +165,13 @@ function DraftCard({
           )}
 
           {/* NDA received: show NDA download link */}
-          {isNdaAck && draft.nda_file_file && (
+          {isNdaAck && draft.nda_file_text && (
             <div className="px-5 py-4 border-b border-[var(--border)]">
               <p className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-2">
                 NDA from Langcliffe
               </p>
               <a
-                href={draft.nda_file_file}
+                href={draft.nda_file_text}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
@@ -183,13 +183,13 @@ function DraftCard({
           )}
 
           {/* NDA signed: show signed NDA download link */}
-          {isNdaReturn && draft.signed_nda_file_file && (
+          {isNdaReturn && draft.signed_nda_file_text && (
             <div className="px-5 py-4 border-b border-[var(--border)]">
               <p className="text-xs font-medium text-green-400 uppercase tracking-wider mb-2">
                 Signed NDA from user
               </p>
               <a
-                href={draft.signed_nda_file_file}
+                href={draft.signed_nda_file_text}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"

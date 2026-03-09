@@ -12,8 +12,8 @@ export interface OutreachDraft {
   reply_draft_text?: string;
   langcliffe_reply_body_text?: string;
   conversation_history_text?: string;
-  nda_file_file?: string;
-  signed_nda_file_file?: string;
+  nda_file_text?: string;
+  signed_nda_file_text?: string;
   acknowledgment_draft_text?: string;
   nda_return_draft_text?: string;
   status_text: 'pending' | 'sent' | 'rejected' | 'pending_reply' | 'nda_received' | 'nda_acknowledged' | 'nda_signed' | 'nda_returned';

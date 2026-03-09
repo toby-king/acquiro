@@ -133,7 +133,7 @@ export function NdaNotificationBanner({ userId }: { userId: string }) {
             const queue = await getLangcliffeQueue();
             for (const id of outreachIds) {
               const outreach = queue.find((o) => o._id === id);
-              ndaMap[id] = outreach?.nda_file_file ?? null;
+              ndaMap[id] = outreach?.nda_file_text ?? null;
             }
           } catch {
             for (const id of outreachIds) ndaMap[id] = null;
