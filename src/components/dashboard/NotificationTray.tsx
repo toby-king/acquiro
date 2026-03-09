@@ -130,6 +130,7 @@ export function NotificationTray({ userId }: { userId: string }) {
       if (document.hidden) return;
       try {
         const notifs = await getUserNotifications(userId);
+        if (notifs.length > 0) console.log('[NotificationTray] raw notification:', notifs[0]);
         setNotifications((prev) => {
           const prevIds = prev.map((n) => n._id).join(',');
           const nextIds = notifs.map((n) => n._id).join(',');
