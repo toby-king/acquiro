@@ -7,6 +7,7 @@ import { ThemeToggle } from '../layout/ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, LogOut, Loader2, Settings, X, Shield } from 'lucide-react';
 import { getUser } from '../../services/userService';
+import { NotificationTray } from './NotificationTray';
 
 type SubscriptionCheckStatus = 'loading' | 'subscribed' | 'unsubscribed';
 
@@ -81,17 +82,17 @@ export function Dashboard() {
             aria-hidden
           />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-            <div className="pointer-events-auto w-full max-w-md bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl shadow-xl p-8 text-center">
-              <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-3">
+            <div className="pointer-events-auto w-full max-w-sm bg-[var(--bg-card)] border border-[var(--border)] rounded-xl shadow-xl px-5 py-4 text-center">
+              <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
                 Subscription Required
               </h2>
-              <p className="text-[var(--text-secondary)] text-sm leading-relaxed mb-6">
+              <p className="text-[var(--text-secondary)] text-xs leading-relaxed mb-3">
                 Subscribe to unlock full access to your matched listings, advisor, and email alerts.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <div className="flex flex-row gap-2 justify-center">
                 <Link
                   to="/offer"
-                  className="min-h-[44px] px-6 py-3 rounded-full font-medium bg-accent text-black hover:bg-accent/90 transition-colors inline-flex items-center justify-center"
+                  className="px-4 py-2 rounded-full text-sm font-medium bg-accent text-black hover:bg-accent/90 transition-colors inline-flex items-center justify-center"
                 >
                   Subscribe
                 </Link>
@@ -101,7 +102,7 @@ export function Dashboard() {
                     logout();
                     navigate('/', { replace: true });
                   }}
-                  className="min-h-[44px] px-6 py-3 rounded-full font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:bg-[var(--bg-card)] transition-colors"
+                  className="px-4 py-2 rounded-full text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] hover:bg-[var(--bg-secondary)] transition-colors"
                 >
                   Logout
                 </button>
@@ -131,8 +132,11 @@ export function Dashboard() {
           </h1>
         </div>
 
-        {/* Right side - Theme, Admin (if admin), Profile */}
+        {/* Right side - Notifications, Theme, Profile */}
         <div className="flex items-center gap-2">
+          {!showSubscriptionOverlay && userId && (
+            <NotificationTray userId={userId} />
+          )}
           <ThemeToggle />
 
           {/* User Profile - Avatar with dropdown */}
@@ -200,8 +204,8 @@ export function Dashboard() {
 
       {/* Cancellation banner: subscribed but cancelling at period end */}
       {!showSubscriptionOverlay && storeCancelAt && !cancelBannerDismissed && (
-        <div className="mx-4 sm:mx-6 mt-4 p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 text-[var(--text-primary)] flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm flex-1 min-w-0">
+        <div className="mx-4 sm:mx-6 mt-3 px-4 py-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-[var(--text-primary)] flex items-center justify-between gap-3">
+          <p className="text-xs flex-1 min-w-0">
             Your subscription will end on{' '}
             <time dateTime={storeCancelAt}>
               {new Date(storeCancelAt).toLocaleDateString(undefined, {
@@ -215,17 +219,17 @@ export function Dashboard() {
           <div className="flex items-center gap-2 flex-shrink-0">
             <Link
               to="/offer"
-              className="min-h-[40px] px-4 py-2 rounded-full font-medium bg-accent text-black hover:bg-accent/90 transition-colors inline-flex items-center justify-center text-sm whitespace-nowrap"
+              className="px-3 py-1.5 rounded-full font-medium bg-accent text-black hover:bg-accent/90 transition-colors inline-flex items-center justify-center text-xs whitespace-nowrap"
             >
               Resubscribe
             </Link>
             <button
               type="button"
               onClick={() => setCancelBannerDismissed(true)}
-              className="p-2 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-amber-500/20 transition-colors"
+              className="p-1 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-amber-500/20 transition-colors"
               aria-label="Dismiss banner"
             >
-              <X size={18} />
+              <X size={14} />
             </button>
           </div>
         </div>

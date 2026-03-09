@@ -12,7 +12,11 @@ export interface OutreachDraft {
   reply_draft_text?: string;
   langcliffe_reply_body_text?: string;
   conversation_history_text?: string;
-  status_text: 'pending' | 'sent' | 'rejected' | 'pending_reply';
+  nda_file_file?: string;
+  signed_nda_file_file?: string;
+  acknowledgment_draft_text?: string;
+  nda_return_draft_text?: string;
+  status_text: 'pending' | 'sent' | 'rejected' | 'pending_reply' | 'nda_received' | 'nda_acknowledged' | 'nda_signed' | 'nda_returned';
   'Created Date': string;
 }
 
@@ -65,6 +69,22 @@ export async function rejectReply(id: string, feedback?: string): Promise<string
   if (!res.ok) throw new Error(`Reject reply failed: ${res.status}`);
   const json = await res.json();
   return json.draft ?? '';
+}
+
+export async function approveAcknowledgment(id: string): Promise<void> {
+  const res = await fetch(`${SCRAPER_BASE}/admin/langcliffe-queue/${id}/approve-ack`, {
+    method: 'POST',
+    headers: adminHeaders(),
+  });
+  if (!res.ok) throw new Error(`Approve acknowledgment failed: ${res.status}`);
+}
+
+export async function approveNDAReturn(id: string): Promise<void> {
+  const res = await fetch(`${SCRAPER_BASE}/admin/langcliffe-queue/${id}/approve-nda-return`, {
+    method: 'POST',
+    headers: adminHeaders(),
+  });
+  if (!res.ok) throw new Error(`Approve NDA return failed: ${res.status}`);
 }
 
 export async function rejectOutreach(id: string, feedback?: string): Promise<string> {

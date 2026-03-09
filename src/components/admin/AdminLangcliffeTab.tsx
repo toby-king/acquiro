@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, CheckCircle2, XCircle, Loader2, Mail, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { RefreshCw, CheckCircle2, XCircle, Loader2, Mail, ChevronDown, ChevronUp, Trash2, ExternalLink } from 'lucide-react';
 import {
   getLangcliffeQueue,
   approveOutreach,
   approveReply,
+  approveAcknowledgment,
+  approveNDAReturn,
   rejectOutreach,
   rejectReply,
   deleteOutreach,
@@ -23,16 +25,22 @@ function DraftCard({
   draft: OutreachDraft;
   onActionComplete: () => void;
 }) {
-  const isReply = draft.status_text === 'pending_reply';
+  const isReply    = draft.status_text === 'pending_reply';
+  const isNdaAck   = draft.status_text === 'nda_received';
+  const isNdaReturn = draft.status_text === 'nda_signed';
+  const isNdaCard  = isNdaAck || isNdaReturn;
 
   const [action, setAction]             = useState<CardAction>('idle');
   const [feedback, setFeedback]         = useState('');
   const [showReject, setShowReject]     = useState(false);
   const [showDelete, setShowDelete]     = useState(false);
   const [expanded, setExpanded]         = useState(false);
-  const [currentDraft, setCurrentDraft] = useState(
-    isReply ? (draft.reply_draft_text ?? '') : draft.draft_body_text,
-  );
+  const [currentDraft, setCurrentDraft] = useState(() => {
+    if (isNdaAck)    return draft.acknowledgment_draft_text ?? '';
+    if (isNdaReturn) return draft.nda_return_draft_text ?? '';
+    if (isReply)     return draft.reply_draft_text ?? '';
+    return draft.draft_body_text;
+  });
   const [error, setError]               = useState<string | null>(null);
 
   const busy = action !== 'idle';
@@ -41,11 +49,10 @@ function DraftCard({
     setError(null);
     setAction('approving');
     try {
-      if (isReply) {
-        await approveReply(draft._id);
-      } else {
-        await approveOutreach(draft._id);
-      }
+      if (isNdaAck)    await approveAcknowledgment(draft._id);
+      else if (isNdaReturn) await approveNDAReturn(draft._id);
+      else if (isReply)     await approveReply(draft._id);
+      else                  await approveOutreach(draft._id);
       onActionComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Approve failed');
@@ -87,8 +94,20 @@ function DraftCard({
     day: 'numeric', month: 'numeric', year: '2-digit',
   });
 
+  const borderClass = isNdaCard
+    ? isNdaAck ? 'border-purple-500/30' : 'border-green-500/30'
+    : isReply ? 'border-blue-500/30' : 'border-[var(--border)]';
+
+  const approveLabel = isNdaAck
+    ? 'Approve & Send Acknowledgment'
+    : isNdaReturn
+    ? 'Send NDA to Langcliffe'
+    : isReply
+    ? 'Approve & Send Reply'
+    : 'Approve & Send';
+
   return (
-    <div className={`rounded-xl bg-[var(--bg-card)] border overflow-hidden ${isReply ? 'border-blue-500/30' : 'border-[var(--border)]'}`}>
+    <div className={`rounded-xl bg-[var(--bg-card)] border overflow-hidden ${borderClass}`}>
       {/* Card header */}
       <div className="px-5 py-4 flex items-start justify-between gap-4 border-b border-[var(--border)]">
         <div className="min-w-0">
@@ -122,7 +141,7 @@ function DraftCard({
       {expanded && (
         <>
           {/* Initial outreach: show original Langcliffe teaser */}
-          {!isReply && draft.inbound_email_text && (
+          {!isReply && !isNdaCard && draft.inbound_email_text && (
             <div className="px-5 py-4 border-b border-[var(--border)]">
               <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
                 Original email
@@ -145,10 +164,46 @@ function DraftCard({
             </div>
           )}
 
-          {/* Draft / reply draft */}
+          {/* NDA received: show NDA download link */}
+          {isNdaAck && draft.nda_file_file && (
+            <div className="px-5 py-4 border-b border-[var(--border)]">
+              <p className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-2">
+                NDA from Langcliffe
+              </p>
+              <a
+                href={draft.nda_file_file}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
+              >
+                <ExternalLink size={12} />
+                Download NDA
+              </a>
+            </div>
+          )}
+
+          {/* NDA signed: show signed NDA download link */}
+          {isNdaReturn && draft.signed_nda_file_file && (
+            <div className="px-5 py-4 border-b border-[var(--border)]">
+              <p className="text-xs font-medium text-green-400 uppercase tracking-wider mb-2">
+                Signed NDA from user
+              </p>
+              <a
+                href={draft.signed_nda_file_file}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
+              >
+                <ExternalLink size={12} />
+                Download signed NDA
+              </a>
+            </div>
+          )}
+
+          {/* Draft body */}
           <div className="px-5 py-4 border-b border-[var(--border)]">
             <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
-              {isReply ? 'Draft reply' : 'Draft email body'}
+              {isNdaAck ? 'Acknowledgment draft' : isNdaReturn ? 'NDA return email draft' : isReply ? 'Draft reply' : 'Draft email body'}
             </p>
             <pre className="whitespace-pre-wrap text-sm text-[var(--text-primary)] font-sans leading-relaxed bg-[var(--bg-secondary)] rounded-lg p-4">
               {currentDraft}
@@ -176,19 +231,21 @@ function DraftCard({
             ) : (
               <CheckCircle2 size={14} />
             )}
-            {action === 'approving' ? 'Sending…' : isReply ? 'Approve & Send Reply' : 'Approve & Send'}
+            {action === 'approving' ? 'Sending…' : approveLabel}
           </button>
 
-          {/* Reject / rewrite */}
-          <button
-            type="button"
-            onClick={() => setShowReject((s) => !s)}
-            disabled={busy}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-card)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <XCircle size={14} />
-            Reject & Rewrite
-          </button>
+          {/* Reject / rewrite — not applicable to NDA cards */}
+          {!isNdaCard && (
+            <button
+              type="button"
+              onClick={() => setShowReject((s) => !s)}
+              disabled={busy}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-card)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <XCircle size={14} />
+              Reject & Rewrite
+            </button>
+          )}
 
           {/* Delete */}
           <button
@@ -302,7 +359,10 @@ function QueueSection({
         <div className="flex items-center gap-3 min-w-0">
           <span className={`text-sm font-semibold ${color}`}>{title}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-            color === 'text-amber-400' ? 'bg-amber-400/10 text-amber-400' : 'bg-blue-400/10 text-blue-400'
+            color === 'text-amber-400'  ? 'bg-amber-400/10 text-amber-400'   :
+            color === 'text-blue-400'   ? 'bg-blue-400/10 text-blue-400'     :
+            color === 'text-purple-400' ? 'bg-purple-400/10 text-purple-400' :
+                                          'bg-green-400/10 text-green-400'
           }`}>
             {items.length}
           </span>
@@ -335,8 +395,10 @@ const SECTIONS: {
   description: string;
   color: string;
 }[] = [
-  { key: 'pending_reply', title: 'Replies',  description: 'Responses from Langcliffe contacts',        color: 'text-blue-400'  },
-  { key: 'pending',       title: 'Teasers',  description: 'Initial outreach drafts awaiting approval', color: 'text-amber-400' },
+  { key: 'pending_reply', title: 'Replies',      description: 'Responses from Langcliffe contacts',          color: 'text-blue-400'   },
+  { key: 'pending',       title: 'Teasers',      description: 'Initial outreach drafts awaiting approval',   color: 'text-amber-400'  },
+  { key: 'nda_received',  title: 'NDAs Received', description: 'Acknowledgment drafts awaiting approval',    color: 'text-purple-400' },
+  { key: 'nda_signed',    title: 'NDAs Signed',   description: 'NDA return emails awaiting approval',        color: 'text-green-400'  },
 ];
 
 export function AdminLangcliffeTab({ onCountChange }: { onCountChange?: (count: number) => void }) {
