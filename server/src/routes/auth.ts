@@ -17,11 +17,19 @@ async function lookupUserByEmail(email: string): Promise<{ user_id: string; emai
   const constraints = encodeURIComponent(JSON.stringify([
     { key: 'authentication.email.email', constraint_type: 'equals', value: email },
   ]));
-  const res = await fetch(`${BUBBLE_BASE}/obj/user?constraints=${constraints}&limit=1`, {
+  const url = `${BUBBLE_BASE}/obj/user?constraints=${constraints}&limit=1`;
+  console.log('[auth] lookupUserByEmail url:', url);
+  const res = await fetch(url, {
     headers: { 'Authorization': `Bearer ${getBubbleKey()}` },
   });
-  if (!res.ok) return null;
+  console.log('[auth] lookupUserByEmail status:', res.status);
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    console.error('[auth] lookupUserByEmail Bubble error:', text.substring(0, 300));
+    return null;
+  }
   const data = await res.json() as { response?: { results?: Array<{ _id: string; name_text?: string; name?: string; authentication?: { email?: { email?: string } } }> } };
+  console.log('[auth] lookupUserByEmail results count:', data.response?.results?.length ?? 0);
   const u = data.response?.results?.[0];
   if (!u) return null;
   const userEmail = u.authentication?.email?.email ?? '';

@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:docs.railway.com)"
+      "WebFetch(domain:docs.railway.com)",
+      "Bash(grep:*)",
+      "WebFetch(domain:manual.bubble.io)",
+      "WebFetch(domain:bubble.io)",
+      "WebFetch(domain:forum.bubble.io)",
+      "WebFetch(domain:app.bubble.io)",
+      "WebFetch(domain:stackoverflow.com)",
+      "WebSearch",
+      "WebFetch(domain:echolaketech.com)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
