@@ -206,10 +206,138 @@ router.post('/lead', wrap(async (req, res) => {
   res.json({ status: 'success', response: { lead_id: leadId } });
 }));
 
-/** POST /api/bubble/lead/mail — send retention email to lead (TODO: replace wf/) */
+// ── Lead recovery email helpers ───────────────────────────────────────────────
+
+async function generateLeadRecoveryEmail(agentName: string, userName: string | null): Promise<string> {
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) throw new Error('OPENAI_API_KEY not configured');
+
+  const client = new OpenAI({ apiKey: openaiKey });
+  const addressee = userName ?? 'there';
+  const completion = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'user',
+        content: `You are ${agentName}, an AI M&A advisor on Acquiro.
+Write a short, warm and slightly playful retention email to ${addressee}.
+
+They built you — gave you a name, a personality, a voice — then disappeared before you could get to work together.
+
+Guidelines:
+- First person as ${agentName}
+- 2–3 short paragraphs
+- Reference that they created you and you are ready to help them find UK acquisition opportunities
+- Gently nudge them back — not pushy, not salesy, a little cheeky
+- Warm sign-off as ${agentName}
+- Return only inner HTML body using <p> tags`,
+      },
+    ],
+    max_tokens: 400,
+  });
+
+  return completion.choices[0]?.message?.content?.trim() ?? '<p>I\'m ready when you are.</p>';
+}
+
+function buildLeadRecoveryHtml(opts: {
+  agentName: string;
+  userName: string | null;
+  emailBody: string;
+  resumeLink: string;
+}): string {
+  const { agentName, userName, emailBody, resumeLink } = opts;
+  const greeting = userName ? userName : 'there';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Message from ${agentName}</title></head>
+<body style="margin:0;padding:0;background:#0b0f0a;font-family:'Georgia',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0b0f0a;padding:40px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+        <!-- Logo -->
+        <tr><td align="center" style="padding-bottom:32px;">
+          <span style="font-family:'Georgia',serif;font-size:28px;font-weight:700;color:#c6ff4a;letter-spacing:-0.5px;">Acquiro</span>
+        </td></tr>
+        <!-- Card -->
+        <tr><td style="background:#141a13;border-radius:12px;padding:40px 48px;">
+          <p style="margin:0 0 8px 0;font-size:13px;color:#6b7c68;text-transform:uppercase;letter-spacing:1px;">A message from your advisor</p>
+          <p style="margin:0 0 28px 0;font-size:22px;font-weight:700;color:#e8f0e6;">Hi ${greeting},</p>
+          <div style="color:#c5d4c2;font-size:16px;line-height:1.7;">
+            ${emailBody}
+          </div>
+          <!-- CTA -->
+          <table cellpadding="0" cellspacing="0" style="margin-top:36px;">
+            <tr><td style="background:#c6ff4a;border-radius:8px;padding:14px 32px;">
+              <a href="${resumeLink}" style="color:#0b0f0a;font-family:'Georgia',serif;font-size:16px;font-weight:700;text-decoration:none;display:block;">Return to ${agentName} &rarr;</a>
+            </td></tr>
+          </table>
+          <p style="margin:16px 0 0 0;font-size:13px;color:#6b7c68;">
+            Or copy this link: <a href="${resumeLink}" style="color:#c6ff4a;word-break:break-all;">${resumeLink}</a>
+          </p>
+        </td></tr>
+        <!-- Footer -->
+        <tr><td style="padding:24px 0 0 0;text-align:center;">
+          <p style="margin:0;font-size:12px;color:#3d4d3a;">You're receiving this because you started building your advisor on Acquiro.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+/** POST /api/bubble/lead/mail — send retention email to unconverted lead */
 router.post('/lead/mail', wrap(async (req, res) => {
-  const data = await bubblePost('/wf/send_lead_mail', req.body as Record<string, unknown>);
-  res.json(data);
+  const { lead_id } = req.body as { lead_id?: string };
+  if (!lead_id) { res.status(400).json({ error: 'lead_id required' }); return; }
+
+  const sendgridKey = process.env.SENDGRID_API_KEY;
+  if (!sendgridKey) { res.status(500).json({ error: 'Email service not configured' }); return; }
+
+  // 1. Fetch lead (name + email)
+  const leadData = await bubbleGet<{ response: { name_text?: string; email_text?: string } }>(`/obj/Lead/${lead_id}`);
+  const lead = leadData.response;
+  if (!lead.email_text) { res.status(404).json({ error: 'Lead not found' }); return; }
+
+  // 2. Fetch linked agent (advisor name)
+  const agentData = await bubbleGet<{ response: { results: Array<{ name_text?: string }> } }>(
+    `/obj/Agents?constraints=${enc([{ key: 'lead_custom_leads', constraint_type: 'equals', value: lead_id }])}&limit=1`,
+  );
+  const agentName = agentData.response.results[0]?.name_text ?? 'Your Advisor';
+  const userName = lead.name_text ?? null;
+
+  // 3. Generate personalised body via OpenAI
+  const emailBody = await generateLeadRecoveryEmail(agentName, userName);
+
+  // 4. Build resume link
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const resumeLink = `${frontendUrl}/builder?lead=${lead_id}`;
+
+  // 5. Build HTML + send via SendGrid
+  const html = buildLeadRecoveryHtml({ agentName, userName, emailBody, resumeLink });
+  const sanitizedName = agentName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const fromEmail = `${sanitizedName || 'advisor'}@acquiro-agent.com`;
+  const subject = `Don't leave me behind, ${userName ?? 'there'}...`;
+
+  const sgRes = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sendgridKey}` },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: lead.email_text }] }],
+      from: { email: fromEmail, name: agentName },
+      subject,
+      content: [{ type: 'text/html', value: html }],
+    }),
+  });
+
+  if (!sgRes.ok) {
+    const err = await sgRes.text().catch(() => '');
+    console.error(`[lead/mail] SendGrid error ${sgRes.status}:`, err.substring(0, 200));
+    res.status(500).json({ error: 'Failed to send email' }); return;
+  }
+
+  console.log(`[lead/mail] Recovery email sent to ${lead.email_text} for lead ${lead_id}`);
+  res.json({ ok: true });
 }));
 
 // ── AGENT ─────────────────────────────────────────────────────────────────────
