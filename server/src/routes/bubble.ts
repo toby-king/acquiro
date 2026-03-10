@@ -129,7 +129,7 @@ router.post('/user/account', wrap(async (req, res) => {
 
   // 1. Fetch lead to get email + name
   const leadData = await bubbleGet<{ response: { name_text?: string; email_text?: string } }>(
-    `/obj/Lead/${lead_id}`,
+    `/obj/Leads/${lead_id}`,
   );
   const lead = leadData.response;
   if (!lead.email_text) throw new Error(`Lead ${lead_id} has no email_text`);
@@ -173,7 +173,7 @@ router.post('/user/account', wrap(async (req, res) => {
 
   // 5. Mark lead as converted (non-fatal)
   try {
-    await bubblePatch(`/obj/Lead/${lead_id}`, { converted_boolean: true });
+    await bubblePatch(`/obj/Leads/${lead_id}`, { converted_boolean: true });
   } catch (err) {
     console.warn('[bubble] create_user: lead converted flag failed (non-fatal):', (err as Error).message);
   }
@@ -188,12 +188,12 @@ router.post('/user/account', wrap(async (req, res) => {
 router.post('/lead', wrap(async (req, res) => {
   const { name, email } = req.body as { name?: string; email?: string };
   if (!name?.trim() || !email?.trim()) { res.status(400).json({ error: 'name and email required' }); return; }
-  const data = await bubblePost<{ id?: string }>('/obj/Lead', {
+  const data = await bubblePost<{ id?: string }>('/obj/Leads', {
     name_text: name.trim(),
     email_text: email.trim(),
   });
   const leadId = data.id;
-  if (!leadId) throw new Error('Bubble /obj/Lead POST did not return an id');
+  if (!leadId) throw new Error('Bubble /obj/Leads POST did not return an id');
 
   // Create the linked Buyer_Info record (non-fatal if it fails)
   try {
@@ -295,7 +295,7 @@ router.post('/lead/mail', wrap(async (req, res) => {
   if (!sendgridKey) { res.status(500).json({ error: 'Email service not configured' }); return; }
 
   // 1. Fetch lead (name + email)
-  const leadData = await bubbleGet<{ response: { name_text?: string; email_text?: string } }>(`/obj/Lead/${lead_id}`);
+  const leadData = await bubbleGet<{ response: { name_text?: string; email_text?: string } }>(`/obj/Leads/${lead_id}`);
   const lead = leadData.response;
   if (!lead.email_text) { res.status(404).json({ error: 'Lead not found' }); return; }
 
