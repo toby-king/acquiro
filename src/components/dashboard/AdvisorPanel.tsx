@@ -90,7 +90,7 @@ export function AdvisorPanel() {
       const convId = conversationIdRef.current;
       const currentUserId = useAdvisorStore.getState().userId;
       if (convId && currentUserId) {
-        const apiUrl = import.meta.env.VITE_API_URL;
+        const apiUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
         fetch(`${apiUrl}/api/bubble/buyer-info/extract`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

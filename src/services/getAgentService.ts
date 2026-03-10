@@ -7,11 +7,7 @@ import { PERSONALITY_PRESETS } from '../constants/personalities';
 import { CHALLENGE_STYLES } from '../constants/challengeStyles';
 import { VOICE_OPTIONS } from '../constants/voices';
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-if (!API_URL) {
-  console.error('Missing required environment variable: VITE_API_URL');
-}
+import { API_URL } from '../utils/apiUrl';
 
 export interface GetAgentResponse {
   lead_id?: string;

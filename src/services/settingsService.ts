@@ -3,7 +3,7 @@
  * All mutations are scoped to the authenticated user's own records only.
  */
 
-const API_URL = import.meta.env.VITE_API_URL as string;
+import { API_URL } from '../utils/apiUrl';
 
 const PRODUCTION_BACKEND = 'https://acquiro-backend.vercel.app';
 function getBackendUrl(): string {

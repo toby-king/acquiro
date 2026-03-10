@@ -2,7 +2,7 @@
  * Service for sending lead retention emails via the backend API.
  */
 
-const API_URL = import.meta.env.VITE_API_URL;
+import { API_URL } from '../utils/apiUrl';
 
 export async function sendLeadMail(leadId: string): Promise<void> {
   try {

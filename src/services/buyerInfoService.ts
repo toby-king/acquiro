@@ -2,11 +2,7 @@
  * Service for fetching buyer/criteria info via the backend API.
  */
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-if (!API_URL) {
-  console.error('Missing required environment variable: VITE_API_URL');
-}
+import { API_URL } from '../utils/apiUrl';
 
 export interface BuyerInfo {
   [key: string]: unknown;

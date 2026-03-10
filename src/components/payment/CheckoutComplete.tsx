@@ -76,7 +76,7 @@ export function CheckoutComplete() {
               console.log('[CheckoutComplete] ✅ User account created. Stored userId for dashboard:', userResult.user_id);
               // Fire-and-forget: extract buyer info from ElevenLabs voice transcript (if call was made)
               if (conversationId) {
-                const apiUrl = import.meta.env.VITE_API_URL;
+                const apiUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
                 fetch(`${apiUrl}/api/bubble/buyer-info/extract`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },

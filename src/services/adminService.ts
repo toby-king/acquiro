@@ -10,7 +10,7 @@ function getBackendUrl(): string {
     const host = window.location.hostname;
     if (host !== 'localhost' && host !== '127.0.0.1') return PRODUCTION_BACKEND;
   }
-  return import.meta.env.VITE_API_URL || (import.meta.env.PROD ? PRODUCTION_BACKEND : 'http://localhost:3001');
+  return (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '') || (import.meta.env.PROD ? PRODUCTION_BACKEND : 'http://localhost:3001');
 }
 const BACKEND_URL = getBackendUrl();
 

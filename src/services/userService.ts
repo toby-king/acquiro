@@ -3,11 +3,7 @@
  * All Bubble calls are proxied through /api/bubble/* — BUBBLE_API_KEY never leaves the server.
  */
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-if (!API_URL) {
-  console.error('Missing required environment variable: VITE_API_URL');
-}
+import { API_URL } from '../utils/apiUrl';
 
 interface CreateUserPayload {
   lead_id: string;

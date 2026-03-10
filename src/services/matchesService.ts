@@ -3,11 +3,7 @@
  * The backend joins match records with business details and returns clean JSON.
  */
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-if (!API_URL) {
-  console.error('Missing required environment variable: VITE_API_URL');
-}
+import { API_URL } from '../utils/apiUrl';
 
 export interface Match {
   id: string;
