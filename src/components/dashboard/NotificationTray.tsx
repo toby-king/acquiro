@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, FileText, Upload, CheckCircle2, Loader2, ExternalLink, X } from 'lucide-react';
+import { Bell, FileText, Upload, CheckCircle2, Loader2, ExternalLink, X, Copy, Check, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   getUserNotifications,
@@ -10,6 +10,30 @@ import {
 } from '../../services/notificationService';
 
 type UploadState = 'idle' | 'uploading' | 'done' | 'error';
+
+/** Extract the IM URL and password embedded in the notification body text */
+function parseIMBody(body: string): { url: string | null; password: string | null } {
+  const urlMatch = body.match(/Link:\s*(https?:\/\/\S+)/);
+  const pwMatch  = body.match(/Password:\s*(\S+)/);
+  return {
+    url:      urlMatch ? urlMatch[1] : null,
+    password: pwMatch  ? pwMatch[1]  : null,
+  };
+}
+
+function CopyText({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+    >
+      {copied ? <Check size={9} className="text-green-400" /> : <Copy size={9} />}
+      {copied ? 'Copied' : 'Copy'}
+    </button>
+  );
+}
 
 function NotificationItem({
   notification,
@@ -23,6 +47,7 @@ function NotificationItem({
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isIM = notification.type_text === 'im_received';
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -40,67 +65,96 @@ function NotificationItem({
     }
   };
 
+  const handleDismissIM = async () => {
+    try { await markNotificationActioned(notification._id); } catch { /* non-fatal */ }
+    onDismiss();
+  };
+
+  const { url: imUrl, password: imPassword } = isIM ? parseIMBody(notification.body_text ?? '') : { url: null, password: null };
+
   return (
     <div className="px-4 py-3 border-b border-[var(--border)] last:border-0">
       <div className="flex items-start gap-2.5">
-        <div className="flex-shrink-0 mt-0.5 w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center">
-          <FileText size={13} className="text-blue-400" />
+        <div className={`flex-shrink-0 mt-0.5 w-7 h-7 rounded-full flex items-center justify-center ${isIM ? 'bg-green-500/10' : 'bg-blue-500/10'}`}>
+          {isIM ? <BookOpen size={13} className="text-green-400" /> : <FileText size={13} className="text-blue-400" />}
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold text-[var(--text-primary)] leading-snug">
             {notification.title_text}
           </p>
-          <p className="text-xs text-[var(--text-secondary)] mt-0.5 leading-relaxed">
-            {notification.body_text}
-          </p>
 
-          <div className="flex flex-wrap items-center gap-1.5 mt-2">
-            {ndaFileUrl && (
-              <a
-                href={ndaFileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
+          {isIM ? (
+            <div className="mt-1.5 space-y-1.5">
+              {imUrl && (
+                <div className="flex items-center gap-1.5">
+                  <a
+                    href={imUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent text-black hover:bg-accent/90 transition-colors"
+                  >
+                    <ExternalLink size={10} />
+                    Open IM
+                  </a>
+                </div>
+              )}
+              {imPassword && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-[var(--text-tertiary)]">Password:</span>
+                  <code className="text-[10px] font-mono text-[var(--text-primary)] bg-[var(--bg-card)] border border-[var(--border)] px-1.5 py-0.5 rounded">
+                    {imPassword}
+                  </code>
+                  <CopyText text={imPassword} />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleDismissIM}
+                className="text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors mt-0.5"
               >
-                <ExternalLink size={10} />
-                Download NDA
-              </a>
-            )}
-
-            {uploadState === 'done' ? (
-              <span className="inline-flex items-center gap-1 text-xs text-green-400 font-medium">
-                <CheckCircle2 size={12} />
-                Uploaded!
-              </span>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadState === 'uploading'}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent text-black hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {uploadState === 'uploading' ? (
-                    <Loader2 size={10} className="animate-spin" />
-                  ) : (
-                    <Upload size={10} />
-                  )}
-                  {uploadState === 'uploading' ? 'Uploading…' : 'Upload signed NDA'}
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-              </>
-            )}
-
-            {uploadState === 'error' && (
-              <span className="text-xs text-red-400">{errorMsg}</span>
-            )}
-          </div>
+                Mark as reviewed
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5 leading-relaxed">
+                {notification.body_text}
+              </p>
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                {ndaFileUrl && (
+                  <a
+                    href={ndaFileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
+                  >
+                    <ExternalLink size={10} />
+                    Download NDA
+                  </a>
+                )}
+                {uploadState === 'done' ? (
+                  <span className="inline-flex items-center gap-1 text-xs text-green-400 font-medium">
+                    <CheckCircle2 size={12} />
+                    Uploaded!
+                  </span>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadState === 'uploading'}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent text-black hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {uploadState === 'uploading' ? <Loader2 size={10} className="animate-spin" /> : <Upload size={10} />}
+                      {uploadState === 'uploading' ? 'Uploading…' : 'Upload signed NDA'}
+                    </button>
+                    <input ref={fileInputRef} type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleFileChange} />
+                  </>
+                )}
+                {uploadState === 'error' && <span className="text-xs text-red-400">{errorMsg}</span>}
+              </div>
+            </>
+          )}
         </div>
 
         <button
