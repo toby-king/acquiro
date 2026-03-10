@@ -101,18 +101,19 @@ router.get('/user/:userId', wrap(async (req, res) => {
 router.post('/user/lookup', wrap(async (req, res) => {
   const { email } = req.body as { email?: string };
   if (!email?.trim()) { res.status(400).json({ error: 'email required' }); return; }
-  const constraints = enc([{ key: 'authentication.email.email', constraint_type: 'equals', value: email.trim() }]);
-  const data = await bubbleGet<{ response: { results: Record<string, unknown>[] } }>(
-    `/obj/user?constraints=${constraints}&limit=1`,
-  );
-  const u = data.response.results[0];
-  if (!u) { res.status(404).json({ error: 'ACCOUNT_NOT_FOUND' }); return; }
-  const auth = u.authentication as { email?: { email?: string } } | undefined;
-  res.json({
-    user_id: u._id,
-    name: (u.name_text ?? u.name) as string | null ?? null,
-    email: auth?.email?.email ?? null,
-  });
+  const normalised = email.trim().toLowerCase();
+  let cursor = 0;
+  while (true) {
+    const data = await bubbleGet<{ response: { results: Array<{ _id: string; name_text?: string; authentication?: { email?: { email?: string } } }>; remaining: number } }>(
+      `/obj/user?limit=100&cursor=${cursor}`,
+    );
+    const { results, remaining } = data.response;
+    const u = results.find(r => r.authentication?.email?.email?.toLowerCase() === normalised);
+    if (u) { res.json({ user_id: u._id, name: u.name_text ?? null, email: u.authentication?.email?.email ?? normalised }); return; }
+    if (remaining <= 0) break;
+    cursor += results.length;
+  }
+  res.status(404).json({ error: 'ACCOUNT_NOT_FOUND' });
 }));
 
 /** PATCH /api/bubble/user/:userId — update user fields */

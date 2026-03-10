@@ -12,33 +12,28 @@ function getBubbleKey() {
   return key;
 }
 
-/** Find a Bubble user record by email using the Data API */
+type BubbleUser = { _id: string; name_text?: string; authentication?: { email?: { email?: string } } };
+
+/** Find a Bubble user record by email.
+ *  Bubble's Data API does not support filtering on the authentication.email field,
+ *  so we fetch all users and match client-side.
+ */
 async function lookupUserByEmail(email: string): Promise<{ user_id: string; email: string; name: string | null } | null> {
-  const constraints = encodeURIComponent(JSON.stringify([
-    { key: 'authentication.email.email', constraint_type: 'equals', value: email },
-  ]));
-  const url = `${BUBBLE_BASE}/obj/user?constraints=${constraints}&limit=1`;
-  console.log('[auth] lookupUserByEmail url:', url);
-  const res = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${getBubbleKey()}` },
-  });
-  console.log('[auth] lookupUserByEmail status:', res.status);
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    console.error('[auth] lookupUserByEmail Bubble error:', text.substring(0, 300));
-    return null;
+  const headers = { 'Authorization': `Bearer ${getBubbleKey()}` };
+  const normalised = email.toLowerCase().trim();
+  let cursor = 0;
+  while (true) {
+    const res = await fetch(`${BUBBLE_BASE}/obj/user?limit=100&cursor=${cursor}`, { headers });
+    if (!res.ok) return null;
+    const data = await res.json() as { response?: { results?: BubbleUser[]; count?: number; remaining?: number } };
+    const { results = [], remaining = 0 } = data.response ?? {};
+    const match = results.find(u => u.authentication?.email?.email?.toLowerCase() === normalised);
+    if (match) {
+      return { user_id: match._id, email: match.authentication!.email!.email!, name: match.name_text ?? null };
+    }
+    if (remaining <= 0) return null;
+    cursor += results.length;
   }
-  const data = await res.json() as { response?: { results?: Array<{ _id: string; name_text?: string; name?: string; authentication?: { email?: { email?: string } } }> } };
-  console.log('[auth] lookupUserByEmail results count:', data.response?.results?.length ?? 0);
-  const u = data.response?.results?.[0];
-  if (!u) return null;
-  const userEmail = u.authentication?.email?.email ?? '';
-  if (!userEmail) return null;
-  return {
-    user_id: u._id,
-    email: userEmail,
-    name: u.name_text ?? u.name ?? null,
-  };
 }
 
 /** Store a magic link token + expiry on the Bubble user record */
