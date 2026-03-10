@@ -100,8 +100,13 @@ Your communication style should reflect these custom-configured traits.`;
 
   // Buyer criteria from Bubble
   let buyerCriteriaSection = '';
+  let companyOverviewSection = '';
   if (buyerInfo && Object.keys(buyerInfo).length > 0) {
     try {
+      const companyOverview = buyerInfo.company_overview_text as string | undefined;
+      if (companyOverview) {
+        companyOverviewSection = `\n\nCLIENT'S COMPANY OVERVIEW:\n${companyOverview}\n\nThis is how the client's company should be described. Use this whenever you are asked about "your company", the user's company, or when introducing the client to a broker. Do NOT describe Acquiro as the client's company — Acquiro is the platform you work on; the client is the acquirer with the company described above.`;
+      }
       const criteriaText = JSON.stringify(buyerInfo, null, 2);
       buyerCriteriaSection = `\n\nBUYER CRITERIA (from platform):\n${criteriaText}\n\nUse this when discussing what they're looking for and how their matches fit.`;
     } catch {
@@ -144,6 +149,7 @@ ${challengeSection ? `${challengeSection}\n` : ''}
 ${traitsSection ? `Traits: ${traitsSection}\n` : ''}
 ${voiceSection ? `${voiceSection}\n` : ''}
 ${profanitySection}
+${companyOverviewSection}
 ${buyerCriteriaSection}
 ${matchesSection}
 ${matchToDiscussSection}`;
