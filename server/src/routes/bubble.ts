@@ -128,10 +128,16 @@ router.post('/user/account', wrap(async (req, res) => {
 
 // ── LEAD ──────────────────────────────────────────────────────────────────────
 
-/** POST /api/bubble/lead — create a lead (TODO: replace wf/) */
+/** POST /api/bubble/lead — create a lead */
 router.post('/lead', wrap(async (req, res) => {
-  const data = await bubblePost('/wf/create_lead', req.body as Record<string, unknown>);
-  res.json(data);
+  const { name, email } = req.body as { name?: string; email?: string };
+  if (!name?.trim() || !email?.trim()) { res.status(400).json({ error: 'name and email required' }); return; }
+  const data = await bubblePost<{ id?: string }>('/obj/Lead', {
+    name_text: name.trim(),
+    email_text: email.trim(),
+  });
+  // Match the shape the frontend expects: { response: { lead_id } }
+  res.json({ status: 'success', response: { lead_id: data.id } });
 }));
 
 /** POST /api/bubble/lead/mail — send retention email to lead (TODO: replace wf/) */
@@ -153,18 +159,69 @@ router.get('/agent/email-check', wrap(async (req, res) => {
   res.json({ taken: (data.response?.count ?? 0) > 0 });
 }));
 
-/** GET /api/bubble/agent?lead_id=... — get agent by lead ID (TODO: replace wf/) */
+/** GET /api/bubble/agent?lead_id=... — get agent by lead ID */
 router.get('/agent', wrap(async (req, res) => {
   const leadId = req.query.lead_id as string | undefined;
   if (!leadId) { res.status(400).json({ error: 'lead_id required' }); return; }
-  const data = await bubblePost<unknown>('/wf/get_agent', { lead_id: leadId });
-  res.json(data);
+
+  const constraints = enc([{ key: 'lead_custom_leads', constraint_type: 'equals', value: leadId }]);
+  const data = await bubbleGet<{ response: { results: Record<string, unknown>[] } }>(
+    `/obj/Agents?constraints=${constraints}&limit=1`,
+  );
+  const agent = data.response.results[0];
+  if (!agent) { res.status(404).json({ error: 'Agent not found' }); return; }
+
+  // Fetch linked user for user_name + user_email
+  let userName: string | null = null;
+  let userEmail: string | null = null;
+  const userId = agent.user_user as string | undefined;
+  if (userId) {
+    try {
+      const uData = await bubbleGet<{ response: Record<string, unknown> }>(`/obj/user/${userId}`);
+      const u = uData.response;
+      userName = (u.name_text ?? u.name) as string | null ?? null;
+      userEmail = ((u.authentication as { email?: { email?: string } } | undefined)?.email?.email) ?? null;
+    } catch { /* non-fatal — user might not exist yet */ }
+  }
+
+  // Map Data API field names to the shape getAgentService.ts expects
+  res.json({
+    response: {
+      name: agent.name_text ?? null,
+      challenge_style: agent.style_text ?? null,
+      profanity: agent.profanity_boolean === true ? 'true' : 'false',
+      traits: agent.traits_text ?? '',
+      type: agent.type_text ?? null,
+      voice: agent.voice_text ?? null,
+      personality: agent.personality_options_option_personalityoptions ?? null,
+      user_name: userName,
+      user_email: userEmail,
+    },
+  });
 }));
 
-/** POST /api/bubble/agent — create agent (TODO: replace wf/) */
+/** POST /api/bubble/agent — create agent */
 router.post('/agent', wrap(async (req, res) => {
-  const data = await bubblePost('/wf/create_agent', req.body as Record<string, unknown>);
-  res.json(data);
+  const { lead_id, name, email, challenge_style, profanity, traits, type, voice, personality } =
+    req.body as Record<string, string>;
+
+  const body: Record<string, unknown> = {
+    lead_custom_leads: lead_id,
+    name_text: name,
+    email_text: email,
+    style_text: challenge_style,
+    profanity_boolean: profanity === 'true',
+    type_text: type,
+    voice_text: voice,
+  };
+  if (traits) body.traits_text = traits;
+  // Only set the option set field for preset personalities (not custom stats strings)
+  if (personality && !personality.includes(': ')) {
+    body.personality_options_option_personalityoptions = personality;
+  }
+
+  const data = await bubblePost<{ id?: string }>('/obj/Agents', body);
+  res.json({ status: 'success', id: data.id });
 }));
 
 // ── BUYER INFO ────────────────────────────────────────────────────────────────
@@ -227,15 +284,22 @@ router.patch('/matches/:matchId/dismiss', wrap(async (req, res) => {
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 
-/** GET /api/bubble/admin/stats — user/subscriber counts (TODO: replace wf/) */
+/** GET /api/bubble/admin/stats — user/subscriber counts */
 router.get('/admin/stats', wrap(async (req, res) => {
-  const fetchRes = await fetch(`${BUBBLE_BASE}/wf/get_admin_stats`, {
-    method: 'GET',
-    headers: { Authorization: `Bearer ${getApiKey()}` },
-  });
-  if (!fetchRes.ok) { res.status(fetchRes.status).json({ error: 'Failed to fetch admin stats' }); return; }
-  const data = await fetchRes.json();
-  res.json(data);
+  const subscribedConstraints = enc([{ key: 'is_subscribed_boolean', constraint_type: 'equals', value: true }]);
+
+  const [totalData, activeData] = await Promise.all([
+    bubbleGet<{ response: { count: number; remaining: number } }>('/obj/user?limit=1'),
+    bubbleGet<{ response: { count: number; remaining: number } }>(
+      `/obj/user?constraints=${subscribedConstraints}&limit=1`,
+    ),
+  ]);
+
+  const total_users = (totalData.response.count ?? 0) + (totalData.response.remaining ?? 0);
+  const active_subscribers = (activeData.response.count ?? 0) + (activeData.response.remaining ?? 0);
+  const churned_users = Math.max(0, total_users - active_subscribers);
+
+  res.json({ total_users, active_subscribers, churned_users });
 }));
 
 /** GET /api/bubble/listings?cursor=0&limit=100 — passthrough for admin listings */
