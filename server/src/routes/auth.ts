@@ -1,3 +1,4 @@
+// Magic link auth routes
 import { Router, Request, Response } from 'express';
 import { randomBytes } from 'crypto';
 
