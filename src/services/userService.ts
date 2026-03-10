@@ -1,295 +1,146 @@
 /**
- * Service for user operations via the Bubble API (create_user, get_user)
+ * Service for user operations via the backend API.
+ * All Bubble calls are proxied through /api/bubble/* — BUBBLE_API_KEY never leaves the server.
  */
 
-const BASE_URL = import.meta.env.VITE_BUBBLE_API_BASE_URL;
-const API_TOKEN = import.meta.env.VITE_BUBBLE_API_TOKEN;
 const API_URL = import.meta.env.VITE_API_URL;
-const CREATE_USER_URL = `${BASE_URL}/create_user`;
-const UPDATE_USER_URL = `${BASE_URL}/update_user`;
-const GET_USER_URL = `${BASE_URL}/get_user`;
-const UNSUBSCRIBE_USER_URL = `${BASE_URL}/unsubscribe_user`;
+
+if (!API_URL) {
+  console.error('Missing required environment variable: VITE_API_URL');
+}
 
 interface CreateUserPayload {
   lead_id: string;
   subscription_id?: string;
 }
 
-if (!API_TOKEN || !BASE_URL) {
-  console.error('Missing required environment variables: VITE_BUBBLE_API_TOKEN and/or VITE_BUBBLE_API_BASE_URL');
-}
-
-interface CreateUserResponse {
-  status: string;
-  response: {
-    user_id: string;
-  };
-}
-
 interface CreateUserResult {
   user_id: string;
 }
 
-/**
- * Creates a user by sending lead_id to the Bubble API
- * @param leadId - The lead ID to convert to a user
- * @returns Promise that resolves to the API response containing user_id
- */
 export async function createUser(leadId: string, subscriptionId?: string): Promise<CreateUserResult | null> {
   try {
-    if (!leadId) {
-      throw new Error('Lead ID is required to create user account');
-    }
-
-    if (!API_TOKEN || !BASE_URL) {
-      throw new Error('Bubble API configuration is missing. Cannot create user account.');
-    }
+    if (!leadId) throw new Error('Lead ID is required to create user account');
+    if (!API_URL) throw new Error('API URL configuration is missing.');
 
     const payload: CreateUserPayload = {
       lead_id: leadId,
       ...(subscriptionId && { subscription_id: subscriptionId }),
     };
 
-    const body = JSON.stringify(payload);
-    console.log('[userService] Creating user account in Bubble API for lead:', leadId, 'subscriptionId:', subscriptionId);
-    console.log('[userService] Request:', {
-      url: CREATE_USER_URL,
+    console.log('[userService] Creating user account for lead:', leadId);
+    const response = await fetch(`${API_URL}/api/bubble/user/account`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': API_TOKEN ? `Bearer ${API_TOKEN.slice(0, 8)}...` : '(missing)',
-      },
-      body,
-    });
-
-    const response = await fetch(CREATE_USER_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_TOKEN}`,
-      },
-      body,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
 
     const responseText = await response.text();
-    console.log('[userService] Response:', {
-      ok: response.ok,
-      status: response.status,
-      statusText: response.statusText,
-      body: responseText,
-    });
+    if (!response.ok) throw new Error(`create_user failed: ${response.status}: ${responseText}`);
 
-    if (!response.ok) {
-      const errorMessage = `Bubble API request failed with status ${response.status}: ${responseText}`;
-      console.error('[userService]', errorMessage);
-      throw new Error(errorMessage);
-    }
+    const data = JSON.parse(responseText) as { response?: { user_id?: string } };
+    const userId = data.response?.user_id;
+    if (!userId) throw new Error('Response missing user_id');
 
-    const data = JSON.parse(responseText) as CreateUserResponse;
-    
-    if (!data.response?.user_id) {
-      const errorMessage = 'Bubble API response missing user_id';
-      console.error('[userService]', errorMessage, 'Response:', data);
-      throw new Error(errorMessage);
-    }
-    
-    const returnedUserId = data.response.user_id;
-    console.log('[userService] User account created successfully for lead:', leadId);
-    console.log('[userService] ** Returned user_id (stored for dashboard):', returnedUserId);
-    
-    const result: CreateUserResult = {
-      user_id: returnedUserId,
-    };
-    return result;
+    console.log('[userService] User created, user_id:', userId);
+    return { user_id: userId };
   } catch (error) {
     console.error('[userService] Failed to create user account:', error);
-    if (error instanceof Error) {
-      console.error('[userService] Error details:', error.message);
-    }
-    // Re-throw the error so the caller can handle it appropriately
     throw error;
   }
 }
 
 // --- update_user (re-subscription) ---
 
-interface UpdateUserPayload {
-  user_id: string;
-  subscription_id: string;
-}
-
-/**
- * Updates an existing user's subscription in Bubble (re-subscription flow).
- * Calls PUT /update_user with { user_id, subscription_id }. Bubble sets is_subscribed to "yes" and stores subscription_id.
- * @param userId - The Bubble user ID
- * @param subscriptionId - The Stripe subscription ID
- */
 export async function updateUser(userId: string, subscriptionId: string): Promise<void> {
-  if (!userId || !subscriptionId) {
-    throw new Error('User ID and subscription ID are required to update user');
-  }
-  if (!API_TOKEN || !BASE_URL) {
-    throw new Error('Bubble API configuration is missing.');
-  }
+  if (!userId || !subscriptionId) throw new Error('User ID and subscription ID are required');
+  if (!API_URL) throw new Error('API URL configuration is missing.');
 
-  const payload: UpdateUserPayload = { user_id: userId, subscription_id: subscriptionId };
-  const body = JSON.stringify(payload);
-
-  const response = await fetch(UPDATE_USER_URL, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_TOKEN}`,
-    },
-    body,
+  const response = await fetch(`${API_URL}/api/bubble/user/${userId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subscription_id_text: subscriptionId, is_subscribed_boolean: true }),
   });
 
   if (!response.ok) {
-    const responseText = await response.text();
-    throw new Error(`Bubble update_user failed: ${response.status} ${responseText}`);
+    const text = await response.text();
+    throw new Error(`update_user failed: ${response.status} ${text}`);
   }
 }
 
 // --- unsubscribe_user ---
 
-/**
- * Notifies Bubble that the user has set cancel_at_period_end. Sends { user_id, cancel_at }.
- * Bubble keeps is_subscribed as "yes" and stores cancel_at until the webhook sets is_subscribed to "no".
- */
 export async function unsubscribeUser(userId: string, cancelAt?: string | null): Promise<void> {
-  if (!userId) {
-    throw new Error('User ID is required to unsubscribe');
-  }
-  if (!API_TOKEN || !BASE_URL) {
-    throw new Error('Bubble API configuration is missing.');
+  if (!userId) throw new Error('User ID is required to unsubscribe');
+  if (!API_URL) throw new Error('API URL configuration is missing.');
+
+  const body: Record<string, unknown> = { user_id: userId };
+  if (cancelAt != null && cancelAt.trim() !== '') {
+    body.cancel_at = cancelAt.trim();
   }
 
-  const payload: { user_id: string; cancel_at?: string } = { user_id: userId };
-  if (cancelAt != null && cancelAt.trim() !== '') {
-    payload.cancel_at = cancelAt.trim();
-  }
-  const body = JSON.stringify(payload);
-  const response = await fetch(UNSUBSCRIBE_USER_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_TOKEN}`,
-    },
-    body,
+  const response = await fetch(`${API_URL}/api/bubble/user/${userId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
-    const responseText = await response.text();
-    throw new Error(`Bubble unsubscribe_user failed: ${response.status} ${responseText}`);
+    const text = await response.text();
+    throw new Error(`unsubscribe_user failed: ${response.status} ${text}`);
   }
 }
 
 // --- get_user ---
 
-interface GetUserPayload {
-  user_id: string;
-}
-
-interface GetUserResponse {
-  status?: string;
-  response?: {
-    name?: string;
-    email?: string;
-    is_subscribed?: string;
-    subscription_id?: string | null;
-    cancel_at?: string | null;
-    /** Set by Bubble for admin users; required for /admin access */
-    is_admin?: string | boolean;
-    [key: string]: unknown;
-  };
-}
-
 export interface GetUserResult {
   name: string | null;
   email: string | null;
-  /** true if is_subscribed === 'yes', false otherwise */
   isSubscribed: boolean;
-  /** Stripe subscription ID when present */
   subscriptionId: string | null;
-  /** ISO date string when subscription will end (cancel_at); null otherwise */
   cancelAt: string | null;
-  /** true if user has admin access (is_admin from Bubble) */
   isAdmin: boolean;
 }
 
-/**
- * Fetches user profile (name, email) from the Bubble API
- * @param userId - The user ID from create_user / dashboard
- * @returns Promise with name and email (null if not returned)
- */
 export async function getUser(userId: string): Promise<GetUserResult> {
-  if (!userId) {
-    throw new Error('User ID is required to fetch user');
-  }
-  if (!API_TOKEN || !BASE_URL) {
-    throw new Error('Bubble API configuration is missing.');
-  }
+  if (!userId) throw new Error('User ID is required to fetch user');
+  if (!API_URL) throw new Error('API URL configuration is missing.');
 
-  const payload: GetUserPayload = { user_id: userId };
-  const body = JSON.stringify(payload);
-
-  const response = await fetch(GET_USER_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_TOKEN}`,
-    },
-    body,
+  const response = await fetch(`${API_URL}/api/bubble/user/${userId}`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
   });
 
   const responseText = await response.text();
-  if (!response.ok) {
-    throw new Error(`Bubble get_user failed: ${response.status} ${responseText}`);
-  }
+  if (!response.ok) throw new Error(`get_user failed: ${response.status} ${responseText}`);
 
-  const data = JSON.parse(responseText) as GetUserResponse;
-  const res = data.response;
-  const subscriptionId = (res?.subscription_id != null && String(res.subscription_id).trim() !== '')
-    ? String(res.subscription_id).trim()
-    : null;
-  // Treat as subscribed if is_subscribed is "yes"/"true", or if they have a subscription_id (Bubble may use different formats)
-  const rawSub = res?.is_subscribed;
+  const data = JSON.parse(responseText) as {
+    user_id?: string;
+    name?: string | null;
+    email?: string | null;
+    is_subscribed?: boolean;
+    subscription_id?: string | null;
+    cancel_at?: string | null;
+    is_admin?: boolean;
+  };
+
+  const subscriptionId = data.subscription_id?.trim() || null;
   const isSubscribed =
-    (rawSub != null && (String(rawSub).toLowerCase() === 'yes' || String(rawSub).toLowerCase() === 'true')) ||
+    data.is_subscribed === true ||
     (subscriptionId != null && subscriptionId.length > 0);
-  const cancelAt =
-    res?.cancel_at != null && String(res.cancel_at).trim() !== ''
-      ? String(res.cancel_at).trim()
-      : null;
-  const rawAdmin = res?.is_admin;
-  const isAdmin =
-    rawAdmin === true ||
-    (typeof rawAdmin === 'string' && (rawAdmin.toLowerCase() === 'true' || rawAdmin.toLowerCase() === 'yes'));
+  const cancelAt = data.cancel_at?.trim() || null;
+
   return {
-    name: (res?.name != null && String(res.name).trim() !== '') ? String(res.name) : null,
-    email: (res?.email != null && String(res.email).trim() !== '') ? String(res.email) : null,
+    name: data.name ?? null,
+    email: data.email ?? null,
     isSubscribed,
     subscriptionId,
     cancelAt,
-    isAdmin: !!isAdmin,
+    isAdmin: data.is_admin === true,
   };
 }
 
 // --- get_user by email (login) ---
-
-interface GetUserByEmailPayload {
-  email: string;
-}
-
-interface GetUserByEmailResponse {
-  status?: string;
-  response?: {
-    email?: string;
-    user_id?: string;
-    name?: string;
-    [key: string]: unknown;
-  };
-}
 
 export interface GetUserByEmailResult {
   email: string;
@@ -297,69 +148,37 @@ export interface GetUserByEmailResult {
   name: string | null;
 }
 
-/**
- * Looks up a user by email via the Bubble API (for login).
- * @param email - The user's email
- * @returns User email, user_id, and name if the account exists; throws if not found or API error
- */
 export async function getUserByEmail(email: string): Promise<GetUserByEmailResult> {
   const trimmed = email?.trim();
-  if (!trimmed) {
-    throw new Error('Email is required');
-  }
-  if (!API_TOKEN || !BASE_URL) {
-    throw new Error('Bubble API configuration is missing.');
-  }
+  if (!trimmed) throw new Error('Email is required');
+  if (!API_URL) throw new Error('API URL configuration is missing.');
 
-  const payload: GetUserByEmailPayload = { email: trimmed };
-  const body = JSON.stringify(payload);
-
-  const response = await fetch(GET_USER_URL, {
+  const response = await fetch(`${API_URL}/api/bubble/user/lookup`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_TOKEN}`,
-    },
-    body,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: trimmed }),
   });
 
   const responseText = await response.text();
-  if (!response.ok) {
-    throw new Error(`Lookup failed: ${response.status} ${responseText}`);
-  }
+  if (response.status === 404) throw new Error('ACCOUNT_NOT_FOUND');
+  if (!response.ok) throw new Error(`Lookup failed: ${response.status} ${responseText}`);
 
-  const data = JSON.parse(responseText) as GetUserByEmailResponse;
-  const res = data.response;
-  const userEmail = res?.email != null && String(res.email).trim() !== '' ? String(res.email).trim() : null;
-  const userId = res?.user_id != null && String(res.user_id).trim() !== '' ? String(res.user_id).trim() : null;
-  const name = res?.name != null && String(res.name).trim() !== '' ? String(res.name).trim() : null;
-
-  if (!userId || !userEmail) {
-    throw new Error('ACCOUNT_NOT_FOUND');
-  }
+  const data = JSON.parse(responseText) as { user_id?: string; email?: string; name?: string | null };
+  if (!data.user_id || !data.email) throw new Error('ACCOUNT_NOT_FOUND');
 
   return {
-    email: userEmail,
-    user_id: userId,
-    name: name ?? null,
+    email: data.email,
+    user_id: data.user_id,
+    name: data.name ?? null,
   };
 }
 
 // --- send_magic_link ---
 
-/**
- * Sends a magic link to the given email via the backend API.
- * @param email - The user's email
- * @throws On API error or when no account exists
- */
 export async function sendMagicLink(email: string): Promise<void> {
   const trimmed = email?.trim();
-  if (!trimmed) {
-    throw new Error('Email is required');
-  }
-  if (!API_URL) {
-    throw new Error('API URL configuration is missing.');
-  }
+  if (!trimmed) throw new Error('Email is required');
+  if (!API_URL) throw new Error('API URL configuration is missing.');
 
   const response = await fetch(`${API_URL}/api/auth/magic-link`, {
     method: 'POST',
@@ -367,9 +186,7 @@ export async function sendMagicLink(email: string): Promise<void> {
     body: JSON.stringify({ email: trimmed }),
   });
 
-  if (!response.ok) {
-    throw new Error('SEND_MAGIC_LINK_ERROR');
-  }
+  if (!response.ok) throw new Error('SEND_MAGIC_LINK_ERROR');
 }
 
 // --- get_user by magic link (verify link) ---
@@ -380,30 +197,17 @@ export interface GetUserByMagicLinkResult {
   name: string | null;
 }
 
-/**
- * Verifies a magic link token via the backend API and returns user details.
- * @param link - The token from the email (URL query param ?link=...)
- * @returns User email, user_id, and name
- */
 export async function getUserByMagicLink(link: string): Promise<GetUserByMagicLinkResult> {
   const trimmed = link?.trim();
-  if (!trimmed) {
-    throw new Error('Link is required');
-  }
-  if (!API_URL) {
-    throw new Error('API URL configuration is missing.');
-  }
+  if (!trimmed) throw new Error('Link is required');
+  if (!API_URL) throw new Error('API URL configuration is missing.');
 
   const response = await fetch(`${API_URL}/api/auth/verify?token=${encodeURIComponent(trimmed)}`);
 
-  if (!response.ok) {
-    throw new Error('LINK_EXPIRED');
-  }
+  if (!response.ok) throw new Error('LINK_EXPIRED');
 
   const data = await response.json() as { user_id: string; email: string; name: string | null };
-  if (!data.user_id || !data.email) {
-    throw new Error('LINK_EXPIRED');
-  }
+  if (!data.user_id || !data.email) throw new Error('LINK_EXPIRED');
 
   return {
     email: data.email,

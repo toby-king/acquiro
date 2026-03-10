@@ -1,65 +1,40 @@
 /**
- * Service for creating leads via the Bubble API
+ * Service for creating leads via the backend API.
  */
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+if (!API_URL) {
+  console.error('Missing required environment variable: VITE_API_URL');
+}
 
 interface CreateLeadPayload {
   name: string;
   email: string;
 }
 
-const API_URL = `${import.meta.env.VITE_BUBBLE_API_BASE_URL}/create_lead`;
-const API_TOKEN = import.meta.env.VITE_BUBBLE_API_TOKEN;
-
-if (!API_TOKEN || !import.meta.env.VITE_BUBBLE_API_BASE_URL) {
-  console.error('Missing required environment variables: VITE_BUBBLE_API_TOKEN and/or VITE_BUBBLE_API_BASE_URL');
-}
-
-interface CreateLeadResponse {
-  status: string;
-  response: {
-    lead_id: string;
-  };
-}
-
 interface CreateLeadResult {
   lead_id: string;
 }
 
-/**
- * Creates a lead by sending name and email to the Bubble API
- * @param payload - Object containing name and email
- * @returns Promise that resolves to the API response containing lead_id
- */
 export async function createLead(payload: CreateLeadPayload): Promise<CreateLeadResult | null> {
   try {
-    const response = await fetch(API_URL, {
+    const response = await fetch(`${API_URL}/api/bubble/lead`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_TOKEN}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`create_lead failed with status ${response.status}`);
 
-    const data = await response.json() as CreateLeadResponse;
-    
-    // Optionally log success (in production, you might want to remove console logs)
-    console.log('Lead created successfully:', payload);
-    console.log('Lead ID:', data.response?.lead_id);
-    
-    // Return the response object with lead_id for easier access
-    const result: CreateLeadResult = {
-      lead_id: data.response.lead_id,
-    };
-    return result;
+    const data = await response.json() as { response?: { lead_id?: string } };
+    const leadId = data.response?.lead_id;
+    if (!leadId) throw new Error('Response missing lead_id');
+
+    console.log('[leadService] Lead created:', payload.email, 'lead_id:', leadId);
+    return { lead_id: leadId };
   } catch (error) {
-    // Log error but don't throw - we don't want to interrupt the user flow
-    console.error('Failed to create lead:', error);
-    // In a production app, you might want to send this to an error tracking service
+    console.error('[leadService] Failed to create lead:', error);
     return null;
   }
 }

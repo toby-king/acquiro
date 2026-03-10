@@ -1,7 +1,14 @@
-const BUBBLE_DATA_BASE = (import.meta.env.VITE_BUBBLE_API_BASE_URL as string)
-  ?.replace(/\/wf(\/.*)?$/, '/obj') ?? '';
-const API_TOKEN = import.meta.env.VITE_BUBBLE_API_TOKEN as string;
 const SCRAPER_BASE = import.meta.env.VITE_SCRAPER_URL as string;
+
+const PRODUCTION_BACKEND = 'https://acquiro-backend.vercel.app';
+function getBackendUrl(): string {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host !== 'localhost' && host !== '127.0.0.1') return PRODUCTION_BACKEND;
+  }
+  return import.meta.env.VITE_API_URL || (import.meta.env.PROD ? PRODUCTION_BACKEND : 'http://localhost:3001');
+}
+const BACKEND_URL = getBackendUrl();
 
 export interface UserNotification {
   _id: string;
@@ -11,44 +18,29 @@ export interface UserNotification {
   status_text: 'unread' | 'actioned';
   langcliffe_outreach_text: string;
   'Created Date': string;
-  // Populated from the linked outreach record:
   nda_file_url?: string;
 }
 
 export async function getUserNotifications(userId: string): Promise<UserNotification[]> {
-  const constraints = JSON.stringify([
-    { key: 'user_user',   constraint_type: 'equals', value: userId },
-    { key: 'status_text', constraint_type: 'equals', value: 'unread' },
-  ]);
-  const url = `${BUBBLE_DATA_BASE}/UserNotification?constraints=${encodeURIComponent(constraints)}&sort_field=Created Date&descending=true`;
-
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${API_TOKEN}` },
-  });
+  const res = await fetch(`${BACKEND_URL}/api/bubble/notifications/${userId}`);
   if (!res.ok) throw new Error(`Failed to fetch notifications: ${res.status}`);
   const json = await res.json();
   return json.response?.results ?? [];
 }
 
 export async function markNotificationActioned(notificationId: string): Promise<void> {
-  const res = await fetch(`${BUBBLE_DATA_BASE}/UserNotification/${notificationId}`, {
+  const res = await fetch(`${BACKEND_URL}/api/bubble/notifications/${notificationId}/action`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${API_TOKEN}`,
-    },
-    body: JSON.stringify({ status_text: 'actioned' }),
+    headers: { 'Content-Type': 'application/json' },
   });
   if (!res.ok) throw new Error(`Failed to mark notification actioned: ${res.status}`);
 }
 
 export async function getNdaFileUrl(outreachId: string): Promise<string | null> {
-  const res = await fetch(`${BUBBLE_DATA_BASE}/LangcliffeOutreach/${outreachId}`, {
-    headers: { Authorization: `Bearer ${API_TOKEN}` },
-  });
+  const res = await fetch(`${BACKEND_URL}/api/bubble/notifications/nda/${outreachId}`);
   if (!res.ok) return null;
   const json = await res.json();
-  return json.response?.nda_file_text ?? null;
+  return json.nda_file_url ?? null;
 }
 
 export async function uploadSignedNDA(outreachId: string, file: File): Promise<void> {

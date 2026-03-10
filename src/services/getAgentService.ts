@@ -1,5 +1,5 @@
 /**
- * Service for fetching agent details via the Bubble API
+ * Service for fetching agent details via the backend API.
  */
 
 import { AdvisorConfig } from '../types/advisor';
@@ -7,11 +7,10 @@ import { PERSONALITY_PRESETS } from '../constants/personalities';
 import { CHALLENGE_STYLES } from '../constants/challengeStyles';
 import { VOICE_OPTIONS } from '../constants/voices';
 
-const API_URL = `${import.meta.env.VITE_BUBBLE_API_BASE_URL}/get_agent`;
-const API_TOKEN = import.meta.env.VITE_BUBBLE_API_TOKEN;
+const API_URL = import.meta.env.VITE_API_URL;
 
-if (!API_TOKEN || !import.meta.env.VITE_BUBBLE_API_BASE_URL) {
-  console.error('Missing required environment variables: VITE_BUBBLE_API_TOKEN and/or VITE_BUBBLE_API_BASE_URL');
+if (!API_URL) {
+  console.error('Missing required environment variable: VITE_API_URL');
 }
 
 export interface GetAgentResponse {
@@ -33,25 +32,11 @@ export interface GetAgentResult {
   userEmail: string | null;
 }
 
-/**
- * Fetches agent details by lead_id from the Bubble API
- * @param leadId - The lead ID to fetch the agent for
- * @returns Promise with config, userName, userEmail
- */
 export async function getAgent(leadId: string): Promise<GetAgentResult | null> {
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_TOKEN}`,
-      },
-      body: JSON.stringify({ lead_id: leadId }),
-    });
+    const response = await fetch(`${API_URL}/api/bubble/agent?lead_id=${encodeURIComponent(leadId)}`);
 
-    if (!response.ok) {
-      throw new Error(`get_agent failed with status ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`get_agent failed with status ${response.status}`);
 
     const data = (await response.json()) as { response?: GetAgentResponse; status?: string } | GetAgentResponse;
     const agent = (typeof data === 'object' && data && 'response' in data ? data.response : data) as GetAgentResponse;

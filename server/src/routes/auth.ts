@@ -12,24 +12,24 @@ function getBubbleKey() {
   return key;
 }
 
-/** Find a Bubble user record by email using the existing get_user workflow */
+/** Find a Bubble user record by email using the Data API */
 async function lookupUserByEmail(email: string): Promise<{ user_id: string; email: string; name: string | null } | null> {
-  const res = await fetch(`${BUBBLE_BASE}/wf/get_user`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getBubbleKey()}`,
-    },
-    body: JSON.stringify({ email }),
+  const constraints = encodeURIComponent(JSON.stringify([
+    { key: 'authentication.email.email', constraint_type: 'equals', value: email },
+  ]));
+  const res = await fetch(`${BUBBLE_BASE}/obj/user?constraints=${constraints}&limit=1`, {
+    headers: { 'Authorization': `Bearer ${getBubbleKey()}` },
   });
   if (!res.ok) return null;
-  const data = await res.json() as { response?: { user_id?: string; email?: string; name?: string } };
-  const r = data.response;
-  if (!r?.user_id || !r?.email) return null;
+  const data = await res.json() as { response?: { results?: Array<{ _id: string; name_text?: string; name?: string; authentication?: { email?: { email?: string } } }> } };
+  const u = data.response?.results?.[0];
+  if (!u) return null;
+  const userEmail = u.authentication?.email?.email ?? '';
+  if (!userEmail) return null;
   return {
-    user_id: r.user_id,
-    email: r.email,
-    name: r.name ?? null,
+    user_id: u._id,
+    email: userEmail,
+    name: u.name_text ?? u.name ?? null,
   };
 }
 

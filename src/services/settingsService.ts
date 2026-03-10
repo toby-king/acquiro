@@ -1,31 +1,35 @@
 /**
- * Settings service — reads/writes User, Agents, and Buyer_Info directly via the Bubble Data API.
+ * Settings service — reads/writes User, Agents, and Buyer_Info via the backend API.
  * All mutations are scoped to the authenticated user's own records only.
  */
 
-const BASE_URL = import.meta.env.VITE_BUBBLE_API_BASE_URL as string;
-const API_TOKEN = import.meta.env.VITE_BUBBLE_API_TOKEN as string;
-const DATA_BASE = BASE_URL ? BASE_URL.replace(/\/wf(\/.*)?$/, '/obj') : '';
+const API_URL = import.meta.env.VITE_API_URL as string;
 
-function headers() {
-  return { 'Content-Type': 'application/json', Authorization: `Bearer ${API_TOKEN}` };
+const PRODUCTION_BACKEND = 'https://acquiro-backend.vercel.app';
+function getBackendUrl(): string {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host !== 'localhost' && host !== '127.0.0.1') return PRODUCTION_BACKEND;
+  }
+  return API_URL || (import.meta.env.PROD ? PRODUCTION_BACKEND : 'http://localhost:3001');
 }
+const BACKEND_URL = getBackendUrl();
 
-/** Bubble workflow API wraps IDs in braces; the Data API requires the bare ID. */
+/** Bubble workflow API wraps IDs in braces; strip them for Data API calls. */
 function bareId(id: string): string {
   return id.replace(/^\{/, '').replace(/\}$/, '');
 }
 
-async function dataGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${DATA_BASE}${path}`, { headers: headers() });
+async function backendGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${BACKEND_URL}${path}`);
   if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
   return res.json() as Promise<T>;
 }
 
-async function dataPatch(path: string, body: Record<string, unknown>): Promise<void> {
-  const res = await fetch(`${DATA_BASE}${path}`, {
+async function backendPatch(path: string, body: Record<string, unknown>): Promise<void> {
+  const res = await fetch(`${BACKEND_URL}${path}`, {
     method: 'PATCH',
-    headers: headers(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -39,7 +43,7 @@ async function dataPatch(path: string, body: Record<string, unknown>): Promise<v
 export interface UserProfile {
   _id: string;
   name_text?: string;
-  email?: string; // read-only — lives in authentication.email.email
+  email?: string;
   langcliffe_connected_boolean?: boolean;
 }
 
@@ -51,7 +55,9 @@ interface RawUserResponse {
 }
 
 export async function getUserProfile(userId: string): Promise<UserProfile> {
-  const data = await dataGet<{ response: RawUserResponse }>(`/User/${bareId(userId)}`);
+  const data = await backendGet<{ response: RawUserResponse }>(
+    `/api/bubble/settings/user/${bareId(userId)}`,
+  );
   const raw = data.response;
   return {
     _id: raw._id,
@@ -61,8 +67,11 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
   };
 }
 
-export async function updateUserProfile(userId: string, fields: { name_text?: string; langcliffe_connected_boolean?: boolean }): Promise<void> {
-  await dataPatch(`/User/${bareId(userId)}`, fields as Record<string, unknown>);
+export async function updateUserProfile(
+  userId: string,
+  fields: { name_text?: string; langcliffe_connected_boolean?: boolean },
+): Promise<void> {
+  await backendPatch(`/api/bubble/settings/user/${bareId(userId)}`, fields as Record<string, unknown>);
 }
 
 // ─── Agent ─────────────────────────────────────────────────────────────────────
@@ -74,17 +83,17 @@ export interface AgentRecord {
 }
 
 export async function getMyAgent(userId: string): Promise<AgentRecord | null> {
-  const constraints = encodeURIComponent(
-    JSON.stringify([{ key: 'user_user', constraint_type: 'equals', value: bareId(userId) }]),
-  );
-  const data = await dataGet<{ response: { results: AgentRecord[] } }>(
-    `/Agents?constraints=${constraints}`,
+  const data = await backendGet<{ response: { results: AgentRecord[] } }>(
+    `/api/bubble/settings/agent/${bareId(userId)}`,
   );
   return data.response.results[0] ?? null;
 }
 
-export async function updateAgent(agentId: string, fields: { name_text?: string; email_text?: string }): Promise<void> {
-  await dataPatch(`/Agents/${bareId(agentId)}`, fields as Record<string, unknown>);
+export async function updateAgent(
+  agentId: string,
+  fields: { name_text?: string; email_text?: string },
+): Promise<void> {
+  await backendPatch(`/api/bubble/settings/agent/${bareId(agentId)}`, fields as Record<string, unknown>);
 }
 
 // ─── Buyer info ────────────────────────────────────────────────────────────────
@@ -104,11 +113,8 @@ export interface BuyerInfoRecord {
 }
 
 export async function getMyBuyerInfo(userId: string): Promise<BuyerInfoRecord | null> {
-  const constraints = encodeURIComponent(
-    JSON.stringify([{ key: 'user_user', constraint_type: 'equals', value: bareId(userId) }]),
-  );
-  const data = await dataGet<{ response: { results: BuyerInfoRecord[] } }>(
-    `/Buyer_Info?constraints=${constraints}`,
+  const data = await backendGet<{ response: { results: BuyerInfoRecord[] } }>(
+    `/api/bubble/settings/buyer-info/${bareId(userId)}`,
   );
   return data.response.results[0] ?? null;
 }
@@ -117,5 +123,8 @@ export async function updateBuyerInfo(
   buyerInfoId: string,
   fields: Partial<Omit<BuyerInfoRecord, '_id'>>,
 ): Promise<void> {
-  await dataPatch(`/Buyer_Info/${bareId(buyerInfoId)}`, fields as Record<string, unknown>);
+  await backendPatch(
+    `/api/bubble/settings/buyer-info/${bareId(buyerInfoId)}`,
+    fields as Record<string, unknown>,
+  );
 }

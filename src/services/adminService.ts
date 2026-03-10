@@ -4,9 +4,6 @@
  * See docs/ADMIN_API.md for the Bubble contract.
  */
 
-const BASE_URL = import.meta.env.VITE_BUBBLE_API_BASE_URL;
-const API_TOKEN = import.meta.env.VITE_BUBBLE_API_TOKEN;
-
 const PRODUCTION_BACKEND = 'https://acquiro-backend.vercel.app';
 function getBackendUrl(): string {
   if (typeof window !== 'undefined') {
@@ -43,12 +40,7 @@ export interface AdminStatsResponse {
  * Bubble endpoint: GET (or POST) /get_admin_stats — must return total_users, active_subscribers, churned_users.
  */
 export async function getAdminStats(): Promise<AdminStatsResponse> {
-  if (!API_TOKEN || !BASE_URL) throw new Error('Bubble API configuration is missing.');
-  const url = `${BASE_URL.replace(/\/$/, '')}/get_admin_stats`;
-  const res = await fetch(url, {
-    method: 'GET',
-    headers: { Authorization: `Bearer ${API_TOKEN}` },
-  });
+  const res = await fetch(`${BACKEND_URL}/api/bubble/admin/stats`);
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Admin get_stats failed: ${res.status} ${text}`);
@@ -102,9 +94,6 @@ function mapBubbleDataListingToAdmin(raw: BubbleDataListing): AdminListing {
   return { id, title, source, location, asking_price, date_added, ...raw };
 }
 
-/** Bubble Data API base — derived from workflow base by replacing /wf with /obj */
-const BUBBLE_DATA_BASE = BASE_URL ? BASE_URL.replace(/\/wf(\/.*)?$/, '/obj') : '';
-
 /** In-memory cache for all listings (5-minute TTL) */
 let listingsCache: { data: AdminListing[]; fetchedAt: number } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -117,9 +106,8 @@ async function fetchAllListings(onProgress?: (loaded: number, total: number) => 
   let cursor = 0;
   let knownTotal: number | null = null;
   while (true) {
-    const url = `${BUBBLE_DATA_BASE}/Business?limit=100&cursor=${cursor}`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${API_TOKEN}` } });
-    if (!res.ok) throw new Error(`Bubble Data API failed: ${res.status}`);
+    const res = await fetch(`${BACKEND_URL}/api/bubble/listings?limit=100&cursor=${cursor}`);
+    if (!res.ok) throw new Error(`Listings fetch failed: ${res.status}`);
     const json = (await res.json()) as {
       response: { cursor: number; results: BubbleDataListing[]; count: number; remaining: number };
     };

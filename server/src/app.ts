@@ -8,6 +8,7 @@ import adminRoutes from './routes/admin.js';
 import integrationsRoutes from './routes/integrations.js';
 import emailRoutes from './routes/email.js';
 import authRoutes from './routes/auth.js';
+import bubbleRoutes from './routes/bubble.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -74,6 +75,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/integrations', integrationsRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/bubble', bubbleRoutes);
 
 app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Error:', err);
