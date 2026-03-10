@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 export function CheckoutComplete() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { userId: storeUserId, leadId: storeLeadId, setUserId, setLeadId, setSubscriptionStatus, userName, config } = useAdvisorStore();
+  const { userId: storeUserId, leadId: storeLeadId, setUserId, setLeadId, setSubscriptionStatus, userName, config, conversationId } = useAdvisorStore();
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'update_error'>('loading');
   const [showWhatsNext, setShowWhatsNext] = useState(false);
   const [retryTrigger, setRetryTrigger] = useState(0);
@@ -74,6 +74,19 @@ export function CheckoutComplete() {
             if (userResult?.user_id) {
               setUserId(userResult.user_id);
               console.log('[CheckoutComplete] ✅ User account created. Stored userId for dashboard:', userResult.user_id);
+              // Fire-and-forget: extract buyer info from ElevenLabs voice transcript (if call was made)
+              if (conversationId) {
+                const apiUrl = import.meta.env.VITE_API_URL;
+                fetch(`${apiUrl}/api/bubble/buyer-info/extract`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId: userResult.user_id, conversationId }),
+                }).then((r) => r.json()).then((data) => {
+                  console.log('[CheckoutComplete] Buyer info extraction:', data);
+                }).catch((err) => {
+                  console.warn('[CheckoutComplete] Buyer info extraction failed (non-fatal):', err);
+                });
+              }
             } else {
               console.error('[CheckoutComplete] ❌ No user_id returned from Bubble API');
             }

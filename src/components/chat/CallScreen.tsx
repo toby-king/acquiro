@@ -15,7 +15,7 @@ interface CallScreenProps {
 type CallStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
 export function CallScreen({ onBack, onContinue }: CallScreenProps) {
-  const { config, userName, userId, leadId } = useAdvisorStore();
+  const { config, userName, userId, leadId, setConversationId } = useAdvisorStore();
   const [callStatus, setCallStatus] = useState<CallStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -183,12 +183,16 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
 
       // Start the conversation with dynamic variables and system prompt override
       const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_0401kfask9wye6dt9cymkzbcxdg3';
-      await conversation.startSession({
+      const convId = await conversation.startSession({
         agentId,
         connectionType: 'webrtc' as const,
         ...(Object.keys(dynamicVariables).length > 0 && { dynamicVariables }),
         overrides,
       });
+      if (convId) {
+        setConversationId(convId);
+        console.log('[CallScreen] Conversation started, id:', convId);
+      }
     } catch (error) {
       if (error instanceof DOMException && error.name === 'NotAllowedError') {
         setCallStatus('error');

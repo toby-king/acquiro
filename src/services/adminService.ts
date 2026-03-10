@@ -151,7 +151,7 @@ export interface GetAdminListingsParams {
  * caches the full dataset for 5 minutes, then applies search/filter/pagination client-side.
  */
 export async function getAdminListings(params: GetAdminListingsParams = {}): Promise<AdminListingsResponse> {
-  if (!API_TOKEN || !BASE_URL) throw new Error('Bubble API configuration is missing.');
+  if (!BACKEND_URL) throw new Error('API URL configuration is missing.');
 
   const all = await fetchAllListings(params.onProgress);
 

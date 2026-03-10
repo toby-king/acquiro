@@ -30,6 +30,8 @@ interface AdvisorStore {
   isLeadReconnection: boolean;
   /** Match selected for discussion - when set, AdvisorPanel starts call with this context */
   matchToDiscuss: Match | null;
+  /** ElevenLabs conversation ID from the most recent voice call — used for buyer info extraction */
+  conversationId: string | null;
 
   // Actions
   setType: (type: AdvisorConfig['type']) => void;
@@ -54,6 +56,7 @@ interface AdvisorStore {
   /** Request a call with the given match - AdvisorPanel will start the call with match context */
   requestCallWithMatch: (match: Match) => void;
   clearMatchToDiscuss: () => void;
+  setConversationId: (id: string) => void;
   
   goToStep: (step: WizardStep) => void;
   nextStep: () => void;
@@ -109,6 +112,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
   interstitialReady: true,
   isLeadReconnection: false,
   matchToDiscuss: null,
+  conversationId: null,
 
   setType: (type) => set((state) => ({ config: { ...state.config, type } })),
   
@@ -175,6 +179,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
   clearLeadReconnection: () => set({ isLeadReconnection: false }),
   requestCallWithMatch: (match) => set({ matchToDiscuss: match }),
   clearMatchToDiscuss: () => set({ matchToDiscuss: null }),
+  setConversationId: (id) => set({ conversationId: id }),
 
   goToStep: (step) => set({ currentStep: step }),
   

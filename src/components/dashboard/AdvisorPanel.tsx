@@ -21,7 +21,9 @@ export function AdvisorPanel() {
   const isConnectingRef = useRef<boolean>(false);
   const callStatusRef = useRef<CallStatus>(callStatus);
   callStatusRef.current = callStatus;
-  const startCallRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const startCallRef = useRef<(() => Promise<void>)>(() => Promise.resolve());
+  /** conversationId of the active/most-recent ElevenLabs session */
+  const conversationIdRef = useRef<string | null>(null);
 
   // Handle unhandled errors from ElevenLabs SDK
   useEffect(() => {
@@ -83,6 +85,22 @@ export function AdvisorPanel() {
         pulseAnimationRef.current = null;
       }
       pulseStartTimeRef.current = null;
+
+      // Fire-and-forget buyer info extraction from this call's transcript
+      const convId = conversationIdRef.current;
+      const currentUserId = useAdvisorStore.getState().userId;
+      if (convId && currentUserId) {
+        const apiUrl = import.meta.env.VITE_API_URL;
+        fetch(`${apiUrl}/api/bubble/buyer-info/extract`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUserId, conversationId: convId }),
+        })
+          .then((r) => r.json())
+          .then((data) => console.log('[AdvisorPanel] Buyer info extraction:', data))
+          .catch((err) => console.warn('[AdvisorPanel] Buyer info extraction failed (non-fatal):', err));
+        conversationIdRef.current = null;
+      }
     },
     onError: (error: unknown) => {
       console.error('ElevenLabs error:', error);
@@ -284,13 +302,18 @@ export function AdvisorPanel() {
       // Start the conversation with dynamic variables and system prompt override
       try {
         const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_0401kfask9wye6dt9cymkzbcxdg3';
-        await conversation.startSession({
+        const convId = await conversation.startSession({
           agentId,
           connectionType: 'webrtc' as const,
           ...(Object.keys(dynamicVariables).length > 0 && { dynamicVariables }),
           overrides,
         });
         
+        if (convId) {
+          conversationIdRef.current = convId;
+          console.log('[AdvisorPanel] Conversation started, id:', convId);
+        }
+
         // Stop the test stream after session is established
         // Give the SDK time to set up its own audio pipeline
         if (testStream) {

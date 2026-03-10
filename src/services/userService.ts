@@ -74,9 +74,9 @@ export async function unsubscribeUser(userId: string, cancelAt?: string | null):
   if (!userId) throw new Error('User ID is required to unsubscribe');
   if (!API_URL) throw new Error('API URL configuration is missing.');
 
-  const body: Record<string, unknown> = { user_id: userId };
+  const body: Record<string, unknown> = {};
   if (cancelAt != null && cancelAt.trim() !== '') {
-    body.cancel_at = cancelAt.trim();
+    body.cancel_at_text = cancelAt.trim();
   }
 
   const response = await fetch(`${API_URL}/api/bubble/user/${userId}`, {
