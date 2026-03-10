@@ -120,10 +120,57 @@ router.patch('/user/:userId', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-/** POST /api/bubble/user/account — create a Bubble user from a lead (TODO: replace wf/) */
+/** POST /api/bubble/user/account — create a Bubble auth user from a lead */
 router.post('/user/account', wrap(async (req, res) => {
-  const data = await bubblePost('/wf/create_user', req.body as Record<string, unknown>);
-  res.json(data);
+  const { lead_id, subscription_id } = req.body as { lead_id?: string; subscription_id?: string };
+  if (!lead_id) { res.status(400).json({ error: 'lead_id required' }); return; }
+
+  // 1. Fetch lead to get email + name
+  const leadData = await bubbleGet<{ response: { name_text?: string; email_text?: string } }>(
+    `/obj/Lead/${lead_id}`,
+  );
+  const lead = leadData.response;
+  if (!lead.email_text) throw new Error(`Lead ${lead_id} has no email_text`);
+
+  // 2. Create Bubble auth user
+  const userData = await bubblePost<{ id?: string }>('/obj/user', { email: lead.email_text });
+  const userId = userData.id;
+  if (!userId) throw new Error('Bubble /obj/user POST did not return an id');
+
+  // 3. Set name + subscription fields
+  const userFields: Record<string, unknown> = {};
+  if (lead.name_text) userFields.name_text = lead.name_text;
+  if (subscription_id) {
+    userFields.subscription_id_text = subscription_id;
+    userFields.is_subscribed_boolean = true;
+  }
+  if (Object.keys(userFields).length > 0) {
+    await bubblePatch(`/obj/user/${userId}`, userFields);
+  }
+
+  // 4. Link the agent to the new user (non-fatal)
+  try {
+    const agentConstraints = enc([{ key: 'lead_custom_leads', constraint_type: 'equals', value: lead_id }]);
+    const agentData = await bubbleGet<{ response: { results: { _id: string }[] } }>(
+      `/obj/Agents?constraints=${agentConstraints}&limit=1`,
+    );
+    const agent = agentData.response.results[0];
+    if (agent?._id) {
+      await bubblePatch(`/obj/Agents/${agent._id}`, { user_user: userId });
+    }
+  } catch (err) {
+    console.warn('[bubble] create_user: agent link failed (non-fatal):', (err as Error).message);
+  }
+
+  // 5. Mark lead as converted (non-fatal)
+  try {
+    await bubblePatch(`/obj/Lead/${lead_id}`, { converted_boolean: true });
+  } catch (err) {
+    console.warn('[bubble] create_user: lead converted flag failed (non-fatal):', (err as Error).message);
+  }
+
+  console.log(`[bubble] create_user: created user ${userId} from lead ${lead_id}`);
+  res.json({ status: 'success', response: { user_id: userId } });
 }));
 
 // ── LEAD ──────────────────────────────────────────────────────────────────────
