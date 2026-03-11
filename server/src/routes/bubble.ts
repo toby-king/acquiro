@@ -751,10 +751,15 @@ router.patch('/settings/buyer-info/:buyerInfoId', wrap(async (req, res) => {
 // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
 
 router.get('/notifications/nda/:outreachId', wrap(async (req, res) => {
-  const data = await bubbleGet<{ response?: { nda_file_text?: string } }>(
-    `/obj/LangcliffeOutreach/${req.params.outreachId}`,
-  );
-  res.json({ nda_file_url: data.response?.nda_file_text ?? null });
+  try {
+    const data = await bubbleGet<{ response?: { nda_file_text?: string } }>(
+      `/obj/LangcliffeOutreach/${req.params.outreachId}`,
+    );
+    res.json({ nda_file_url: data.response?.nda_file_text ?? null });
+  } catch (err) {
+    // Outreach record deleted or never existed — return null rather than 500
+    res.json({ nda_file_url: null });
+  }
 }));
 
 router.get('/notifications/:userId', wrap(async (req, res) => {
