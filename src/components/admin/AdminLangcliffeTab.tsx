@@ -350,6 +350,96 @@ function DraftCard({
   );
 }
 
+// ─── Misc card ────────────────────────────────────────────────────────────────
+
+function MiscCard({ draft, onActionComplete }: { draft: OutreachDraft; onActionComplete: () => void }) {
+  const [deleting, setDeleting] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const createdAt = new Date(draft['Created Date']).toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'numeric', year: '2-digit',
+  });
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteOutreach(draft._id);
+      onActionComplete();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Delete failed');
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        className="w-full px-5 py-4 flex items-start justify-between gap-4 border-b border-[var(--border)] text-left hover:bg-[var(--bg-secondary)] transition-colors"
+      >
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
+            {draft.user_email_text && (
+              <>
+                <span className="font-medium text-[var(--text-secondary)]">{draft.user_email_text}</span>
+                <span className="mx-0.5">→</span>
+              </>
+            )}
+            <Mail size={11} />
+            <span>{draft.langcliffe_contact_text}</span>
+            <span className="mx-1">·</span>
+            <span>{createdAt}</span>
+          </div>
+        </div>
+        <span className="flex-shrink-0 p-1.5 text-[var(--text-tertiary)]">
+          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </span>
+      </button>
+
+      {expanded && draft.langcliffe_reply_body_text && (
+        <div className="px-5 py-4 border-b border-[var(--border)]">
+          <pre className="whitespace-pre-wrap text-sm text-[var(--text-secondary)] font-sans leading-relaxed bg-[var(--bg-secondary)] rounded-lg p-4 max-h-64 overflow-y-auto">
+            {draft.langcliffe_reply_body_text}
+          </pre>
+        </div>
+      )}
+
+      <div className="px-5 py-3 flex flex-col gap-3">
+        {error && <p className="text-xs text-red-400">{error}</p>}
+        {!showConfirm ? (
+          <button
+            type="button"
+            onClick={() => setShowConfirm(true)}
+            disabled={deleting}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-tertiary)] hover:text-red-400 hover:border-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-fit"
+          >
+            {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+            Delete
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+              Confirm delete
+            </button>
+            <button type="button" onClick={() => setShowConfirm(false)} className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Section ──────────────────────────────────────────────────────────────────
 
 function QueueSection({
@@ -513,6 +603,26 @@ export function AdminLangcliffeTab({ onCountChange }: { onCountChange?: (count: 
               />
             );
           })}
+          {(() => {
+            const miscItems = queue.filter((d) => d.status_text === 'misc');
+            if (miscItems.length === 0) return null;
+            return (
+              <div className="rounded-xl border border-[var(--border)] overflow-hidden">
+                <div className="flex items-center justify-between gap-4 px-5 py-3 bg-[var(--bg-secondary)]">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-[var(--text-tertiary)]">Misc</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-[var(--bg-card)] text-[var(--text-tertiary)] border border-[var(--border)]">{miscItems.length}</span>
+                    <span className="text-xs text-[var(--text-tertiary)] hidden sm:block">Unmatched inbound emails</span>
+                  </div>
+                </div>
+                <div className="p-4 space-y-4 bg-[var(--bg-primary)]">
+                  {miscItems.map((draft) => (
+                    <MiscCard key={draft._id} draft={draft} onActionComplete={load} />
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

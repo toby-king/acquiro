@@ -17,7 +17,7 @@ export interface OutreachDraft {
   signed_nda_file_text?: string;
   acknowledgment_draft_text?: string;
   nda_return_draft_text?: string;
-  status_text: 'pending' | 'sent' | 'rejected' | 'pending_reply' | 'nda_received' | 'nda_acknowledged' | 'nda_signed' | 'nda_returned';
+  status_text: 'pending' | 'sent' | 'rejected' | 'pending_reply' | 'nda_received' | 'nda_acknowledged' | 'nda_signed' | 'nda_returned' | 'misc';
   'Created Date': string;
 }
 
