@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchCard } from './MatchCard';
 import { fetchMatches, dismissMatch, Match } from '../../services/matchesService';
@@ -16,7 +16,6 @@ export function MatchesList() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingFeedbackId, setPendingFeedbackId] = useState<string | null>(null);
-  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadMatches = useCallback(async (isRefresh = false) => {
     if (!userId) {
@@ -49,11 +48,6 @@ export function MatchesList() {
 
   const handleDismissConfirm = useCallback(async (match: Match, reason?: string) => {
     if (!match.matchId) return;
-    // Clear any pending timer
-    if (feedbackTimerRef.current) {
-      clearTimeout(feedbackTimerRef.current);
-      feedbackTimerRef.current = null;
-    }
     setPendingFeedbackId(null);
     try {
       await dismissMatch(match.matchId, reason);
@@ -65,14 +59,8 @@ export function MatchesList() {
 
   const handleDismissRequest = useCallback((match: Match) => {
     if (!match.matchId) return;
-    // Clear previous timer if switching cards
-    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
     setPendingFeedbackId(match.matchId);
-    // Auto-dismiss without reason after 3 seconds
-    feedbackTimerRef.current = setTimeout(() => {
-      handleDismissConfirm(match, undefined);
-    }, 3000);
-  }, [handleDismissConfirm]);
+  }, []);
 
   const matchesHeader = (
     <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4 min-w-0">

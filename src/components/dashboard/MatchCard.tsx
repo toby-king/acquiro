@@ -46,6 +46,41 @@ export function MatchCard({
       data-match-id={matchId ?? undefined}
       className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl overflow-hidden transition-colors hover:border-accent/50"
     >
+      {/* Feedback row — top */}
+      <AnimatePresence>
+        {showFeedback && (
+          <motion.div
+            key="feedback"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-b border-[var(--border)]"
+          >
+            <div className="px-4 py-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-[var(--text-tertiary)] mr-1">Why not a fit?</span>
+              {DISMISS_REASONS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => onDismissConfirm?.(key)}
+                  className="px-3 py-1.5 text-xs rounded-full border border-[var(--border)] text-[var(--text-secondary)] hover:border-accent hover:text-accent transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => onDismissConfirm?.(undefined)}
+                className="ml-auto px-3 py-1.5 text-xs rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                Skip
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Main row */}
       <div className="relative flex items-center gap-4 p-4 hover:bg-[var(--bg-secondary)] transition-colors group">
         <button
@@ -100,40 +135,6 @@ export function MatchCard({
         )}
       </div>
 
-      {/* Feedback row */}
-      <AnimatePresence>
-        {showFeedback && (
-          <motion.div
-            key="feedback"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden border-t border-[var(--border)]"
-          >
-            <div className="px-4 py-3 flex flex-wrap items-center gap-2">
-              <span className="text-xs text-[var(--text-tertiary)] mr-1">Why not a fit?</span>
-              {DISMISS_REASONS.map(({ key, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => onDismissConfirm?.(key)}
-                  className="px-3 py-1.5 text-xs rounded-full border border-[var(--border)] text-[var(--text-secondary)] hover:border-accent hover:text-accent transition-colors"
-                >
-                  {label}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => onDismissConfirm?.(undefined)}
-                className="ml-auto px-3 py-1.5 text-xs rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                Skip
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
