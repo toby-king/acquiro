@@ -139,6 +139,12 @@ function DraftCard({
             </span>
           </div>
           <div className="flex items-center gap-1.5 mt-1 text-xs text-[var(--text-tertiary)]">
+            {draft.user_email_text && (
+              <>
+                <span className="font-medium text-[var(--text-secondary)]">{draft.user_email_text}</span>
+                <span className="mx-0.5">→</span>
+              </>
+            )}
             <Mail size={11} />
             <span>{draft.langcliffe_contact_text}</span>
             <span className="mx-1">·</span>

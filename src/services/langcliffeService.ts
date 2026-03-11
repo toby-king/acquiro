@@ -6,6 +6,7 @@ export interface OutreachDraft {
   listing_id_text: string;
   business_name_text: string;
   langcliffe_contact_text: string;
+  user_email_text?: string;
   user_user: string;
   draft_body_text: string;
   inbound_email_text?: string;
