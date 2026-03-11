@@ -674,9 +674,15 @@ router.get('/matches/:userId', wrap(async (req, res) => {
   res.json({ matches: enriched.filter(Boolean) });
 }));
 
-/** PATCH /api/bubble/matches/:matchId/dismiss — dismiss a match */
+/** PATCH /api/bubble/matches/:matchId/dismiss — dismiss a match with optional reason */
 router.patch('/matches/:matchId/dismiss', wrap(async (req, res) => {
-  await bubblePatch(`/obj/matches/${req.params.matchId}`, { dismissed_boolean: true });
+  const { reason } = req.body as { reason?: string };
+  const allowedReasons = ['wrong_sector', 'wrong_price', 'wrong_size', 'wrong_location'];
+  const patch: Record<string, unknown> = { dismissed_boolean: true };
+  if (reason && allowedReasons.includes(reason)) {
+    patch.dismiss_reason_text = reason;
+  }
+  await bubblePatch(`/obj/matches/${req.params.matchId}`, patch);
   res.json({ ok: true });
 }));
 

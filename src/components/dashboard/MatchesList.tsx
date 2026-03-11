@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchCard } from './MatchCard';
 import { fetchMatches, dismissMatch, Match } from '../../services/matchesService';
@@ -15,6 +15,8 @@ export function MatchesList() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingFeedbackId, setPendingFeedbackId] = useState<string | null>(null);
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadMatches = useCallback(async (isRefresh = false) => {
     if (!userId) {
@@ -45,15 +47,32 @@ export function MatchesList() {
     loadMatches();
   }, [loadMatches]);
 
-  const handleDismiss = useCallback(async (match: Match) => {
+  const handleDismissConfirm = useCallback(async (match: Match, reason?: string) => {
     if (!match.matchId) return;
+    // Clear any pending timer
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current);
+      feedbackTimerRef.current = null;
+    }
+    setPendingFeedbackId(null);
     try {
-      await dismissMatch(match.matchId);
+      await dismissMatch(match.matchId, reason);
       setMatches((prev) => prev.filter((m) => m.id !== match.id));
     } catch (err) {
       console.error('Failed to dismiss match:', err);
     }
   }, []);
+
+  const handleDismissRequest = useCallback((match: Match) => {
+    if (!match.matchId) return;
+    // Clear previous timer if switching cards
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    setPendingFeedbackId(match.matchId);
+    // Auto-dismiss without reason after 3 seconds
+    feedbackTimerRef.current = setTimeout(() => {
+      handleDismissConfirm(match, undefined);
+    }, 3000);
+  }, [handleDismissConfirm]);
 
   const matchesHeader = (
     <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4 min-w-0">
@@ -156,7 +175,9 @@ export function MatchesList() {
                 thumbnail={match.thumbnail}
                 matchId={match.matchId}
                 onClick={() => requestCallWithMatch(match)}
-                onDismiss={() => handleDismiss(match)}
+                onDismissRequest={() => handleDismissRequest(match)}
+                onDismissConfirm={(reason) => handleDismissConfirm(match, reason)}
+                showFeedback={pendingFeedbackId === match.matchId}
               />
             </motion.div>
           ))}

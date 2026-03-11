@@ -28,12 +28,13 @@ export async function fetchMatches(userId: string): Promise<Match[]> {
   return data.matches ?? [];
 }
 
-export async function dismissMatch(matchId: string): Promise<void> {
+export async function dismissMatch(matchId: string, reason?: string): Promise<void> {
   if (!matchId) throw new Error('Match ID is required to dismiss');
 
   const response = await fetch(`${API_URL}/api/bubble/matches/${matchId}/dismiss`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(reason ? { reason } : {}),
   });
 
   if (!response.ok) {
