@@ -1,5 +1,6 @@
 import { AdvisorConfig } from '../types/advisor';
 import { buildSystemPrompt, getOpeningGenerationPrompt } from '../prompts/advisorPrompt';
+import { API_URL } from '../utils/apiUrl';
 
 interface Message {
   id: string;
@@ -13,12 +14,7 @@ interface ResponseMessage {
   content: string;
 }
 
-const API_URL = 'https://api.openai.com/v1/responses';
-const API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-
-if (!API_KEY) {
-  console.error('Missing required environment variable: VITE_OPENAI_API_KEY');
-}
+const PROXY_URL = `${API_URL}/api/openai/stream`;
 
 /**
  * Converts internal message format to Responses API format
@@ -56,20 +52,14 @@ export async function generateChatResponseStream(
   userName: string | null,
   onChunk: (chunk: string) => void
 ): Promise<void> {
-  if (!API_KEY) {
-    console.error('OpenAI API key is missing');
-    return;
-  }
-
   try {
     const systemPrompt = buildSystemPrompt(config, userName);
     const responseItems = convertMessagesToResponsesFormat(messages);
 
-    const response = await fetch(API_URL, {
+    const response = await fetch(PROXY_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
         model: 'gpt-5-mini',
@@ -235,20 +225,14 @@ export async function generateOpeningMessage(
   config: AdvisorConfig,
   userName: string | null
 ): Promise<string> {
-  if (!API_KEY) {
-    console.warn('OpenAI API key missing; using fallback opening');
-    return OPENING_FALLBACK;
-  }
-
   try {
     const instructions = getOpeningGenerationPrompt(config, userName);
     const input = [{ role: 'user' as const, content: 'Generate your first message now.' }];
 
-    const response = await fetch(API_URL, {
+    const response = await fetch(PROXY_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
         model: 'gpt-5-mini',
