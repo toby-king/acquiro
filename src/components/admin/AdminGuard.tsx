@@ -21,17 +21,12 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
       setChecking(false);
       return;
     }
-    if (isAdmin === true) {
-      setChecking(false);
-      return;
-    }
     let cancelled = false;
+    // Always re-validate server-side — never trust the cached isAdmin flag alone
     getUser(userId)
       .then((result) => {
         if (cancelled) return;
-        if (result.isAdmin) {
-          setAdmin(true);
-        }
+        setAdmin(result.isAdmin ? true : false);
       })
       .finally(() => {
         if (!cancelled) setChecking(false);
@@ -39,7 +34,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [userId, isAdmin, setAdmin]);
+  }, [userId, setAdmin]);
 
   if (!userId) {
     return <Navigate to="/" state={{ from: location }} replace />;

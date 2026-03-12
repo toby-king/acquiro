@@ -14,6 +14,7 @@ import { CheckoutComplete } from './components/payment/CheckoutComplete.tsx'
 import { SubscriptionPage } from './components/payment/SubscriptionPage.tsx'
 import { PrivacyPolicy } from './pages/PrivacyPolicy.tsx'
 import { TermsOfService } from './pages/TermsOfService.tsx'
+import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import './index.css'
 
 // Initialize theme before first paint - default to dark unless user explicitly chose light
@@ -29,13 +30,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/builder" element={<App />} />
+        <Route path="/builder" element={<ErrorBoundary section="Advisor"><App /></ErrorBoundary>} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/dashboard" element={<DashboardGuard />} />
-        <Route path="/settings" element={<DashboardGuard><SettingsPage /></DashboardGuard>} />
-        <Route path="/integrations" element={<DashboardGuard><IntegrationsPage /></DashboardGuard>} />
-        <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
-        <Route path="/subscription/complete" element={<CheckoutComplete />} />
+        <Route path="/dashboard" element={<ErrorBoundary section="Dashboard"><DashboardGuard /></ErrorBoundary>} />
+        <Route path="/settings" element={<ErrorBoundary section="Settings"><DashboardGuard><SettingsPage /></DashboardGuard></ErrorBoundary>} />
+        <Route path="/integrations" element={<ErrorBoundary section="Integrations"><DashboardGuard><IntegrationsPage /></DashboardGuard></ErrorBoundary>} />
+        <Route path="/admin" element={<ErrorBoundary section="Admin"><AdminGuard><AdminPage /></AdminGuard></ErrorBoundary>} />
+        <Route path="/subscription/complete" element={<ErrorBoundary section="Checkout"><CheckoutComplete /></ErrorBoundary>} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route 
