@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, FileText, Activity, Globe, ArrowLeft, Settings, LogOut, Mail } from 'lucide-react';
+import { Users, FileText, Activity, Globe, ArrowLeft, Settings, LogOut, Mail, Target } from 'lucide-react';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
 import { NotificationTray } from '../dashboard/NotificationTray';
@@ -11,17 +11,24 @@ import { AdminListingsTab } from './AdminListingsTab';
 import { AdminAgentActivityTab } from './AdminAgentActivityTab';
 import { AdminSourcesTab } from './AdminSourcesTab';
 import { AdminLangcliffeTab } from './AdminLangcliffeTab';
+import { AdminPursueTab } from './AdminPursueTab';
 import { getLangcliffeQueue } from '../../services/langcliffeService';
+import { getPursueRequests } from '../../services/pursueService';
 
-type AdminTab = 'users' | 'listings' | 'activity' | 'sources' | 'langcliffe';
+type AdminTab = 'users' | 'listings' | 'activity' | 'sources' | 'langcliffe' | 'pursue';
 
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
   const [profileOpen, setProfileOpen] = useState(false);
   const [langcliffeCount, setLangcliffeCount] = useState(0);
+  const [pursueCount, setPursueCount] = useState(0);
 
   useEffect(() => {
     getLangcliffeQueue().then((q) => setLangcliffeCount(q.length)).catch(() => {});
+    getPursueRequests().then((reqs) => {
+      const pendingCount = reqs.filter((r) => r.status_text === 'pending' || r.status_text === 'contacted').length;
+      setPursueCount(pendingCount);
+    }).catch(() => {});
   }, []);
   const profileRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -118,6 +125,7 @@ export function AdminPage() {
               { id: 'activity' as const, label: 'Agent Activity', icon: Activity },
               { id: 'sources' as const, label: 'Sources', icon: Globe },
               { id: 'langcliffe' as const, label: 'Langcliffe', icon: Mail },
+              { id: 'pursue' as const, label: 'Outreach', icon: Target },
             ] as const
           ).map(({ id, label, icon: Icon }) => (
             <button
@@ -135,6 +143,11 @@ export function AdminPage() {
               {id === 'langcliffe' && langcliffeCount > 0 && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent text-black leading-none">
                   {langcliffeCount}
+                </span>
+              )}
+              {id === 'pursue' && pursueCount > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent text-black leading-none">
+                  {pursueCount}
                 </span>
               )}
             </button>
@@ -156,6 +169,7 @@ export function AdminPage() {
         {activeTab === 'activity' && <AdminAgentActivityTab />}
         {activeTab === 'sources' && <AdminSourcesTab />}
         {activeTab === 'langcliffe' && <AdminLangcliffeTab onCountChange={setLangcliffeCount} />}
+        {activeTab === 'pursue' && <AdminPursueTab onCountChange={setPursueCount} />}
       </main>
     </div>
   );
