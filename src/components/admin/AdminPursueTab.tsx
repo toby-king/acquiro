@@ -190,7 +190,7 @@ export function AdminPursueTab({ onCountChange }: { onCountChange?: (n: number) 
   const filtered = filter === 'all' ? requests : requests.filter((r) => r.status_text === filter);
 
   return (
-    <div className="space-y-4 max-w-3xl">
+    <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex gap-1">

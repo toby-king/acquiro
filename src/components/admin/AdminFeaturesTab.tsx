@@ -283,7 +283,7 @@ export function AdminFeaturesTab() {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div className="space-y-4 max-w-3xl">
+    <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3">
         <CreateAnnouncementForm onCreated={load} />
