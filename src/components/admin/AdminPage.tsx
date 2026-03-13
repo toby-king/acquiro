@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, FileText, Activity, Globe, ArrowLeft, Settings, LogOut, Mail, Target } from 'lucide-react';
+import { Users, FileText, Activity, Globe, ArrowLeft, Settings, LogOut, Mail, Target, Megaphone } from 'lucide-react';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { ThemeToggle } from '../layout/ThemeToggle';
 import { NotificationTray } from '../dashboard/NotificationTray';
@@ -12,10 +12,11 @@ import { AdminAgentActivityTab } from './AdminAgentActivityTab';
 import { AdminSourcesTab } from './AdminSourcesTab';
 import { AdminLangcliffeTab } from './AdminLangcliffeTab';
 import { AdminPursueTab } from './AdminPursueTab';
+import { AdminFeaturesTab } from './AdminFeaturesTab';
 import { getLangcliffeQueue } from '../../services/langcliffeService';
 import { getPursueRequests } from '../../services/pursueService';
 
-type AdminTab = 'users' | 'listings' | 'activity' | 'sources' | 'langcliffe' | 'pursue';
+type AdminTab = 'users' | 'listings' | 'activity' | 'sources' | 'langcliffe' | 'pursue' | 'features';
 
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
@@ -126,6 +127,7 @@ export function AdminPage() {
               { id: 'sources' as const, label: 'Sources', icon: Globe },
               { id: 'langcliffe' as const, label: 'Langcliffe', icon: Mail },
               { id: 'pursue' as const, label: 'Outreach', icon: Target },
+              { id: 'features' as const, label: 'Features', icon: Megaphone },
             ] as const
           ).map(({ id, label, icon: Icon }) => (
             <button
@@ -170,6 +172,7 @@ export function AdminPage() {
         {activeTab === 'sources' && <AdminSourcesTab />}
         {activeTab === 'langcliffe' && <AdminLangcliffeTab onCountChange={setLangcliffeCount} />}
         {activeTab === 'pursue' && <AdminPursueTab onCountChange={setPursueCount} />}
+        {activeTab === 'features' && <AdminFeaturesTab />}
       </main>
     </div>
   );
