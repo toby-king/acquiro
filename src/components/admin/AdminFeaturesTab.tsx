@@ -85,7 +85,7 @@ function AnnouncementCard({
             type="button"
             onClick={handleToggleActive}
             disabled={toggling}
-            className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors disabled:opacity-50"
+            className="p-1.5 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors disabled:opacity-50"
             title={announcement.active_boolean ? 'Deactivate' : 'Activate'}
           >
             {toggling ? <Loader2 size={15} className="animate-spin" /> : announcement.active_boolean ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -174,7 +174,7 @@ function CreateAnnouncementForm({ onCreated }: { onCreated: () => void }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent text-black hover:opacity-90 transition-opacity"
+        className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full bg-accent text-black hover:opacity-90 transition-opacity"
       >
         <Plus size={14} />
         New announcement
@@ -245,14 +245,14 @@ function CreateAnnouncementForm({ onCreated }: { onCreated: () => void }) {
         <button
           type="submit"
           disabled={saving}
-          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-accent text-black hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="px-3 py-1.5 text-xs font-medium rounded-full bg-accent text-black hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {saving ? 'Creating…' : 'Create'}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          className="px-3 py-1.5 text-xs font-medium rounded-full bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
         >
           Cancel
         </button>
@@ -291,7 +291,7 @@ export function AdminFeaturesTab() {
           type="button"
           onClick={load}
           disabled={loading}
-          className="p-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors disabled:opacity-50"
+          className="p-2 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors disabled:opacity-50"
           title="Refresh"
         >
           <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
