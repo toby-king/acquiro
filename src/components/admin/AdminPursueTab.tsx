@@ -199,7 +199,7 @@ export function AdminPursueTab({ onCountChange }: { onCountChange?: (n: number) 
               key={f}
               type="button"
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors capitalize ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors capitalize ${
                 filter === f
                   ? 'bg-accent text-black'
                   : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
