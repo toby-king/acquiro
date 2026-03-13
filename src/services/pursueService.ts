@@ -11,6 +11,15 @@ export interface PursueRequest {
   // Bubble returns linked fields as IDs
   user_user: string;
   business_custom_business: string;
+  // Enriched by backend
+  user_name_text?: string | null;
+  user_email_text?: string | null;
+  business_description_text?: string | null;
+  business_sector_text?: string | null;
+  business_location_text?: string | null;
+  business_asking_price_number?: number | null;
+  business_turnover_number?: number | null;
+  business_net_profit_number?: number | null;
 }
 
 function headers() {

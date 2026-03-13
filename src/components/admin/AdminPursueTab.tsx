@@ -63,10 +63,18 @@ function PursueCard({
     }
   };
 
+  const formatCurrency = (n: number | null | undefined) =>
+    n != null ? `£${n.toLocaleString()}` : null;
+
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl overflow-hidden">
-      {/* Header */}
-      <div className="px-4 py-3 flex items-start justify-between gap-3">
+      {/* Header — clickable to expand/collapse */}
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        className="w-full px-5 py-4 flex items-start justify-between gap-4 text-left hover:bg-[var(--bg-secondary)] transition-colors"
+        aria-label={expanded ? 'Collapse' : 'Expand'}
+      >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-[var(--text-primary)] text-sm truncate">
@@ -76,36 +84,62 @@ function PursueCard({
               {STATUS_LABELS[request.status_text]}
             </span>
           </div>
-          <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{createdAt}</p>
+          <div className="flex items-center gap-1.5 mt-1 text-xs text-[var(--text-tertiary)] flex-wrap">
+            {request.user_name_text && (
+              <span className="font-medium text-[var(--text-secondary)]">{request.user_name_text}</span>
+            )}
+            {request.user_email_text && (
+              <span className="text-[var(--text-tertiary)]">({request.user_email_text})</span>
+            )}
+            {(request.user_name_text || request.user_email_text) && <span className="mx-0.5">·</span>}
+            <span>{createdAt}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {request.listing_url_text && (
-            <a
-              href={request.listing_url_text}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-accent hover:bg-[var(--bg-secondary)] transition-colors"
-              title="View listing"
-            >
-              <ExternalLink size={15} />
-            </a>
-          )}
-          <button
-            type="button"
-            onClick={() => setExpanded((e) => !e)}
-            className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
-          >
-            {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-          </button>
-        </div>
-      </div>
+        <span className="flex-shrink-0 p-1.5 text-[var(--text-tertiary)]">
+          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </span>
+      </button>
 
       {/* Expanded */}
       {expanded && (
-        <div className="px-4 pb-4 border-t border-[var(--border)] pt-3 space-y-3">
+        <div className="border-t border-[var(--border)]">
+          {/* Business overview */}
+          {(request.business_description_text || request.business_sector_text) && (
+            <div className="px-5 py-4 border-b border-[var(--border)]">
+              <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Business overview</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--text-secondary)] mb-2">
+                {request.business_sector_text && <span>Sector: {request.business_sector_text}</span>}
+                {request.business_location_text && <span>Location: {request.business_location_text}</span>}
+                {formatCurrency(request.business_asking_price_number) && <span>Asking: {formatCurrency(request.business_asking_price_number)}</span>}
+                {formatCurrency(request.business_turnover_number) && <span>Turnover: {formatCurrency(request.business_turnover_number)}</span>}
+                {formatCurrency(request.business_net_profit_number) && <span>Net profit: {formatCurrency(request.business_net_profit_number)}</span>}
+              </div>
+              {request.business_description_text && (
+                <p className="text-sm text-[var(--text-secondary)] leading-relaxed line-clamp-4">
+                  {request.business_description_text}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Listing link */}
+          {request.listing_url_text && (
+            <div className="px-5 py-3 border-b border-[var(--border)]">
+              <a
+                href={request.listing_url_text}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-accent hover:text-accent/80 transition-colors"
+              >
+                <ExternalLink size={12} />
+                View original listing
+              </a>
+            </div>
+          )}
+
           {/* Notes */}
-          <div>
-            <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">Admin notes</label>
+          <div className="px-5 py-4 border-b border-[var(--border)]">
+            <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider block mb-2">Admin notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -117,20 +151,20 @@ function PursueCard({
               type="button"
               onClick={handleSaveNotes}
               disabled={saving}
-              className="mt-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50"
+              className="mt-1.5 text-xs px-3 py-1.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50"
             >
               {saving ? 'Saving…' : 'Save notes'}
             </button>
           </div>
 
           {/* Status actions */}
-          <div className="flex flex-wrap gap-2">
+          <div className="px-5 py-3 flex flex-wrap items-center gap-2">
             {request.status_text === 'pending' && (
               <button
                 type="button"
                 onClick={() => handleAction(() => markContacted(request._id))}
                 disabled={actionBusy}
-                className="text-xs px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                className="text-xs px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 transition-colors disabled:opacity-50"
               >
                 {actionBusy ? <Loader2 size={12} className="animate-spin" /> : 'Mark as contacted'}
               </button>
@@ -140,7 +174,7 @@ function PursueCard({
                 type="button"
                 onClick={() => handleAction(() => markResponded(request._id))}
                 disabled={actionBusy}
-                className="text-xs px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                className="text-xs px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30 text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50"
               >
                 {actionBusy ? <Loader2 size={12} className="animate-spin" /> : 'Mark as responded'}
               </button>
@@ -150,14 +184,14 @@ function PursueCard({
                 type="button"
                 onClick={() => handleAction(() => markClosed(request._id))}
                 disabled={actionBusy}
-                className="text-xs px-3 py-1.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50"
+                className="text-xs px-3 py-1.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50"
               >
                 Close
               </button>
             )}
           </div>
 
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && <p className="text-xs text-red-400 px-5 pb-3">{error}</p>}
         </div>
       )}
     </div>
