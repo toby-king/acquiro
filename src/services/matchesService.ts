@@ -12,6 +12,7 @@ export interface Match {
   description: string;
   status: 'new' | 'pending' | null;
   thumbnail: string | null;
+  matchReason?: string | null;
 }
 
 export async function fetchMatches(userId: string): Promise<Match[]> {

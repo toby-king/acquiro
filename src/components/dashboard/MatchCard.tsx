@@ -17,6 +17,7 @@ interface MatchCardProps {
   status: MatchStatus;
   thumbnail: string | null;
   matchId?: string | null;
+  matchReason?: string | null;
   onClick: () => void;
   /** Called when the X button is first clicked — parent should show feedback row */
   onDismissRequest?: () => void;
@@ -32,6 +33,7 @@ export function MatchCard({
   status,
   thumbnail,
   matchId,
+  matchReason,
   onClick,
   onDismissRequest,
   onDismissConfirm,
@@ -113,6 +115,9 @@ export function MatchCard({
               {status && <StatusBadge status={status} />}
             </div>
             <p className="text-sm text-[var(--text-secondary)] line-clamp-2">{description}</p>
+            {matchReason && (
+              <p className="text-xs text-accent/80 mt-1 line-clamp-1">{matchReason}</p>
+            )}
           </div>
 
           {/* Arrow */}

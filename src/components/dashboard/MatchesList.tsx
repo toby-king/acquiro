@@ -162,6 +162,7 @@ export function MatchesList() {
                 status={match.status}
                 thumbnail={match.thumbnail}
                 matchId={match.matchId}
+                matchReason={match.matchReason}
                 onClick={() => requestCallWithMatch(match)}
                 onDismissRequest={() => handleDismissRequest(match)}
                 onDismissConfirm={(reason) => handleDismissConfirm(match, reason)}

@@ -664,6 +664,7 @@ router.get('/matches/:userId', wrap(async (req, res) => {
           description: (b.description_text as string) ?? '',
           status: null,
           thumbnail: firstImageUrl?.startsWith('http') ? firstImageUrl : null,
+          matchReason: (m.match_reason_text as string) || null,
         };
       } catch {
         return null;
