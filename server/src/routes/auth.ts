@@ -1,88 +1,11 @@
-// Magic link auth routes
+// Magic link auth routes — Supabase implementation
 import { Router, Request, Response } from 'express';
 import { randomBytes } from 'crypto';
+import { supabase } from '../lib/supabase.js';
 
 const router = Router();
 
-const BUBBLE_BASE = 'https://toby-85612.bubbleapps.io/version-test/api/1.1';
 const TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
-
-function getBubbleKey() {
-  const key = process.env.BUBBLE_API_KEY;
-  if (!key) throw new Error('BUBBLE_API_KEY is not configured');
-  return key;
-}
-
-type BubbleUser = { _id: string; name_text?: string; authentication?: { email?: { email?: string } } };
-
-/** Find a Bubble user record by email.
- *  Bubble's Data API does not support filtering on the authentication.email field,
- *  so we fetch all users and match client-side.
- */
-async function lookupUserByEmail(email: string): Promise<{ user_id: string; email: string; name: string | null } | null> {
-  const headers = { 'Authorization': `Bearer ${getBubbleKey()}` };
-  const normalised = email.toLowerCase().trim();
-  let cursor = 0;
-  while (true) {
-    const res = await fetch(`${BUBBLE_BASE}/obj/user?limit=100&cursor=${cursor}`, { headers });
-    if (!res.ok) return null;
-    const data = await res.json() as { response?: { results?: BubbleUser[]; count?: number; remaining?: number } };
-    const { results = [], remaining = 0 } = data.response ?? {};
-    const match = results.find(u => u.authentication?.email?.email?.toLowerCase() === normalised);
-    if (match) {
-      return { user_id: match._id, email: match.authentication!.email!.email!, name: match.name_text ?? null };
-    }
-    if (remaining <= 0) return null;
-    cursor += results.length;
-  }
-}
-
-/** Store a magic link token + expiry on the Bubble user record */
-async function storeMagicLinkToken(userId: string, token: string, expiresAt: string): Promise<void> {
-  const res = await fetch(`${BUBBLE_BASE}/obj/user/${userId}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getBubbleKey()}`,
-    },
-    body: JSON.stringify({
-      magic_link_text: token,
-      magic_link_expires_text: expiresAt,
-    }),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Bubble storeMagicLinkToken returned HTTP ${res.status}: ${text}`);
-  }
-}
-
-/** Look up a user by magic_link_text token */
-async function findUserByToken(token: string): Promise<{ _id: string; email: string; name?: string; magic_link_expires_text?: string } | null> {
-  const constraints = JSON.stringify([
-    { key: 'magic_link_text', constraint_type: 'equals', value: token },
-  ]);
-  const res = await fetch(`${BUBBLE_BASE}/obj/user?constraints=${encodeURIComponent(constraints)}&limit=1`, {
-    headers: { 'Authorization': `Bearer ${getBubbleKey()}` },
-  });
-  if (!res.ok) return null;
-  const data = await res.json() as { response?: { results?: Array<{ _id: string; email?: string; name?: string; magic_link_expires_text?: string; authentication?: { email?: { email?: string } } }> } };
-  const record = data.response?.results?.[0];
-  if (!record) return null;
-  const email = record.authentication?.email?.email ?? record.email ?? '';
-  return { _id: record._id, email, name: record.name, magic_link_expires_text: record.magic_link_expires_text };
-}
-
-/** Clear the magic link token from the Bubble user record */
-async function clearMagicLinkToken(userId: string): Promise<void> {
-  await fetch(`${BUBBLE_BASE}/obj/user/${userId}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getBubbleKey()}`,
-    },
-    body: JSON.stringify({ magic_link_text: '', magic_link_expires_text: '' }),
-  });
-}
 
 // POST /api/auth/magic-link
 // Body: { email: string }
@@ -98,14 +21,12 @@ router.post('/magic-link', async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'Email service not configured' });
   }
 
-  // 1. Look up user
-  let user: { user_id: string; email: string; name: string | null } | null;
-  try {
-    user = await lookupUserByEmail(email.trim());
-  } catch (err) {
-    console.error('[auth] lookupUserByEmail failed:', err);
-    return res.status(500).json({ error: 'Failed to look up account' });
-  }
+  // 1. Look up user by email (single indexed query, not paginated scan)
+  const { data: user } = await supabase
+    .from('users')
+    .select('id, name, email')
+    .eq('email', email.trim().toLowerCase())
+    .single();
 
   if (!user) {
     // Return the same response to avoid email enumeration
@@ -117,11 +38,14 @@ router.post('/magic-link', async (req: Request, res: Response) => {
   const token = randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + TOKEN_TTL_MS).toISOString();
 
-  // 3. Store in Bubble
-  try {
-    await storeMagicLinkToken(user.user_id, token, expiresAt);
-  } catch (err) {
-    console.error('[auth] storeMagicLinkToken failed:', err);
+  // 3. Store on user record
+  const { error: updateErr } = await supabase
+    .from('users')
+    .update({ magic_link: token, magic_link_expires: expiresAt })
+    .eq('id', user.id);
+
+  if (updateErr) {
+    console.error('[auth] storeMagicLinkToken failed:', updateErr);
     return res.status(500).json({ error: 'Failed to generate login link' });
   }
 
@@ -164,35 +88,36 @@ router.get('/verify', async (req: Request, res: Response) => {
   }
 
   // 1. Look up user by token
-  let record: { _id: string; email: string; name?: string; magic_link_expires_text?: string } | null;
-  try {
-    record = await findUserByToken(token.trim());
-  } catch (err) {
-    console.error('[auth] findUserByToken failed:', err);
-    return res.status(500).json({ error: 'Verification failed' });
-  }
+  const { data: user } = await supabase
+    .from('users')
+    .select('id, email, name, magic_link_expires')
+    .eq('magic_link', token.trim())
+    .single();
 
-  if (!record) {
+  if (!user) {
     return res.status(401).json({ error: 'LINK_EXPIRED' });
   }
 
   // 2. Check expiry
-  const expiresAt = record.magic_link_expires_text;
-  if (!expiresAt || Date.now() > new Date(expiresAt).getTime()) {
-    await clearMagicLinkToken(record._id).catch(() => {});
+  if (!user.magic_link_expires || Date.now() > new Date(user.magic_link_expires).getTime()) {
+    await supabase.from('users').update({ magic_link: null, magic_link_expires: null }).eq('id', user.id);
     return res.status(401).json({ error: 'LINK_EXPIRED' });
   }
 
   // 3. Clear the token (single-use)
-  await clearMagicLinkToken(record._id).catch((err) => {
-    console.warn('[auth] clearMagicLinkToken failed (non-fatal):', err);
-  });
+  await supabase
+    .from('users')
+    .update({ magic_link: null, magic_link_expires: null })
+    .eq('id', user.id)
+    .then(({ error }) => {
+      if (error) console.warn('[auth] clearMagicLinkToken failed (non-fatal):', error.message);
+    });
 
-  console.log(`[auth] Magic link verified for user ${record._id}`);
+  console.log(`[auth] Magic link verified for user ${user.id}`);
   return res.json({
-    user_id: record._id,
-    email: record.email,
-    name: record.name ?? null,
+    user_id: user.id,
+    email: user.email,
+    name: user.name ?? null,
   });
 });
 
