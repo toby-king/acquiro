@@ -11,13 +11,13 @@ function getBackendUrl(): string {
 const BACKEND_URL = getBackendUrl();
 
 export interface UserNotification {
-  _id: string;
-  type_text: string;
-  title_text: string;
-  body_text: string;
-  status_text: 'unread' | 'actioned';
-  langcliffe_outreach_text: string;
-  'Created Date': string;
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  status: 'unread' | 'actioned';
+  langcliffe_outreach: string;
+  created_at: string;
   nda_file_url?: string;
 }
 

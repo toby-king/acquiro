@@ -71,27 +71,27 @@ export interface AdminListing {
   [key: string]: unknown;
 }
 
-/** Raw listing from Bubble Data API obj/Business */
-interface BubbleDataListing {
-  _id: string;
-  business_name_text?: string;
-  listing_id_text?: string;
-  location_text?: string;
-  asking_price_number?: number;
-  'Created Date'?: string; // ISO string from Data API
+/** Raw listing from Supabase Business table */
+interface RawListing {
+  id: string;
+  business_name?: string;
+  listing_id?: string;
+  location?: string;
+  asking_price?: number;
+  created_at?: string;
   [key: string]: unknown;
 }
 
-function mapBubbleDataListingToAdmin(raw: BubbleDataListing): AdminListing {
-  const id = raw._id ?? '';
-  const title = raw.business_name_text?.trim() ?? '';
-  // Derive source from listing_id_text prefix, e.g. "rightbiz_645229" → "rightbiz", "langcliffe-288658" → "langcliffe"
-  const listingId = raw.listing_id_text ?? '';
+function mapRawListingToAdmin(raw: RawListing): AdminListing {
+  const id = raw.id ?? '';
+  const title = raw.business_name?.trim() ?? '';
+  // Derive source from listing_id prefix, e.g. "rightbiz_645229" → "rightbiz", "langcliffe-288658" → "langcliffe"
+  const listingId = raw.listing_id ?? '';
   const source = listingId.split(/[_-]/)[0] ?? '';
-  const location = raw.location_text?.trim() || null;
-  const asking_price = typeof raw.asking_price_number === 'number' ? raw.asking_price_number : null;
-  const date_added = raw['Created Date'] ?? new Date(0).toISOString();
-  return { id, title, source, location, asking_price, date_added, ...raw };
+  const location = raw.location?.trim() || null;
+  const asking_price = typeof raw.asking_price === 'number' ? raw.asking_price : null;
+  const date_added = raw.created_at ?? new Date(0).toISOString();
+  return { ...raw, id, title, source, location, asking_price, date_added };
 }
 
 /** In-memory cache for all listings (5-minute TTL) */
@@ -109,10 +109,10 @@ async function fetchAllListings(onProgress?: (loaded: number, total: number) => 
     const res = await fetch(`${BACKEND_URL}/api/bubble/listings?limit=100&cursor=${cursor}`);
     if (!res.ok) throw new Error(`Listings fetch failed: ${res.status}`);
     const json = (await res.json()) as {
-      response: { cursor: number; results: BubbleDataListing[]; count: number; remaining: number };
+      response: { cursor: number; results: RawListing[]; count: number; remaining: number };
     };
     const { results, count, remaining } = json.response;
-    all.push(...results.map(mapBubbleDataListingToAdmin));
+    all.push(...results.map(mapRawListingToAdmin));
     if (knownTotal === null) knownTotal = count + remaining;
     onProgress?.(all.length, knownTotal);
     if (remaining <= 0) break;

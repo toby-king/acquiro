@@ -57,11 +57,11 @@ function LangcliffeSetup({ userId, connected, onMarkConnected, markingConnected 
   useEffect(() => {
     Promise.all([getMyAgent(userId), getMyBuyerInfo(userId)])
       .then(([agent, buyerInfo]) => {
-        if (agent) setAgentEmail(`${sanitiseAgentName(agent.name_text ?? 'agent')}@acquiro-agent.com`);
+        if (agent) setAgentEmail(`${sanitiseAgentName(agent.name ?? 'agent')}@acquiro-agent.com`);
         if (buyerInfo) {
-          setBuyerInfoId(buyerInfo._id);
-          setOverview(buyerInfo.company_overview_text ?? '');
-          setContactEmail(buyerInfo.langcliffe_contact_email_text ?? '');
+          setBuyerInfoId(buyerInfo.id);
+          setOverview(buyerInfo.company_overview ?? '');
+          setContactEmail(buyerInfo.langcliffe_contact_email ?? '');
         }
       })
       .catch(() => {})
@@ -72,7 +72,7 @@ function LangcliffeSetup({ userId, connected, onMarkConnected, markingConnected 
     if (!buyerInfoId) return;
     setContactEmailSaving(true);
     try {
-      await updateBuyerInfo(buyerInfoId, { langcliffe_contact_email_text: contactEmail.trim().toLowerCase() });
+      await updateBuyerInfo(buyerInfoId, { langcliffe_contact_email: contactEmail.trim().toLowerCase() });
       setContactEmailSaved(true);
       setTimeout(() => setContactEmailSaved(false), 2000);
     } catch {
@@ -106,7 +106,7 @@ function LangcliffeSetup({ userId, connected, onMarkConnected, markingConnected 
     if (!buyerInfoId) return;
     setOverviewSaving(true);
     try {
-      await updateBuyerInfo(buyerInfoId, { company_overview_text: overview });
+      await updateBuyerInfo(buyerInfoId, { company_overview: overview });
       setOverviewSaved(true);
       setTimeout(() => setOverviewSaved(false), 2000);
     } catch {
@@ -335,8 +335,8 @@ export function IntegrationsPage() {
   useEffect(() => {
     if (!userId) return;
     getUserProfile(userId).then((profile) => {
-      setUserProfileId(profile._id);
-      setLangcliffeConnected(profile.langcliffe_connected_boolean ?? false);
+      setUserProfileId(profile.id);
+      setLangcliffeConnected(profile.langcliffe_connected ?? false);
     }).catch(() => {});
   }, [userId]);
 
@@ -344,7 +344,7 @@ export function IntegrationsPage() {
     if (!userProfileId) return;
     setMarkingConnected(true);
     try {
-      await updateUserProfile(userProfileId, { langcliffe_connected_boolean: true });
+      await updateUserProfile(userProfileId, { langcliffe_connected: true });
       setLangcliffeConnected(true);
     } catch {
       // fail silently

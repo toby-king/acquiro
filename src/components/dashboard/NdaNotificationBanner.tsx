@@ -30,8 +30,8 @@ function NdaBanner({
     setUploadState('uploading');
     setErrorMsg('');
     try {
-      await uploadSignedNDA(notification.langcliffe_outreach_text, file);
-      await markNotificationActioned(notification._id);
+      await uploadSignedNDA(notification.langcliffe_outreach, file);
+      await markNotificationActioned(notification.id);
       setUploadState('done');
       setTimeout(onDismiss, 2000);
     } catch (err) {
@@ -48,8 +48,8 @@ function NdaBanner({
             <FileText size={16} className="text-blue-400" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">{notification.title_text}</p>
-            <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">{notification.body_text}</p>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">{notification.title}</p>
+            <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">{notification.body}</p>
 
             <div className="flex flex-wrap items-center gap-2 mt-3">
               {ndaFileUrl && (
@@ -127,13 +127,13 @@ export function NdaNotificationBanner({ userId }: { userId: string }) {
 
         // Fetch NDA file URLs from the outreach records
         const ndaMap: Record<string, string | null> = {};
-        const outreachIds = [...new Set(notifs.map((n) => n.langcliffe_outreach_text).filter(Boolean))];
+        const outreachIds = [...new Set(notifs.map((n) => n.langcliffe_outreach).filter(Boolean))];
         if (outreachIds.length > 0) {
           try {
             const queue = await getLangcliffeQueue();
             for (const id of outreachIds) {
-              const outreach = queue.find((o) => o._id === id);
-              ndaMap[id] = outreach?.nda_file_text ?? null;
+              const outreach = queue.find((o) => o.id === id);
+              ndaMap[id] = outreach?.nda_file ?? null;
             }
           } catch {
             for (const id of outreachIds) ndaMap[id] = null;
@@ -144,17 +144,17 @@ export function NdaNotificationBanner({ userId }: { userId: string }) {
       .catch(() => {});
   }, [userId]);
 
-  const visible = notifications.filter((n) => !dismissed.has(n._id));
+  const visible = notifications.filter((n) => !dismissed.has(n.id));
   if (visible.length === 0) return null;
 
   return (
     <>
       {visible.map((n) => (
         <NdaBanner
-          key={n._id}
+          key={n.id}
           notification={n}
-          ndaFileUrl={ndaUrls[n.langcliffe_outreach_text] ?? null}
-          onDismiss={() => setDismissed((prev) => new Set([...prev, n._id]))}
+          ndaFileUrl={ndaUrls[n.langcliffe_outreach] ?? null}
+          onDismiss={() => setDismissed((prev) => new Set([...prev, n.id]))}
         />
       ))}
     </>

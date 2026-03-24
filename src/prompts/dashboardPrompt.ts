@@ -98,12 +98,12 @@ Your communication style should reflect these custom-configured traits.`;
     ? 'You may use profanity when it fits your personality.'
     : 'Do not use profanity.';
 
-  // Buyer criteria from Bubble
+  // Buyer criteria from database
   let buyerCriteriaSection = '';
   let companyOverviewSection = '';
   if (buyerInfo && Object.keys(buyerInfo).length > 0) {
     try {
-      const companyOverview = buyerInfo.company_overview_text as string | undefined;
+      const companyOverview = buyerInfo.company_overview as string | undefined;
       if (companyOverview) {
         companyOverviewSection = `\n\nCLIENT'S COMPANY OVERVIEW:\n${companyOverview}\n\nThis is how the client's company should be described. Use this whenever you are asked about "your company", the user's company, or when introducing the client to a broker. Do NOT describe Acquiro as the client's company — Acquiro is the platform you work on; the client is the acquirer with the company described above.`;
       }

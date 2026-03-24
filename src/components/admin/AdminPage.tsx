@@ -27,7 +27,7 @@ export function AdminPage() {
   useEffect(() => {
     getLangcliffeQueue().then((q) => setLangcliffeCount(q.length)).catch(() => {});
     getPursueRequests().then((reqs) => {
-      const pendingCount = reqs.filter((r) => r.status_text === 'pending' || r.status_text === 'contacted').length;
+      const pendingCount = reqs.filter((r) => r.status === 'pending' || r.status === 'contacted').length;
       setPursueCount(pendingCount);
     }).catch(() => {});
   }, []);

@@ -314,22 +314,21 @@ function fmt(val: unknown): string {
 
 const KNOWN_FIELDS = new Set([
   'id', 'title', 'source', 'location', 'asking_price', 'date_added',
-  '_id', 'business_name_text', 'listing_id_text', 'location_text',
-  'asking_price_number', 'Created Date', 'Modified Date',
+  'business_name', 'listing_id', 'created_at', 'updated_at',
 ]);
 
 function ListingDetail({ row }: { row: AdminListing }) {
-  const url = row['url_text'] as string | undefined;
-  const description = row['description_text'] as string | undefined;
-  const sector = row['sector_text'] as string | undefined;
-  const tenure = row['tenure_text'] as string | undefined;
-  const turnover = row['turnover_text'] ?? (row['turnover_number'] != null ? `£${Number(row['turnover_number']).toLocaleString()}` : undefined);
-  const ebitda = row['ebitda_text'] ?? (row['ebitda_number'] != null ? `£${Number(row['ebitda_number']).toLocaleString()}` : undefined);
-  const netProfit = row['net_profit_text'] ?? (row['net_profit_number'] != null ? `£${Number(row['net_profit_number']).toLocaleString()}` : undefined);
-  const rent = row['rent_text'] ?? (row['rent_number'] != null ? `£${Number(row['rent_number']).toLocaleString()}` : undefined);
+  const url = row['url'] as string | undefined;
+  const description = row['description'] as string | undefined;
+  const sector = row['sector'] as string | undefined;
+  const tenure = row['tenure'] as string | undefined;
+  const turnover = row['turnover'] != null ? `£${Number(row['turnover']).toLocaleString()}` : undefined;
+  const ebitda = row['ebitda'] != null ? `£${Number(row['ebitda']).toLocaleString()}` : undefined;
+  const netProfit = row['net_profit'] != null ? `£${Number(row['net_profit']).toLocaleString()}` : undefined;
+  const rent = row['rent'] != null ? `£${Number(row['rent']).toLocaleString()}` : undefined;
 
   const highlights: { label: string; value: unknown }[] = [
-    { label: 'Listing ID', value: row['listing_id_text'] },
+    { label: 'Listing ID', value: row['listing_id'] },
     { label: 'Source', value: row.source },
     { label: 'Location', value: row.location },
     { label: 'Sector', value: sector },
@@ -344,9 +343,8 @@ function ListingDetail({ row }: { row: AdminListing }) {
 
   const knownValueKeys = new Set([
     ...Array.from(KNOWN_FIELDS),
-    'url_text', 'description_text', 'sector_text', 'tenure_text',
-    'turnover_text', 'turnover_number', 'ebitda_text', 'ebitda_number',
-    'net_profit_text', 'net_profit_number', 'rent_text', 'rent_number',
+    'url', 'description', 'sector', 'tenure',
+    'turnover', 'ebitda', 'net_profit', 'rent',
   ]);
   const extra = Object.entries(row).filter(
     ([k, v]) => !knownValueKeys.has(k) && v != null && v !== '' && !Array.isArray(v)

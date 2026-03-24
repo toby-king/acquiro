@@ -4,9 +4,8 @@
  * Replaces Bubble.io as the data layer. The frontend route contract
  * is unchanged — same paths, same request/response shapes.
  *
- * For passthrough endpoints (settings, notifications, listings), responses
- * are mapped back to Bubble-style field names so the frontend doesn't
- * need updating yet. This can be cleaned up in a future pass.
+ * All responses use clean Supabase column names — no Bubble-style
+ * field name mappings.
  */
 
 import { Router, Request, Response } from 'express';
@@ -70,21 +69,11 @@ router.post('/user/lookup', wrap(async (req, res) => {
 router.patch('/user/:userId', wrap(async (req, res) => {
   const body = req.body as Record<string, unknown>;
 
-  // Map Bubble field names → Supabase columns (frontend still sends Bubble names)
+  const allowedFields = ['name', 'subscription_id', 'is_subscribed', 'cancel_at', 'role', 'magic_link', 'magic_link_expires'];
   const update: Record<string, unknown> = {};
-  if ('subscription_id_text' in body) update.subscription_id = body.subscription_id_text;
-  if ('is_subscribed_boolean' in body) update.is_subscribed = body.is_subscribed_boolean;
-  if ('cancel_at_text' in body) update.cancel_at = body.cancel_at_text;
-  if ('role_text' in body) update.role = body.role_text;
-  if ('name_text' in body) update.name = body.name_text;
-  if ('magic_link' in body) update.magic_link = body.magic_link;
-  if ('magic_link_expires' in body) update.magic_link_expires = body.magic_link_expires;
-  // Also accept clean names directly
-  if ('subscription_id' in body) update.subscription_id = body.subscription_id;
-  if ('is_subscribed' in body) update.is_subscribed = body.is_subscribed;
-  if ('cancel_at' in body) update.cancel_at = body.cancel_at;
-  if ('name' in body) update.name = body.name;
-  if ('role' in body) update.role = body.role;
+  for (const field of allowedFields) {
+    if (field in body) update[field] = body[field];
+  }
 
   if (Object.keys(update).length > 0) {
     const { error } = await supabase.from('users').update(update).eq('id', req.params.userId);
@@ -606,40 +595,7 @@ router.get('/buyer-info/:userId', wrap(async (req, res) => {
     .single();
   if (!info) { res.status(404).json({ error: 'Buyer info not found' }); return; }
 
-  // Map to Bubble field names for frontend compatibility
-  res.json({
-    response: {
-      _id: info.id,
-      buyer_type_text: info.buyer_type,
-      buying_reason_text: info.buying_reason,
-      buying_experience_text: info.buying_experience,
-      decision_speed_text: info.decision_speed,
-      geography_text: info.geography,
-      turnover_range_text: info.turnover_range,
-      ebitda_range_text: info.ebitda_range,
-      ebitda_margin_min_text: info.ebitda_margin_min,
-      asset_base_text: info.asset_base,
-      valuation_range_text: info.valuation_range,
-      deal_structure_preferences_text: info.deal_structure_preference,
-      funding_source_text: info.funding_source,
-      business_age_text: info.business_age,
-      employee_headcount_text: info.employee_headcount,
-      customer_base_type_text: info.customer_base_type,
-      contractual_recurrence_text: info.contractual_recurrence,
-      ip_technology_text: info.ip_technology,
-      physical_digital_text: info.physical_digital,
-      involvement_text: info.involvement,
-      problems_text: info.problems,
-      industry_preferences_list_option_sectors: info.industry_preferences,
-      excluded_sectors_list_option_sectors: info.excluded_sectors,
-      company_overview_text: info.company_overview,
-      langcliffe_contact_email_text: info.langcliffe_contact_email,
-      max_investment_number: info.initial_budget,
-      initial_budget_text: info.initial_budget,
-      misc_info_text: info.misc_info,
-      is_returning_boolean: info.is_returning,
-    },
-  });
+  res.json({ response: info });
 }));
 
 // ── MATCHES ───────────────────────────────────────────────────────────────────
@@ -718,30 +674,12 @@ router.get('/listings', wrap(async (req, res) => {
   const total = count ?? 0;
   const remaining = Math.max(0, total - cursor - (results?.length ?? 0));
 
-  // Map to Bubble response shape for frontend compatibility
   res.json({
     response: {
       cursor: cursor + (results?.length ?? 0),
       count: results?.length ?? 0,
       remaining,
-      results: (results ?? []).map(b => ({
-        _id: b.id,
-        business_name_text: b.business_name,
-        listing_id_text: b.listing_id,
-        location_text: b.location,
-        asking_price_number: b.asking_price,
-        'Created Date': b.created_at,
-        description_text: b.description,
-        sector1_text: b.sector,
-        url_text: b.url,
-        turnover_number: b.turnover,
-        net_profit_number: b.net_profit,
-        image_image: b.image,
-        archived_boolean: b.archived,
-        last_seen_at_date: b.last_seen_at,
-        source_text: b.source,
-        region_text: b.region,
-      })),
+      results: results ?? [],
     },
   });
 }));
@@ -756,34 +694,17 @@ router.get('/settings/user/:userId', wrap(async (req, res) => {
     .single();
   if (!u) { res.status(404).json({ error: 'User not found' }); return; }
 
-  // Map to Bubble response shape
-  res.json({
-    response: {
-      _id: u.id,
-      name_text: u.name,
-      authentication: { email: { email: u.email } },
-      langcliffe_connected_boolean: u.langcliffe_connected,
-      dealsuite_connected_boolean: u.dealsuite_connected,
-      is_subscribed_boolean: u.is_subscribed,
-      subscription_id_text: u.subscription_id,
-      cancel_at_text: u.cancel_at,
-      is_admin_boolean: u.is_admin,
-      role_text: u.role,
-    },
-  });
+  res.json({ response: u });
 }));
 
 router.patch('/settings/user/:userId', wrap(async (req, res) => {
   const body = req.body as Record<string, unknown>;
 
-  // Map Bubble field names → Supabase columns
+  const allowedFields = ['name', 'langcliffe_connected', 'dealsuite_connected'];
   const update: Record<string, unknown> = {};
-  if ('name_text' in body) update.name = body.name_text;
-  if ('langcliffe_connected_boolean' in body) update.langcliffe_connected = body.langcliffe_connected_boolean;
-  if ('dealsuite_connected_boolean' in body) update.dealsuite_connected = body.dealsuite_connected_boolean;
-  // Accept clean names too
-  if ('name' in body) update.name = body.name;
-  if ('langcliffe_connected' in body) update.langcliffe_connected = body.langcliffe_connected;
+  for (const field of allowedFields) {
+    if (field in body) update[field] = body[field];
+  }
 
   if (Object.keys(update).length > 0) {
     const { error } = await supabase.from('users').update(update).eq('id', req.params.userId);
@@ -798,20 +719,9 @@ router.get('/settings/agent/:userId', wrap(async (req, res) => {
     .select('*')
     .eq('user_id', req.params.userId);
 
-  // Map to Bubble response shape
   res.json({
     response: {
-      results: (agents ?? []).map(a => ({
-        _id: a.id,
-        name_text: a.name,
-        email_text: a.email,
-        style_text: a.challenge_style,
-        profanity_boolean: a.profanity,
-        traits_text: a.traits,
-        type_text: a.type,
-        voice_text: a.voice,
-        personality_options_option_personalityoptions: a.personality,
-      })),
+      results: agents ?? [],
     },
   });
 }));
@@ -819,11 +729,11 @@ router.get('/settings/agent/:userId', wrap(async (req, res) => {
 router.patch('/settings/agent/:agentId', wrap(async (req, res) => {
   const body = req.body as Record<string, unknown>;
 
+  const allowedFields = ['name', 'email'];
   const update: Record<string, unknown> = {};
-  if ('name_text' in body) update.name = body.name_text;
-  if ('email_text' in body) update.email = body.email_text;
-  if ('name' in body) update.name = body.name;
-  if ('email' in body) update.email = body.email;
+  for (const field of allowedFields) {
+    if (field in body) update[field] = body[field];
+  }
 
   if (Object.keys(update).length > 0) {
     const { error } = await supabase.from('agents').update(update).eq('id', req.params.agentId);
@@ -838,39 +748,9 @@ router.get('/settings/buyer-info/:userId', wrap(async (req, res) => {
     .select('*')
     .eq('user_id', req.params.userId);
 
-  // Map to Bubble response shape
   res.json({
     response: {
-      results: (infos ?? []).map(info => ({
-        _id: info.id,
-        company_overview_text: info.company_overview,
-        geography_text: info.geography,
-        funding_source_text: info.funding_source,
-        ebitda_range_text: info.ebitda_range,
-        turnover_range_text: info.turnover_range,
-        max_investment_number: info.initial_budget,
-        industry_preferences_list_option_sectors: info.industry_preferences,
-        excluded_sectors_list_option_sectors: info.excluded_sectors,
-        langcliffe_contact_email_text: info.langcliffe_contact_email,
-        buyer_type_text: info.buyer_type,
-        buying_reason_text: info.buying_reason,
-        buying_experience_text: info.buying_experience,
-        decision_speed_text: info.decision_speed,
-        ebitda_margin_min_text: info.ebitda_margin_min,
-        asset_base_text: info.asset_base,
-        valuation_range_text: info.valuation_range,
-        deal_structure_preferences_text: info.deal_structure_preference,
-        employee_headcount_text: info.employee_headcount,
-        customer_base_type_text: info.customer_base_type,
-        contractual_recurrence_text: info.contractual_recurrence,
-        ip_technology_text: info.ip_technology,
-        physical_digital_text: info.physical_digital,
-        involvement_text: info.involvement,
-        problems_text: info.problems,
-        initial_budget_text: info.initial_budget,
-        misc_info_text: info.misc_info,
-        is_returning_boolean: info.is_returning,
-      })),
+      results: infos ?? [],
     },
   });
 }));
@@ -878,32 +758,9 @@ router.get('/settings/buyer-info/:userId', wrap(async (req, res) => {
 router.patch('/settings/buyer-info/:buyerInfoId', wrap(async (req, res) => {
   const body = req.body as Record<string, unknown>;
 
-  // Map Bubble field names → Supabase columns
-  const fieldMap: Record<string, string> = {
-    company_overview_text: 'company_overview',
-    geography_text: 'geography',
-    funding_source_text: 'funding_source',
-    ebitda_range_text: 'ebitda_range',
-    turnover_range_text: 'turnover_range',
-    max_investment_number: 'initial_budget',
-    industry_preferences_list_option_sectors: 'industry_preferences',
-    excluded_sectors_list_option_sectors: 'excluded_sectors',
-    langcliffe_contact_email_text: 'langcliffe_contact_email',
-  };
-
-  const update: Record<string, unknown> = {};
-  for (const [bubbleName, supaCol] of Object.entries(fieldMap)) {
-    if (bubbleName in body) update[supaCol] = body[bubbleName];
-  }
-  // Also accept clean names directly
-  for (const key of Object.keys(body)) {
-    if (!key.includes('_text') && !key.includes('_number') && !key.includes('_boolean') && !key.includes('_list_option')) {
-      update[key] = body[key];
-    }
-  }
-
-  if (Object.keys(update).length > 0) {
-    const { error } = await supabase.from('buyer_info').update(update).eq('id', req.params.buyerInfoId);
+  // Pass through directly — frontend sends clean Supabase column names
+  if (Object.keys(body).length > 0) {
+    const { error } = await supabase.from('buyer_info').update(body).eq('id', req.params.buyerInfoId);
     if (error) throw error;
   }
   res.json({ ok: true });
@@ -929,19 +786,9 @@ router.get('/notifications/:userId', wrap(async (req, res) => {
     .eq('status', 'unread')
     .order('created_at', { ascending: false });
 
-  // Map to Bubble response shape
   res.json({
     response: {
-      results: (notifications ?? []).map(n => ({
-        _id: n.id,
-        type_text: n.type,
-        title_text: n.title,
-        body_text: n.body,
-        status_text: n.status,
-        langcliffe_outreach_text: n.langcliffe_outreach,
-        'Created Date': n.created_at,
-        nda_file_url: n.nda_file_url,
-      })),
+      results: notifications ?? [],
     },
   });
 }));

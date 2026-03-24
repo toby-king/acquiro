@@ -9,14 +9,14 @@ import {
   type PursueRequest,
 } from '../../services/pursueService';
 
-const STATUS_LABELS: Record<PursueRequest['status_text'], string> = {
+const STATUS_LABELS: Record<PursueRequest['status'], string> = {
   pending:   'Pending',
   contacted: 'Contacted',
   responded: 'Responded',
   closed:    'Closed',
 };
 
-const STATUS_COLOURS: Record<PursueRequest['status_text'], string> = {
+const STATUS_COLOURS: Record<PursueRequest['status'], string> = {
   pending:   'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
   contacted: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
   responded: 'bg-green-500/15 text-green-400 border-green-500/30',
@@ -31,12 +31,12 @@ function PursueCard({
   onUpdate: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [notes, setNotes] = useState(request.admin_notes_text ?? '');
+  const [notes, setNotes] = useState(request.admin_notes ?? '');
   const [saving, setSaving] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createdAt = new Date(request['Created Date']).toLocaleDateString('en-GB', {
+  const createdAt = new Date(request.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 
@@ -55,7 +55,7 @@ function PursueCard({
   const handleSaveNotes = async () => {
     setSaving(true);
     try {
-      await updateNotes(request._id, notes);
+      await updateNotes(request.id, notes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save notes');
     } finally {
@@ -78,20 +78,20 @@ function PursueCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-[var(--text-primary)] text-sm truncate">
-              {request.business_name_text || 'Unknown Business'}
+              {request.business_name || 'Unknown Business'}
             </span>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOURS[request.status_text]}`}>
-              {STATUS_LABELS[request.status_text]}
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOURS[request.status]}`}>
+              {STATUS_LABELS[request.status]}
             </span>
           </div>
           <div className="flex items-center gap-1.5 mt-1 text-xs text-[var(--text-tertiary)] flex-wrap">
-            {request.user_name_text && (
-              <span className="font-medium text-[var(--text-secondary)]">{request.user_name_text}</span>
+            {request.user_name && (
+              <span className="font-medium text-[var(--text-secondary)]">{request.user_name}</span>
             )}
-            {request.user_email_text && (
-              <span className="text-[var(--text-tertiary)]">({request.user_email_text})</span>
+            {request.user_email && (
+              <span className="text-[var(--text-tertiary)]">({request.user_email})</span>
             )}
-            {(request.user_name_text || request.user_email_text) && <span className="mx-0.5">·</span>}
+            {(request.user_name || request.user_email) && <span className="mx-0.5">·</span>}
             <span>{createdAt}</span>
           </div>
         </div>
@@ -104,29 +104,29 @@ function PursueCard({
       {expanded && (
         <div className="border-t border-[var(--border)]">
           {/* Business overview */}
-          {(request.business_description_text || request.business_sector_text) && (
+          {(request.business_description || request.business_sector) && (
             <div className="px-5 py-4 border-b border-[var(--border)]">
               <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Business overview</p>
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--text-secondary)] mb-2">
-                {request.business_sector_text && <span>Sector: {request.business_sector_text}</span>}
-                {request.business_location_text && <span>Location: {request.business_location_text}</span>}
-                {formatCurrency(request.business_asking_price_number) && <span>Asking: {formatCurrency(request.business_asking_price_number)}</span>}
-                {formatCurrency(request.business_turnover_number) && <span>Turnover: {formatCurrency(request.business_turnover_number)}</span>}
-                {formatCurrency(request.business_net_profit_number) && <span>Net profit: {formatCurrency(request.business_net_profit_number)}</span>}
+                {request.business_sector && <span>Sector: {request.business_sector}</span>}
+                {request.business_location && <span>Location: {request.business_location}</span>}
+                {formatCurrency(request.business_asking_price) && <span>Asking: {formatCurrency(request.business_asking_price)}</span>}
+                {formatCurrency(request.business_turnover) && <span>Turnover: {formatCurrency(request.business_turnover)}</span>}
+                {formatCurrency(request.business_net_profit) && <span>Net profit: {formatCurrency(request.business_net_profit)}</span>}
               </div>
-              {request.business_description_text && (
+              {request.business_description && (
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed line-clamp-4">
-                  {request.business_description_text}
+                  {request.business_description}
                 </p>
               )}
             </div>
           )}
 
           {/* Listing link */}
-          {request.listing_url_text && (
+          {request.listing_url && (
             <div className="px-5 py-3 border-b border-[var(--border)]">
               <a
-                href={request.listing_url_text}
+                href={request.listing_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-accent hover:text-accent/80 transition-colors"
@@ -159,30 +159,30 @@ function PursueCard({
 
           {/* Status actions */}
           <div className="px-5 py-3 flex flex-wrap items-center gap-2">
-            {request.status_text === 'pending' && (
+            {request.status === 'pending' && (
               <button
                 type="button"
-                onClick={() => handleAction(() => markContacted(request._id))}
+                onClick={() => handleAction(() => markContacted(request.id))}
                 disabled={actionBusy}
                 className="text-xs px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 transition-colors disabled:opacity-50"
               >
                 {actionBusy ? <Loader2 size={12} className="animate-spin" /> : 'Mark as contacted'}
               </button>
             )}
-            {request.status_text === 'contacted' && (
+            {request.status === 'contacted' && (
               <button
                 type="button"
-                onClick={() => handleAction(() => markResponded(request._id))}
+                onClick={() => handleAction(() => markResponded(request.id))}
                 disabled={actionBusy}
                 className="text-xs px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30 text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50"
               >
                 {actionBusy ? <Loader2 size={12} className="animate-spin" /> : 'Mark as responded'}
               </button>
             )}
-            {request.status_text !== 'closed' && (
+            {request.status !== 'closed' && (
               <button
                 type="button"
-                onClick={() => handleAction(() => markClosed(request._id))}
+                onClick={() => handleAction(() => markClosed(request.id))}
                 disabled={actionBusy}
                 className="text-xs px-3 py-1.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50"
               >
@@ -202,7 +202,7 @@ export function AdminPursueTab({ onCountChange }: { onCountChange?: (n: number) 
   const [requests, setRequests] = useState<PursueRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<PursueRequest['status_text'] | 'all'>('all');
+  const [filter, setFilter] = useState<PursueRequest['status'] | 'all'>('all');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -210,7 +210,7 @@ export function AdminPursueTab({ onCountChange }: { onCountChange?: (n: number) 
     try {
       const data = await getPursueRequests();
       setRequests(data);
-      const pendingCount = data.filter((r) => r.status_text === 'pending' || r.status_text === 'contacted').length;
+      const pendingCount = data.filter((r) => r.status === 'pending' || r.status === 'contacted').length;
       onCountChange?.(pendingCount);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load');
@@ -221,7 +221,7 @@ export function AdminPursueTab({ onCountChange }: { onCountChange?: (n: number) 
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = filter === 'all' ? requests : requests.filter((r) => r.status_text === filter);
+  const filtered = filter === 'all' ? requests : requests.filter((r) => r.status === filter);
 
   return (
     <div className="space-y-4">
@@ -239,7 +239,7 @@ export function AdminPursueTab({ onCountChange }: { onCountChange?: (n: number) 
                   : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              {f === 'all' ? `All (${requests.length})` : `${STATUS_LABELS[f]} (${requests.filter(r => r.status_text === f).length})`}
+              {f === 'all' ? `All (${requests.length})` : `${STATUS_LABELS[f]} (${requests.filter(r => r.status === f).length})`}
             </button>
           ))}
         </div>
@@ -265,7 +265,7 @@ export function AdminPursueTab({ onCountChange }: { onCountChange?: (n: number) 
         <p className="text-sm text-[var(--text-secondary)] py-8 text-center">No pursue requests{filter !== 'all' ? ` with status "${filter}"` : ''}.</p>
       )}
       {!loading && filtered.map((r) => (
-        <PursueCard key={r._id} request={r} onUpdate={load} />
+        <PursueCard key={r.id} request={r} onUpdate={load} />
       ))}
     </div>
   );

@@ -41,16 +41,17 @@ async function backendPatch(path: string, body: Record<string, unknown>): Promis
 // ─── User profile ──────────────────────────────────────────────────────────────
 
 export interface UserProfile {
-  _id: string;
-  name_text?: string;
+  id: string;
+  name?: string;
   email?: string;
-  langcliffe_connected_boolean?: boolean;
+  langcliffe_connected?: boolean;
 }
 
 interface RawUserResponse {
-  _id: string;
-  name_text?: string;
-  authentication?: { email?: { email?: string } };
+  id: string;
+  name?: string;
+  email?: string;
+  langcliffe_connected?: boolean;
   [key: string]: unknown;
 }
 
@@ -60,16 +61,16 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
   );
   const raw = data.response;
   return {
-    _id: raw._id,
-    name_text: raw.name_text,
-    email: raw.authentication?.email?.email,
-    langcliffe_connected_boolean: raw.langcliffe_connected_boolean as boolean | undefined,
+    id: raw.id,
+    name: raw.name,
+    email: raw.email,
+    langcliffe_connected: raw.langcliffe_connected,
   };
 }
 
 export async function updateUserProfile(
   userId: string,
-  fields: { name_text?: string; langcliffe_connected_boolean?: boolean },
+  fields: { name?: string; langcliffe_connected?: boolean },
 ): Promise<void> {
   await backendPatch(`/api/bubble/settings/user/${bareId(userId)}`, fields as Record<string, unknown>);
 }
@@ -77,9 +78,9 @@ export async function updateUserProfile(
 // ─── Agent ─────────────────────────────────────────────────────────────────────
 
 export interface AgentRecord {
-  _id: string;
-  name_text?: string;
-  email_text?: string;
+  id: string;
+  name?: string;
+  email?: string;
 }
 
 export async function getMyAgent(userId: string): Promise<AgentRecord | null> {
@@ -91,7 +92,7 @@ export async function getMyAgent(userId: string): Promise<AgentRecord | null> {
 
 export async function updateAgent(
   agentId: string,
-  fields: { name_text?: string; email_text?: string },
+  fields: { name?: string; email?: string },
 ): Promise<void> {
   await backendPatch(`/api/bubble/settings/agent/${bareId(agentId)}`, fields as Record<string, unknown>);
 }
@@ -99,16 +100,16 @@ export async function updateAgent(
 // ─── Buyer info ────────────────────────────────────────────────────────────────
 
 export interface BuyerInfoRecord {
-  _id: string;
-  company_overview_text?: string;
-  geography_text?: string;
-  funding_source_text?: string;
-  ebitda_range_text?: string;
-  turnover_range_text?: string;
-  max_investment_number?: number;
-  industry_preferences_list_option_sectors?: string[];
-  excluded_sectors_list_option_sectors?: string[];
-  langcliffe_contact_email_text?: string;
+  id: string;
+  company_overview?: string;
+  geography?: string;
+  funding_source?: string;
+  ebitda_range?: string;
+  turnover_range?: string;
+  initial_budget?: number;
+  industry_preferences?: string[];
+  excluded_sectors?: string[];
+  langcliffe_contact_email?: string;
   [key: string]: unknown;
 }
 
@@ -121,7 +122,7 @@ export async function getMyBuyerInfo(userId: string): Promise<BuyerInfoRecord | 
 
 export async function updateBuyerInfo(
   buyerInfoId: string,
-  fields: Partial<Omit<BuyerInfoRecord, '_id'>>,
+  fields: Partial<Omit<BuyerInfoRecord, 'id'>>,
 ): Promise<void> {
   await backendPatch(
     `/api/bubble/settings/buyer-info/${bareId(buyerInfoId)}`,

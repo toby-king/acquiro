@@ -47,7 +47,7 @@ function NotificationItem({
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isIM = notification.type_text === 'im_received';
+  const isIM = notification.type === 'im_received';
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -55,8 +55,8 @@ function NotificationItem({
     setUploadState('uploading');
     setErrorMsg('');
     try {
-      await uploadSignedNDA(notification.langcliffe_outreach_text, file);
-      await markNotificationActioned(notification._id);
+      await uploadSignedNDA(notification.langcliffe_outreach, file);
+      await markNotificationActioned(notification.id);
       setUploadState('done');
       setTimeout(onDismiss, 2000);
     } catch (err) {
@@ -66,11 +66,11 @@ function NotificationItem({
   };
 
   const handleDismissIM = async () => {
-    try { await markNotificationActioned(notification._id); } catch { /* non-fatal */ }
+    try { await markNotificationActioned(notification.id); } catch { /* non-fatal */ }
     onDismiss();
   };
 
-  const { url: imUrl, password: imPassword } = isIM ? parseIMBody(notification.body_text ?? '') : { url: null, password: null };
+  const { url: imUrl, password: imPassword } = isIM ? parseIMBody(notification.body ?? '') : { url: null, password: null };
 
   return (
     <div className="px-4 py-3 border-b border-[var(--border)] last:border-0">
@@ -80,7 +80,7 @@ function NotificationItem({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold text-[var(--text-primary)] leading-snug">
-            {notification.title_text}
+            {notification.title}
           </p>
 
           {isIM ? (
@@ -118,7 +118,7 @@ function NotificationItem({
           ) : (
             <>
               <p className="text-xs text-[var(--text-secondary)] mt-0.5 leading-relaxed">
-                {notification.body_text}
+                {notification.body}
               </p>
               <div className="flex flex-wrap items-center gap-1.5 mt-2">
                 {ndaFileUrl && (
@@ -185,12 +185,12 @@ export function NotificationTray({ userId }: { userId: string }) {
       try {
         const notifs = await getUserNotifications(userId);
         setNotifications((prev) => {
-          const prevIds = prev.map((n) => n._id).join(',');
-          const nextIds = notifs.map((n) => n._id).join(',');
+          const prevIds = prev.map((n) => n.id).join(',');
+          const nextIds = notifs.map((n) => n.id).join(',');
           return prevIds === nextIds ? prev : notifs;
         });
 
-        const outreachIds = [...new Set(notifs.map((n) => n.langcliffe_outreach_text).filter(Boolean))];
+        const outreachIds = [...new Set(notifs.map((n) => n.langcliffe_outreach).filter(Boolean))];
         if (outreachIds.length > 0) {
           const ndaMap: Record<string, string | null> = {};
           await Promise.all(outreachIds.map(async (id) => {
@@ -224,7 +224,7 @@ export function NotificationTray({ userId }: { userId: string }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
 
-  const visible = notifications.filter((n) => !dismissed.has(n._id));
+  const visible = notifications.filter((n) => !dismissed.has(n.id));
   const hasUnread = visible.length > 0;
 
   return (
@@ -272,10 +272,10 @@ export function NotificationTray({ userId }: { userId: string }) {
               ) : (
                 visible.map((n) => (
                   <NotificationItem
-                    key={n._id}
+                    key={n.id}
                     notification={n}
-                    ndaFileUrl={ndaUrls[n.langcliffe_outreach_text] ?? null}
-                    onDismiss={() => setDismissed((prev) => new Set([...prev, n._id]))}
+                    ndaFileUrl={ndaUrls[n.langcliffe_outreach] ?? null}
+                    onDismiss={() => setDismissed((prev) => new Set([...prev, n.id]))}
                   />
                 ))
               )}
