@@ -775,7 +775,15 @@ router.get('/notifications/nda/:outreachId', wrap(async (req, res) => {
     .eq('id', req.params.outreachId)
     .single();
 
-  res.json({ nda_file_url: data?.nda_file ?? null });
+  const path = data?.nda_file ?? null;
+  if (!path) { res.json({ nda_file_url: null }); return; }
+
+  // Generate a signed URL (1 hour expiry) for the private file
+  const { data: urlData, error } = await supabase.storage
+    .from('files')
+    .createSignedUrl(path, 3600);
+
+  res.json({ nda_file_url: error ? null : urlData.signedUrl });
 }));
 
 router.get('/notifications/:userId', wrap(async (req, res) => {
