@@ -22,6 +22,8 @@ export function Dashboard() {
   );
   const [cancelBannerDismissed, setCancelBannerDismissed] = useState(false);
 
+  const isBubbleId = !!userId && !userId.includes('-');
+
   // Subscription check + user profile: run on every dashboard mount so we re-check after returning from /offer
   useEffect(() => {
     if (!userId) return;
@@ -209,6 +211,22 @@ export function Dashboard() {
           </div>
         </div>
       </motion.div>
+
+      {/* Migration banner: user has a legacy Bubble ID in localStorage */}
+      {isBubbleId && (
+        <div className="mx-4 sm:mx-6 mt-3 px-4 py-2.5 rounded-lg border border-blue-500/40 bg-blue-500/10 text-[var(--text-primary)] flex items-center justify-between gap-3">
+          <p className="text-xs flex-1 min-w-0">
+            We've recently migrated our servers. Please log out and sign back in with your magic link to continue.
+          </p>
+          <button
+            type="button"
+            onClick={() => { logout(); navigate('/', { replace: true }); }}
+            className="px-3 py-1.5 rounded-full font-medium bg-accent text-black hover:bg-accent/90 transition-colors text-xs whitespace-nowrap flex-shrink-0"
+          >
+            Log out
+          </button>
+        </div>
+      )}
 
       {/* Cancellation banner: subscribed but cancelling at period end */}
       {!showSubscriptionOverlay && storeCancelAt && !cancelBannerDismissed && (
