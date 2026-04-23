@@ -144,7 +144,7 @@ function ProfileSection({ userId }: { userId: string }) {
   useEffect(() => {
     getUserProfile(userId)
       .then((p) => {
-        const name = p.name_text ?? '';
+        const name = p.name ?? '';
         const em = p.email ?? userEmail ?? '';
         setSavedName(name);
         setDraftName(name);
@@ -160,7 +160,7 @@ function ProfileSection({ userId }: { userId: string }) {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     save(async () => {
-      await updateUserProfile(userId, { name_text: draftName.trim() });
+      await updateUserProfile(userId, { name: draftName.trim() });
       setSavedName(draftName.trim());
       setUserName(draftName.trim());
       setEditing(false);
@@ -208,7 +208,7 @@ function ProfileSection({ userId }: { userId: string }) {
 
 function AgentSection({ userId }: { userId: string }) {
   const [agent, setAgent] = useState<AgentRecord | null>(null);
-  const [saved, setSaved] = useState({ name_text: '', email_text: '' });
+  const [saved, setSaved] = useState({ name: '', email: '' });
   const [draft, setDraft] = useState(saved);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -219,7 +219,7 @@ function AgentSection({ userId }: { userId: string }) {
       .then((a) => {
         if (a) {
           setAgent(a);
-          const vals = { name_text: a.name_text ?? '', email_text: a.email_text ?? '' };
+          const vals = { name: a.name ?? '', email: a.email ?? '' };
           setSaved(vals);
           setDraft(vals);
         }
@@ -234,8 +234,8 @@ function AgentSection({ userId }: { userId: string }) {
     e.preventDefault();
     if (!agent) return;
     save(async () => {
-      await updateAgent(agent._id, { name_text: draft.name_text.trim(), email_text: draft.email_text.trim() });
-      const committed = { name_text: draft.name_text.trim(), email_text: draft.email_text.trim() };
+      await updateAgent(agent.id, { name: draft.name.trim(), email: draft.email.trim() });
+      const committed = { name: draft.name.trim(), email: draft.email.trim() };
       setSaved(committed);
       setEditing(false);
     });
@@ -256,8 +256,8 @@ function AgentSection({ userId }: { userId: string }) {
           <p className="text-sm text-[var(--text-tertiary)]">No agent found for your account.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <ReadField label="Agent name" value={saved.name_text} />
-            <ReadField label="Agent email" value={saved.email_text} />
+            <ReadField label="Agent name" value={saved.name} />
+            <ReadField label="Agent email" value={saved.email} />
           </div>
         )
       }
@@ -265,11 +265,11 @@ function AgentSection({ userId }: { userId: string }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Agent name</label>
-            <input className={inputCls} value={draft.name_text} onChange={(e) => setDraft((d) => ({ ...d, name_text: e.target.value }))} placeholder="e.g. Sophia" />
+            <input className={inputCls} value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} placeholder="e.g. Sophia" />
           </div>
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Agent email</label>
-            <input className={inputCls} type="email" value={draft.email_text} onChange={(e) => setDraft((d) => ({ ...d, email_text: e.target.value }))} placeholder="e.g. sophia@acquiro.ai" />
+            <input className={inputCls} type="email" value={draft.email} onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))} placeholder="e.g. sophia@acquiro.ai" />
           </div>
         </div>
       }
@@ -280,36 +280,36 @@ function AgentSection({ userId }: { userId: string }) {
 // ─── Buyer criteria section ───────────────────────────────────────────────────
 
 type BuyerDraft = {
-  company_overview_text: string;
-  geography_text: string;
-  funding_source_text: string;
-  ebitda_range_text: string;
-  turnover_range_text: string;
-  max_investment_number: string;
+  company_overview: string;
+  geography: string;
+  funding_source: string;
+  ebitda_range: string;
+  turnover_range: string;
+  initial_budget: string;
   industry_preferences: string;
   excluded_sectors: string;
 };
 
 function infoToDraft(b: BuyerInfoRecord): BuyerDraft {
   return {
-    company_overview_text: b.company_overview_text ?? '',
-    geography_text: b.geography_text ?? '',
-    funding_source_text: b.funding_source_text ?? '',
-    ebitda_range_text: b.ebitda_range_text ?? '',
-    turnover_range_text: b.turnover_range_text ?? '',
-    max_investment_number: b.max_investment_number != null ? String(b.max_investment_number) : '',
-    industry_preferences: (b.industry_preferences_list_option_sectors ?? []).join(', '),
-    excluded_sectors: (b.excluded_sectors_list_option_sectors ?? []).join(', '),
+    company_overview: b.company_overview ?? '',
+    geography: b.geography ?? '',
+    funding_source: b.funding_source ?? '',
+    ebitda_range: b.ebitda_range ?? '',
+    turnover_range: b.turnover_range ?? '',
+    initial_budget: b.initial_budget != null ? String(b.initial_budget) : '',
+    industry_preferences: (b.industry_preferences ?? []).join(', '),
+    excluded_sectors: (b.excluded_sectors ?? []).join(', '),
   };
 }
 
 const emptyDraft: BuyerDraft = {
-  company_overview_text: '',
-  geography_text: '',
-  funding_source_text: '',
-  ebitda_range_text: '',
-  turnover_range_text: '',
-  max_investment_number: '',
+  company_overview: '',
+  geography: '',
+  funding_source: '',
+  ebitda_range: '',
+  turnover_range: '',
+  initial_budget: '',
   industry_preferences: '',
   excluded_sectors: '',
 };
@@ -346,15 +346,15 @@ function BuyerCriteriaSection({ userId }: { userId: string }) {
     if (!info) return;
     const splitList = (s: string) => s.split(',').map((v) => v.trim()).filter(Boolean);
     save(async () => {
-      await updateBuyerInfo(info._id, {
-        company_overview_text: draft.company_overview_text.trim() || undefined,
-        geography_text: draft.geography_text.trim() || undefined,
-        funding_source_text: draft.funding_source_text.trim() || undefined,
-        ebitda_range_text: draft.ebitda_range_text.trim() || undefined,
-        turnover_range_text: draft.turnover_range_text.trim() || undefined,
-        max_investment_number: draft.max_investment_number ? Number(draft.max_investment_number) : undefined,
-        industry_preferences_list_option_sectors: splitList(draft.industry_preferences),
-        excluded_sectors_list_option_sectors: splitList(draft.excluded_sectors),
+      await updateBuyerInfo(info.id, {
+        company_overview: draft.company_overview.trim() || undefined,
+        geography: draft.geography.trim() || undefined,
+        funding_source: draft.funding_source.trim() || undefined,
+        ebitda_range: draft.ebitda_range.trim() || undefined,
+        turnover_range: draft.turnover_range.trim() || undefined,
+        initial_budget: draft.initial_budget ? Number(draft.initial_budget) : undefined,
+        industry_preferences: splitList(draft.industry_preferences),
+        excluded_sectors: splitList(draft.excluded_sectors),
       });
       setSaved(draft);
       setEditing(false);
@@ -383,13 +383,13 @@ function BuyerCriteriaSection({ userId }: { userId: string }) {
           <p className="text-sm text-[var(--text-tertiary)]">No buyer criteria found for your account.</p>
         ) : (
           <div className="space-y-4">
-            <ReadField label="Company overview" value={saved.company_overview_text} />
+            <ReadField label="Company overview" value={saved.company_overview} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <ReadField label="Geography" value={saved.geography_text} />
-              <ReadField label="Funding source" value={saved.funding_source_text} />
-              <ReadField label="EBITDA range" value={saved.ebitda_range_text} />
-              <ReadField label="Turnover range" value={saved.turnover_range_text} />
-              <ReadField label="Max investment" value={saved.max_investment_number ? `£${Number(saved.max_investment_number).toLocaleString()}` : ''} />
+              <ReadField label="Geography" value={saved.geography} />
+              <ReadField label="Funding source" value={saved.funding_source} />
+              <ReadField label="EBITDA range" value={saved.ebitda_range} />
+              <ReadField label="Turnover range" value={saved.turnover_range} />
+              <ReadField label="Max investment" value={saved.initial_budget ? `£${Number(saved.initial_budget).toLocaleString()}` : ''} />
             </div>
             <ReadField label="Preferred sectors" value={saved.industry_preferences} />
             <ReadField label="Excluded sectors" value={saved.excluded_sectors} />
@@ -400,14 +400,14 @@ function BuyerCriteriaSection({ userId }: { userId: string }) {
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Company overview</label>
-            <textarea className={textareaCls} rows={4} value={draft.company_overview_text} onChange={set('company_overview_text')} placeholder="Brief description of who you are and what you're looking to acquire…" />
+            <textarea className={textareaCls} rows={4} value={draft.company_overview} onChange={set('company_overview')} placeholder="Brief description of who you are and what you're looking to acquire…" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <LabelInput label="Geography" field="geography_text" placeholder="e.g. UK" />
-            <LabelInput label="Funding source" field="funding_source_text" placeholder="e.g. Cash / bank debt" />
-            <LabelInput label="EBITDA range" field="ebitda_range_text" placeholder="e.g. £200k – £1m" />
-            <LabelInput label="Turnover range" field="turnover_range_text" placeholder="e.g. £1m – £5m" />
-            <LabelInput label="Max investment (£)" field="max_investment_number" type="number" placeholder="e.g. 2000000" />
+            <LabelInput label="Geography" field="geography" placeholder="e.g. UK" />
+            <LabelInput label="Funding source" field="funding_source" placeholder="e.g. Cash / bank debt" />
+            <LabelInput label="EBITDA range" field="ebitda_range" placeholder="e.g. £200k – £1m" />
+            <LabelInput label="Turnover range" field="turnover_range" placeholder="e.g. £1m – £5m" />
+            <LabelInput label="Max investment (£)" field="initial_budget" type="number" placeholder="e.g. 2000000" />
           </div>
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Preferred sectors (comma-separated)</label>

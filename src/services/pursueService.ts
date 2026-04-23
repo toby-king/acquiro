@@ -2,24 +2,23 @@ const API_URL = import.meta.env.VITE_SCRAPER_URL as string;
 const ADMIN_KEY = import.meta.env.VITE_SCRAPER_ADMIN_KEY as string;
 
 export interface PursueRequest {
-  _id: string;
-  business_name_text: string;
-  status_text: 'pending' | 'contacted' | 'responded' | 'closed';
-  admin_notes_text: string;
-  listing_url_text: string;
-  'Created Date': string;
-  // Bubble returns linked fields as IDs
-  user_user: string;
-  business_custom_business: string;
+  id: string;
+  business_name: string;
+  status: 'pending' | 'contacted' | 'responded' | 'closed';
+  admin_notes: string;
+  listing_url: string;
+  created_at: string;
+  user_id: string;
+  business_id: string;
   // Enriched by backend
-  user_name_text?: string | null;
-  user_email_text?: string | null;
-  business_description_text?: string | null;
-  business_sector_text?: string | null;
-  business_location_text?: string | null;
-  business_asking_price_number?: number | null;
-  business_turnover_number?: number | null;
-  business_net_profit_number?: number | null;
+  user_name?: string | null;
+  user_email?: string | null;
+  business_description?: string | null;
+  business_sector?: string | null;
+  business_location?: string | null;
+  business_asking_price?: number | null;
+  business_turnover?: number | null;
+  business_net_profit?: number | null;
 }
 
 function headers() {

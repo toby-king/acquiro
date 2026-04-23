@@ -1,71 +1,18 @@
 /**
- * Backend proxy for all Bubble data operations.
+ * Backend data proxy — Supabase implementation.
  *
- * Every frontend Bubble call routes through here so that BUBBLE_API_KEY
- * never leaves the server. When we migrate to Supabase the implementations
- * in this file change; the frontend route contract stays the same.
+ * Replaces Bubble.io as the data layer. The frontend route contract
+ * is unchanged — same paths, same request/response shapes.
  *
- * Endpoints that call wf/ (workflow API) are marked TODO — they'll be
- * replaced with direct /obj/ calls once Bubble field names are confirmed.
+ * All responses use clean Supabase column names — no Bubble-style
+ * field name mappings.
  */
 
 import { Router, Request, Response } from 'express';
 import OpenAI from 'openai';
+import { supabase } from '../lib/supabase.js';
 
 const router = Router();
-
-const BUBBLE_BASE = 'https://toby-85612.bubbleapps.io/version-test/api/1.1';
-
-function getApiKey(): string {
-  const key = process.env.BUBBLE_API_KEY;
-  if (!key) throw new Error('BUBBLE_API_KEY is not configured');
-  return key;
-}
-
-function authHeaders(): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${getApiKey()}`,
-  };
-}
-
-async function bubbleGet<T = unknown>(path: string): Promise<T> {
-  const res = await fetch(`${BUBBLE_BASE}${path}`, { headers: authHeaders() });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Bubble GET ${path} failed: ${res.status} ${text.slice(0, 200)}`);
-  }
-  return res.json() as Promise<T>;
-}
-
-async function bubblePatch(path: string, body: Record<string, unknown>): Promise<void> {
-  const res = await fetch(`${BUBBLE_BASE}${path}`, {
-    method: 'PATCH',
-    headers: authHeaders(),
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Bubble PATCH ${path} failed: ${res.status} ${text.slice(0, 200)}`);
-  }
-}
-
-async function bubblePost<T = unknown>(path: string, body: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`${BUBBLE_BASE}${path}`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Bubble POST ${path} failed: ${res.status} ${text.slice(0, 200)}`);
-  }
-  return res.json() as Promise<T>;
-}
-
-function enc(constraints: unknown): string {
-  return encodeURIComponent(JSON.stringify(constraints));
-}
 
 type Handler = (req: Request, res: Response) => Promise<void>;
 function wrap(handler: Handler) {
@@ -73,7 +20,7 @@ function wrap(handler: Handler) {
     try {
       await handler(req, res);
     } catch (err) {
-      console.error('[bubble]', err);
+      console.error('[db]', err);
       res.status(500).json({ error: err instanceof Error ? err.message : 'Internal error' });
     }
   };
@@ -83,17 +30,22 @@ function wrap(handler: Handler) {
 
 /** GET /api/bubble/user/:userId — get user profile by ID */
 router.get('/user/:userId', wrap(async (req, res) => {
-  const data = await bubbleGet<{ response: Record<string, unknown> }>(`/obj/user/${req.params.userId}`);
-  const u = data.response;
-  const auth = u.authentication as { email?: { email?: string } } | undefined;
+  const { data: u, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', req.params.userId)
+    .single();
+
+  if (error || !u) { res.status(404).json({ error: 'User not found' }); return; }
+
   res.json({
-    user_id: u._id,
-    name: (u.name_text ?? u.name) as string | null ?? null,
-    email: auth?.email?.email ?? null,
-    is_subscribed: (u.is_subscribed_boolean ?? false) as boolean,
-    subscription_id: (u.subscription_id_text ?? null) as string | null,
-    cancel_at: (u.cancel_at_text ?? null) as string | null,
-    is_admin: (u.is_admin_boolean ?? false) as boolean,
+    user_id: u.id,
+    name: u.name ?? null,
+    email: u.email ?? null,
+    is_subscribed: u.is_subscribed ?? false,
+    subscription_id: u.subscription_id ?? null,
+    cancel_at: u.cancel_at ?? null,
+    is_admin: u.is_admin ?? false,
   });
 }));
 
@@ -101,109 +53,104 @@ router.get('/user/:userId', wrap(async (req, res) => {
 router.post('/user/lookup', wrap(async (req, res) => {
   const { email } = req.body as { email?: string };
   if (!email?.trim()) { res.status(400).json({ error: 'email required' }); return; }
-  const normalised = email.trim().toLowerCase();
-  let cursor = 0;
-  while (true) {
-    const data = await bubbleGet<{ response: { results: Array<{ _id: string; name_text?: string; authentication?: { email?: { email?: string } } }>; remaining: number } }>(
-      `/obj/user?limit=100&cursor=${cursor}`,
-    );
-    const { results, remaining } = data.response;
-    const u = results.find(r => r.authentication?.email?.email?.toLowerCase() === normalised);
-    if (u) { res.json({ user_id: u._id, name: u.name_text ?? null, email: u.authentication?.email?.email ?? normalised }); return; }
-    if (remaining <= 0) break;
-    cursor += results.length;
-  }
-  res.status(404).json({ error: 'ACCOUNT_NOT_FOUND' });
+
+  const { data: u, error } = await supabase
+    .from('users')
+    .select('id, name, email')
+    .eq('email', email.trim().toLowerCase())
+    .single();
+
+  if (error || !u) { res.status(404).json({ error: 'ACCOUNT_NOT_FOUND' }); return; }
+
+  res.json({ user_id: u.id, name: u.name ?? null, email: u.email });
 }));
 
 /** PATCH /api/bubble/user/:userId — update user fields */
 router.patch('/user/:userId', wrap(async (req, res) => {
-  await bubblePatch(`/obj/user/${req.params.userId}`, req.body as Record<string, unknown>);
+  const body = req.body as Record<string, unknown>;
+
+  const allowedFields = ['name', 'subscription_id', 'is_subscribed', 'cancel_at', 'role', 'magic_link', 'magic_link_expires'];
+  const update: Record<string, unknown> = {};
+  for (const field of allowedFields) {
+    if (field in body) update[field] = body[field];
+  }
+
+  if (Object.keys(update).length > 0) {
+    const { error } = await supabase.from('users').update(update).eq('id', req.params.userId);
+    if (error) throw error;
+  }
+
   res.json({ ok: true });
 }));
 
-/** POST /api/bubble/user/account — create a Bubble auth user from a lead */
+/** POST /api/bubble/user/account — create a user from a lead */
 router.post('/user/account', wrap(async (req, res) => {
   const { lead_id, subscription_id } = req.body as { lead_id?: string; subscription_id?: string };
   if (!lead_id) { res.status(400).json({ error: 'lead_id required' }); return; }
 
-  // 1. Fetch lead to get email + name
-  const leadData = await bubbleGet<{ response: { name_text?: string; email_text?: string } }>(
-    `/obj/Leads/${lead_id}`,
-  );
-  const lead = leadData.response;
-  if (!lead.email_text) throw new Error(`Lead ${lead_id} has no email_text`);
+  // 1. Fetch lead
+  const { data: lead, error: leadErr } = await supabase
+    .from('leads')
+    .select('name, email')
+    .eq('id', lead_id)
+    .single();
+  if (leadErr || !lead?.email) throw new Error(`Lead ${lead_id} not found or has no email`);
 
-  // 2. Create Bubble auth user
-  const userData = await bubblePost<{ id?: string }>('/obj/user', { email: lead.email_text });
-  const userId = userData.id;
-  if (!userId) throw new Error('Bubble /obj/user POST did not return an id');
+  // 2. Create auth user via Supabase Auth (triggers handle_new_auth_user → inserts public.users)
+  const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+    email: lead.email,
+    email_confirm: true,
+  });
+  if (authErr) throw new Error(`Auth user creation failed: ${authErr.message}`);
+  const userId = authData.user.id;
 
-  // 3. Set name, role + subscription fields
-  const userFields: Record<string, unknown> = { role_text: 'buyer' };
-  if (lead.name_text) userFields.name_text = lead.name_text;
+  // 3. Update user fields
+  const userFields: Record<string, unknown> = { role: 'buyer' };
+  if (lead.name) userFields.name = lead.name;
   if (subscription_id) {
-    userFields.subscription_id_text = subscription_id;
-    userFields.is_subscribed_boolean = true;
+    userFields.subscription_id = subscription_id;
+    userFields.is_subscribed = true;
   }
-  if (Object.keys(userFields).length > 0) {
-    await bubblePatch(`/obj/user/${userId}`, userFields);
-  }
+  await supabase.from('users').update(userFields).eq('id', userId);
 
-  // 4. Link agent + Buyer_Info to the new user (non-fatal)
-  const leadConstraints = enc([{ key: 'lead_custom_leads', constraint_type: 'equals', value: lead_id }]);
+  // 4. Link agent + buyer_info to new user (non-fatal)
   await Promise.all([
-    bubbleGet<{ response: { results: { _id: string }[] } }>(
-      `/obj/Agents?constraints=${leadConstraints}&limit=1`,
-    ).then(async (agentData) => {
-      const agent = agentData.response.results[0];
-      if (agent?._id) await bubblePatch(`/obj/Agents/${agent._id}`, { user_user: userId });
-    }).catch((err) => {
-      console.warn('[bubble] create_user: agent link failed (non-fatal):', (err as Error).message);
-    }),
-    bubbleGet<{ response: { results: { _id: string }[] } }>(
-      `/obj/Buyer_Info?constraints=${leadConstraints}&limit=1`,
-    ).then(async (buyerData) => {
-      const buyerInfo = buyerData.response.results[0];
-      if (buyerInfo?._id) await bubblePatch(`/obj/Buyer_Info/${buyerInfo._id}`, { user_user: userId });
-    }).catch((err) => {
-      console.warn('[bubble] create_user: buyer_info link failed (non-fatal):', (err as Error).message);
-    }),
+    supabase.from('agents').update({ user_id: userId }).eq('lead_id', lead_id)
+      .then(({ error }) => { if (error) console.warn('[db] create_user: agent link failed (non-fatal):', error.message); }),
+    supabase.from('buyer_info').update({ user_id: userId }).eq('lead_id', lead_id)
+      .then(({ error }) => { if (error) console.warn('[db] create_user: buyer_info link failed (non-fatal):', error.message); }),
   ]);
 
   // 5. Mark lead as converted (non-fatal)
-  try {
-    await bubblePatch(`/obj/Leads/${lead_id}`, { converted_boolean: true });
-  } catch (err) {
-    console.warn('[bubble] create_user: lead converted flag failed (non-fatal):', (err as Error).message);
-  }
+  await supabase.from('leads').update({ converted: true }).eq('id', lead_id)
+    .then(({ error }) => { if (error) console.warn('[db] create_user: lead converted flag failed (non-fatal):', error.message); });
 
-  console.log(`[bubble] create_user: created user ${userId} from lead ${lead_id}`);
+  console.log(`[db] create_user: created user ${userId} from lead ${lead_id}`);
   res.json({ status: 'success', response: { user_id: userId } });
 }));
 
 // ── LEAD ──────────────────────────────────────────────────────────────────────
 
-/** POST /api/bubble/lead — create a lead + linked Buyer_Info */
+/** POST /api/bubble/lead — create a lead + linked buyer_info */
 router.post('/lead', wrap(async (req, res) => {
   const { name, email } = req.body as { name?: string; email?: string };
   if (!name?.trim() || !email?.trim()) { res.status(400).json({ error: 'name and email required' }); return; }
-  const data = await bubblePost<{ id?: string }>('/obj/Leads', {
-    name_text: name.trim(),
-    email_text: email.trim(),
-  });
-  const leadId = data.id;
-  if (!leadId) throw new Error('Bubble /obj/Leads POST did not return an id');
 
-  // Create the linked Buyer_Info record (non-fatal if it fails)
+  const { data: lead, error } = await supabase
+    .from('leads')
+    .insert({ name: name.trim(), email: email.trim() })
+    .select('id')
+    .single();
+  if (error || !lead) throw new Error('Failed to create lead');
+
+  // Create linked buyer_info (non-fatal)
   try {
-    await bubblePost('/obj/Buyer_Info', { lead_custom_leads: leadId });
+    await supabase.from('buyer_info').insert({ lead_id: lead.id });
   } catch (err) {
-    console.warn('[bubble] create_lead: Buyer_Info creation failed (non-fatal):', (err as Error).message);
+    console.warn('[db] create_lead: buyer_info creation failed (non-fatal):', (err as Error).message);
   }
 
-  // Match the shape the frontend expects: { response: { lead_id } }
-  res.json({ status: 'success', response: { lead_id: leadId } });
+  res.json({ status: 'success', response: { lead_id: lead.id } });
 }));
 
 // ── Lead recovery email helpers ───────────────────────────────────────────────
@@ -294,17 +241,22 @@ router.post('/lead/mail', wrap(async (req, res) => {
   const sendgridKey = process.env.SENDGRID_API_KEY;
   if (!sendgridKey) { res.status(500).json({ error: 'Email service not configured' }); return; }
 
-  // 1. Fetch lead (name + email)
-  const leadData = await bubbleGet<{ response: { name_text?: string; email_text?: string } }>(`/obj/Leads/${lead_id}`);
-  const lead = leadData.response;
-  if (!lead.email_text) { res.status(404).json({ error: 'Lead not found' }); return; }
+  // 1. Fetch lead
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('name, email')
+    .eq('id', lead_id)
+    .single();
+  if (!lead?.email) { res.status(404).json({ error: 'Lead not found' }); return; }
 
-  // 2. Fetch linked agent (advisor name)
-  const agentData = await bubbleGet<{ response: { results: Array<{ name_text?: string }> } }>(
-    `/obj/Agents?constraints=${enc([{ key: 'lead_custom_leads', constraint_type: 'equals', value: lead_id }])}&limit=1`,
-  );
-  const agentName = agentData.response.results[0]?.name_text ?? 'Your Advisor';
-  const userName = lead.name_text ?? null;
+  // 2. Fetch linked agent
+  const { data: agents } = await supabase
+    .from('agents')
+    .select('name')
+    .eq('lead_id', lead_id)
+    .limit(1);
+  const agentName = agents?.[0]?.name ?? 'Your Advisor';
+  const userName = lead.name ?? null;
 
   // 3. Generate personalised body via OpenAI
   const emailBody = await generateLeadRecoveryEmail(agentName, userName);
@@ -323,7 +275,7 @@ router.post('/lead/mail', wrap(async (req, res) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sendgridKey}` },
     body: JSON.stringify({
-      personalizations: [{ to: [{ email: lead.email_text }] }],
+      personalizations: [{ to: [{ email: lead.email }] }],
       from: { email: fromEmail, name: agentName },
       subject,
       content: [{ type: 'text/html', value: html }],
@@ -336,7 +288,7 @@ router.post('/lead/mail', wrap(async (req, res) => {
     res.status(500).json({ error: 'Failed to send email' }); return;
   }
 
-  console.log(`[lead/mail] Recovery email sent to ${lead.email_text} for lead ${lead_id}`);
+  console.log(`[lead/mail] Recovery email sent to ${lead.email} for lead ${lead_id}`);
   res.json({ ok: true });
 }));
 
@@ -346,11 +298,13 @@ router.post('/lead/mail', wrap(async (req, res) => {
 router.get('/agent/email-check', wrap(async (req, res) => {
   const email = req.query.email as string | undefined;
   if (!email) { res.status(400).json({ error: 'email required' }); return; }
-  const constraints = enc([{ key: 'email_text', constraint_type: 'equals', value: email }]);
-  const data = await bubbleGet<{ response: { count?: number } }>(
-    `/obj/Agents?constraints=${constraints}&limit=1`,
-  );
-  res.json({ taken: (data.response?.count ?? 0) > 0 });
+
+  const { count } = await supabase
+    .from('agents')
+    .select('*', { count: 'exact', head: true })
+    .eq('email', email);
+
+  res.json({ taken: (count ?? 0) > 0 });
 }));
 
 /** GET /api/bubble/agent?lead_id=... — get agent by lead ID */
@@ -358,36 +312,39 @@ router.get('/agent', wrap(async (req, res) => {
   const leadId = req.query.lead_id as string | undefined;
   if (!leadId) { res.status(400).json({ error: 'lead_id required' }); return; }
 
-  const constraints = enc([{ key: 'lead_custom_leads', constraint_type: 'equals', value: leadId }]);
-  const data = await bubbleGet<{ response: { results: Record<string, unknown>[] } }>(
-    `/obj/Agents?constraints=${constraints}&limit=1`,
-  );
-  const agent = data.response.results[0];
+  const { data: agent } = await supabase
+    .from('agents')
+    .select('*')
+    .eq('lead_id', leadId)
+    .limit(1)
+    .single();
   if (!agent) { res.status(404).json({ error: 'Agent not found' }); return; }
 
   // Fetch linked user for user_name + user_email
   let userName: string | null = null;
   let userEmail: string | null = null;
-  const userId = agent.user_user as string | undefined;
-  if (userId) {
-    try {
-      const uData = await bubbleGet<{ response: Record<string, unknown> }>(`/obj/user/${userId}`);
-      const u = uData.response;
-      userName = (u.name_text ?? u.name) as string | null ?? null;
-      userEmail = ((u.authentication as { email?: { email?: string } } | undefined)?.email?.email) ?? null;
-    } catch { /* non-fatal — user might not exist yet */ }
+  if (agent.user_id) {
+    const { data: u } = await supabase
+      .from('users')
+      .select('name, email')
+      .eq('id', agent.user_id)
+      .single();
+    if (u) {
+      userName = u.name ?? null;
+      userEmail = u.email ?? null;
+    }
   }
 
-  // Map Data API field names to the shape getAgentService.ts expects
+  // Match the shape getAgentService.ts expects
   res.json({
     response: {
-      name: agent.name_text ?? null,
-      challenge_style: agent.style_text ?? null,
-      profanity: agent.profanity_boolean === true ? 'true' : 'false',
-      traits: agent.traits_text ?? '',
-      type: agent.type_text ?? null,
-      voice: agent.voice_text ?? null,
-      personality: agent.personality_options_option_personalityoptions ?? null,
+      name: agent.name ?? null,
+      challenge_style: agent.challenge_style ?? null,
+      profanity: agent.profanity === true ? 'true' : 'false',
+      traits: agent.traits ?? '',
+      type: agent.type ?? null,
+      voice: agent.voice ?? null,
+      personality: agent.personality ?? null,
       user_name: userName,
       user_email: userEmail,
     },
@@ -399,23 +356,24 @@ router.post('/agent', wrap(async (req, res) => {
   const { lead_id, name, email, challenge_style, profanity, traits, type, voice, personality } =
     req.body as Record<string, string>;
 
-  const body: Record<string, unknown> = {
-    lead_custom_leads: lead_id,
-    name_text: name,
-    email_text: email,
-    style_text: challenge_style,
-    profanity_boolean: profanity === 'true',
-    type_text: type,
-    voice_text: voice,
-  };
-  if (traits) body.traits_text = traits;
-  // Only set the option set field for preset personalities (not custom stats strings)
-  if (personality && !personality.includes(': ')) {
-    body.personality_options_option_personalityoptions = personality;
-  }
+  const { data, error } = await supabase
+    .from('agents')
+    .insert({
+      lead_id,
+      name,
+      email,
+      challenge_style,
+      profanity: profanity === 'true',
+      traits: traits || null,
+      type,
+      voice,
+      personality: personality || null,
+    })
+    .select('id')
+    .single();
 
-  const data = await bubblePost<{ id?: string }>('/obj/Agents', body);
-  res.json({ status: 'success', id: data.id });
+  if (error) throw error;
+  res.json({ status: 'success', id: data!.id });
 }));
 
 // ── BUYER INFO ────────────────────────────────────────────────────────────────
@@ -484,7 +442,7 @@ You MUST return ALL of the following fields in every response:
 
 Return ONLY valid JSON with all 22 fields. No markdown, no explanation, no wrapping.`;
 
-/** POST /api/bubble/buyer-info/extract — fetch ElevenLabs transcript, extract buyer info, update Buyer_Info */
+/** POST /api/bubble/buyer-info/extract — fetch ElevenLabs transcript, extract buyer info, update buyer_info */
 router.post('/buyer-info/extract', wrap(async (req, res) => {
   const { userId, conversationId } = req.body as { userId?: string; conversationId?: string };
   if (!userId || !conversationId) {
@@ -510,7 +468,7 @@ router.post('/buyer-info/extract', wrap(async (req, res) => {
 
   const messages = transcriptData.transcript ?? [];
   if (messages.length === 0) {
-    console.log(`[bubble] buyer-info extract: empty transcript for conversation ${conversationId} — skipping`);
+    console.log(`[db] buyer-info extract: empty transcript for conversation ${conversationId} — skipping`);
     res.json({ ok: true, message: 'Empty transcript — skipping extraction' });
     return;
   }
@@ -519,41 +477,42 @@ router.post('/buyer-info/extract', wrap(async (req, res) => {
     .map((m) => `${m.role}: ${m.message}`)
     .join('\n');
 
-  // 2. Get current Buyer_Info record
-  const constraints = enc([{ key: 'user_user', constraint_type: 'equals', value: userId }]);
-  const buyerData = await bubbleGet<{ response: { results: Record<string, unknown>[] } }>(
-    `/obj/Buyer_Info?constraints=${constraints}&limit=1`,
-  );
-  const buyerInfo = buyerData.response.results[0];
+  // 2. Get current buyer_info record
+  const { data: buyerInfo } = await supabase
+    .from('buyer_info')
+    .select('*')
+    .eq('user_id', userId)
+    .limit(1)
+    .single();
   if (!buyerInfo) {
     res.status(404).json({ error: 'Buyer_Info not found for this user' });
     return;
   }
 
-  // 3. Build current profile to pass alongside transcript
+  // 3. Build current profile
   const currentProfile = {
-    buyer_type:                  buyerInfo.buyer_type_text                    ?? '',
-    buying_reason:               buyerInfo.buying_reason_text                 ?? '',
-    buying_experience:           buyerInfo.buying_experience_text             ?? '',
-    decision_speed:              buyerInfo.decision_speed_text                ?? '',
-    industry_preferences:        buyerInfo.industry_preferences_list_option_sectors ?? [],
-    excluded_sectors:            buyerInfo.excluded_sectors_list_option_sectors     ?? [],
-    geography:                   buyerInfo.geography_text                     ?? '',
-    turnover_range:              buyerInfo.turnover_range_text                ?? '',
-    ebitda_range:                buyerInfo.ebitda_range_text                  ?? '',
-    ebitda_margin_min:           buyerInfo.ebitda_margin_min_text             ?? '',
-    asset_base:                  buyerInfo.asset_base_text                    ?? '',
-    valuation_range:             buyerInfo.valuation_range_text               ?? '',
-    deal_structure_preferences:  buyerInfo.deal_structure_preferences_text   ?? '',
-    funding_source:              buyerInfo.funding_source_text                ?? '',
-    business_age:                buyerInfo.business_age_text                  ?? '',
-    employee_headcount:          buyerInfo.employee_headcount_text            ?? '',
-    customer_base_type:          buyerInfo.customer_base_type_text            ?? '',
-    contractual_recurrence:      buyerInfo.contractual_recurrence_text        ?? '',
-    ip_technology:               buyerInfo.ip_technology_text                 ?? '',
-    physical_digital:            buyerInfo.physical_digital_text              ?? '',
-    involvement:                 buyerInfo.involvement_text                   ?? '',
-    problems:                    buyerInfo.problems_text                      ?? '',
+    buyer_type:                  buyerInfo.buyer_type                  ?? '',
+    buying_reason:               buyerInfo.buying_reason               ?? '',
+    buying_experience:           buyerInfo.buying_experience           ?? '',
+    decision_speed:              buyerInfo.decision_speed              ?? '',
+    industry_preferences:        buyerInfo.industry_preferences        ?? [],
+    excluded_sectors:            buyerInfo.excluded_sectors            ?? [],
+    geography:                   buyerInfo.geography                   ?? '',
+    turnover_range:              buyerInfo.turnover_range              ?? '',
+    ebitda_range:                buyerInfo.ebitda_range                ?? '',
+    ebitda_margin_min:           buyerInfo.ebitda_margin_min           ?? '',
+    asset_base:                  buyerInfo.asset_base                  ?? '',
+    valuation_range:             buyerInfo.valuation_range             ?? '',
+    deal_structure_preferences:  buyerInfo.deal_structure_preference   ?? '',
+    funding_source:              buyerInfo.funding_source              ?? '',
+    business_age:                buyerInfo.business_age                ?? '',
+    employee_headcount:          buyerInfo.employee_headcount          ?? '',
+    customer_base_type:          buyerInfo.customer_base_type          ?? '',
+    contractual_recurrence:      buyerInfo.contractual_recurrence      ?? '',
+    ip_technology:               buyerInfo.ip_technology               ?? '',
+    physical_digital:            buyerInfo.physical_digital            ?? '',
+    involvement:                 buyerInfo.involvement                 ?? '',
+    problems:                    buyerInfo.problems                    ?? '',
   };
 
   // 4. Extract with OpenAI
@@ -572,66 +531,70 @@ router.post('/buyer-info/extract', wrap(async (req, res) => {
 
   const extracted = JSON.parse(aiRes.choices[0].message.content ?? '{}') as Record<string, unknown>;
 
-  // 5. Map extracted fields → Bubble field names, only writing fields that changed
+  // 5. Build update with only changed fields (using clean Supabase column names)
   const update: Record<string, unknown> = {};
 
-  const setText = (from: keyof typeof currentProfile, to: string) => {
-    const v = extracted[from];
-    if (typeof v !== 'string' || !v.trim()) return; // empty — skip
-    if (v.trim() === (currentProfile[from] as string)) return; // unchanged — skip
-    update[to] = v.trim();
+  const setText = (field: string, dbCol?: string) => {
+    const v = extracted[field];
+    const col = dbCol ?? field;
+    if (typeof v !== 'string' || !v.trim()) return;
+    if (v.trim() === (currentProfile[field as keyof typeof currentProfile] as string)) return;
+    update[col] = v.trim();
   };
 
-  setText('buyer_type',                 'buyer_type_text');
-  setText('buying_reason',              'buying_reason_text');
-  setText('buying_experience',          'buying_experience_text');
-  setText('decision_speed',             'decision_speed_text');
-  setText('geography',                  'geography_text');
-  setText('turnover_range',             'turnover_range_text');
-  setText('ebitda_range',               'ebitda_range_text');
-  setText('ebitda_margin_min',          'ebitda_margin_min_text');
-  setText('asset_base',                 'asset_base_text');
-  setText('valuation_range',            'valuation_range_text');
-  setText('deal_structure_preferences', 'deal_structure_preferences_text');
-  setText('funding_source',             'funding_source_text');
-  setText('business_age',               'business_age_text');
-  setText('employee_headcount',         'employee_headcount_text');
-  setText('customer_base_type',         'customer_base_type_text');
-  setText('contractual_recurrence',     'contractual_recurrence_text');
-  setText('ip_technology',              'ip_technology_text');
-  setText('physical_digital',           'physical_digital_text');
-  setText('involvement',                'involvement_text');
-  setText('problems',                   'problems_text');
+  setText('buyer_type');
+  setText('buying_reason');
+  setText('buying_experience');
+  setText('decision_speed');
+  setText('geography');
+  setText('turnover_range');
+  setText('ebitda_range');
+  setText('ebitda_margin_min');
+  setText('asset_base');
+  setText('valuation_range');
+  setText('deal_structure_preferences', 'deal_structure_preference');
+  setText('funding_source');
+  setText('business_age');
+  setText('employee_headcount');
+  setText('customer_base_type');
+  setText('contractual_recurrence');
+  setText('ip_technology');
+  setText('physical_digital');
+  setText('involvement');
+  setText('problems');
 
   const prefs = extracted.industry_preferences;
   if (Array.isArray(prefs) && prefs.length > 0) {
     const existing = currentProfile.industry_preferences as string[];
     const changed = prefs.length !== existing.length || prefs.some((v, i) => v !== existing[i]);
-    if (changed) update.industry_preferences_list_option_sectors = prefs;
+    if (changed) update.industry_preferences = prefs;
   }
   const excl = extracted.excluded_sectors;
   if (Array.isArray(excl) && excl.length > 0) {
     const existing = currentProfile.excluded_sectors as string[];
     const changed = excl.length !== existing.length || excl.some((v, i) => v !== existing[i]);
-    if (changed) update.excluded_sectors_list_option_sectors = excl;
+    if (changed) update.excluded_sectors = excl;
   }
 
   if (Object.keys(update).length > 0) {
-    await bubblePatch(`/obj/Buyer_Info/${buyerInfo._id as string}`, update);
+    const { error } = await supabase.from('buyer_info').update(update).eq('id', buyerInfo.id);
+    if (error) throw error;
   }
 
-  console.log(`[bubble] buyer-info extract: updated ${Object.keys(update).length} fields for user ${userId}`);
+  console.log(`[db] buyer-info extract: updated ${Object.keys(update).length} fields for user ${userId}`);
   res.json({ ok: true, fields_updated: Object.keys(update).length, fields: Object.keys(update) });
 }));
 
 /** GET /api/bubble/buyer-info/:userId — get buyer info for a user */
 router.get('/buyer-info/:userId', wrap(async (req, res) => {
-  const constraints = enc([{ key: 'user_user', constraint_type: 'equals', value: req.params.userId }]);
-  const data = await bubbleGet<{ response: { results: Record<string, unknown>[] } }>(
-    `/obj/Buyer_Info?constraints=${constraints}&limit=1`,
-  );
-  const info = data.response.results[0];
+  const { data: info } = await supabase
+    .from('buyer_info')
+    .select('*')
+    .eq('user_id', req.params.userId)
+    .limit(1)
+    .single();
   if (!info) { res.status(404).json({ error: 'Buyer info not found' }); return; }
+
   res.json({ response: info });
 }));
 
@@ -640,50 +603,44 @@ router.get('/buyer-info/:userId', wrap(async (req, res) => {
 /** GET /api/bubble/matches/:userId — top matches with business details */
 router.get('/matches/:userId', wrap(async (req, res) => {
   const { userId } = req.params;
-  const constraints = enc([
-    { key: 'user_user', constraint_type: 'equals', value: userId },
-    { key: 'dismissed_boolean', constraint_type: 'not equal', value: true },
-  ]);
-  const matchesData = await bubbleGet<{ response: { results: Record<string, unknown>[] } }>(
-    `/obj/matches?constraints=${constraints}&sort_field=score_number&descending=true&limit=10`,
-  );
 
-  const enriched = await Promise.all(
-    matchesData.response.results.map(async (m) => {
-      const businessId = m.business_custom_business as string;
-      if (!businessId) return null;
-      try {
-        const bData = await bubbleGet<{ response: Record<string, unknown> }>(`/obj/Business/${businessId}`);
-        const b = bData.response;
-        const imageRaw = ((b.image_image ?? '') as string);
-        const firstImageUrl = imageRaw.split(',')[0]?.trim();
-        return {
-          id: m._id as string,
-          matchId: m._id as string,
-          companyName: (b.business_name_text as string) ?? 'Unknown Business',
-          description: (b.description_text as string) ?? '',
-          status: null,
-          thumbnail: firstImageUrl?.startsWith('http') ? firstImageUrl : null,
-          matchReason: (m.match_reason_text as string) || null,
-        };
-      } catch {
-        return null;
-      }
-    }),
-  );
+  // Single query with join — replaces the N+1 pattern
+  const { data: matches } = await supabase
+    .from('matches')
+    .select('id, score, match_reason, business:business_id(business_name, description, image)')
+    .eq('user_id', userId)
+    .neq('dismissed', true)
+    .order('score', { ascending: false })
+    .limit(10);
 
-  res.json({ matches: enriched.filter(Boolean) });
+  const enriched = (matches ?? []).map((m: any) => {
+    const b = m.business;
+    const imageRaw = (b?.image ?? '') as string;
+    const firstImageUrl = imageRaw.split(',')[0]?.trim();
+    return {
+      id: m.id,
+      matchId: m.id,
+      companyName: b?.business_name ?? 'Unknown Business',
+      description: b?.description ?? '',
+      status: null,
+      thumbnail: firstImageUrl?.startsWith('http') ? firstImageUrl : null,
+      matchReason: m.match_reason || null,
+    };
+  });
+
+  res.json({ matches: enriched });
 }));
 
 /** PATCH /api/bubble/matches/:matchId/dismiss — dismiss a match with optional reason */
 router.patch('/matches/:matchId/dismiss', wrap(async (req, res) => {
   const { reason } = req.body as { reason?: string };
   const allowedReasons = ['wrong_sector', 'wrong_price', 'wrong_size', 'wrong_location'];
-  const patch: Record<string, unknown> = { dismissed_boolean: true };
+  const patch: Record<string, unknown> = { dismissed: true };
   if (reason && allowedReasons.includes(reason)) {
-    patch.dismiss_reason_text = reason;
+    patch.dismiss_reason = reason;
   }
-  await bubblePatch(`/obj/matches/${req.params.matchId}`, patch);
+  const { error } = await supabase.from('matches').update(patch).eq('id', req.params.matchId);
+  if (error) throw error;
   res.json({ ok: true });
 }));
 
@@ -691,91 +648,165 @@ router.patch('/matches/:matchId/dismiss', wrap(async (req, res) => {
 
 /** GET /api/bubble/admin/stats — user/subscriber counts */
 router.get('/admin/stats', wrap(async (req, res) => {
-  const subscribedConstraints = enc([{ key: 'is_subscribed_boolean', constraint_type: 'equals', value: true }]);
-
-  const [totalData, activeData] = await Promise.all([
-    bubbleGet<{ response: { count: number; remaining: number } }>('/obj/user?limit=1'),
-    bubbleGet<{ response: { count: number; remaining: number } }>(
-      `/obj/user?constraints=${subscribedConstraints}&limit=1`,
-    ),
+  const [totalRes, activeRes] = await Promise.all([
+    supabase.from('users').select('*', { count: 'exact', head: true }),
+    supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_subscribed', true),
   ]);
 
-  const total_users = (totalData.response.count ?? 0) + (totalData.response.remaining ?? 0);
-  const active_subscribers = (activeData.response.count ?? 0) + (activeData.response.remaining ?? 0);
+  const total_users = totalRes.count ?? 0;
+  const active_subscribers = activeRes.count ?? 0;
   const churned_users = Math.max(0, total_users - active_subscribers);
 
   res.json({ total_users, active_subscribers, churned_users });
 }));
 
-/** GET /api/bubble/listings?cursor=0&limit=100 — passthrough for admin listings */
+/** GET /api/bubble/listings?cursor=0&limit=100 — admin listings */
 router.get('/listings', wrap(async (req, res) => {
-  const cursor = (req.query.cursor as string) ?? '0';
-  const limit = (req.query.limit as string) ?? '100';
-  const data = await bubbleGet(`/obj/Business?limit=${limit}&cursor=${cursor}`);
-  res.json(data);
+  const cursor = parseInt((req.query.cursor as string) ?? '0', 10);
+  const limit = parseInt((req.query.limit as string) ?? '100', 10);
+
+  const { data: results, count } = await supabase
+    .from('business')
+    .select('*', { count: 'exact' })
+    .range(cursor, cursor + limit - 1)
+    .order('created_at', { ascending: false });
+
+  const total = count ?? 0;
+  const remaining = Math.max(0, total - cursor - (results?.length ?? 0));
+
+  res.json({
+    response: {
+      cursor: cursor + (results?.length ?? 0),
+      count: results?.length ?? 0,
+      remaining,
+      results: results ?? [],
+    },
+  });
 }));
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
 
 router.get('/settings/user/:userId', wrap(async (req, res) => {
-  const data = await bubbleGet(`/obj/User/${req.params.userId}`);
-  res.json(data);
+  const { data: u } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', req.params.userId)
+    .single();
+  if (!u) { res.status(404).json({ error: 'User not found' }); return; }
+
+  res.json({ response: u });
 }));
 
 router.patch('/settings/user/:userId', wrap(async (req, res) => {
-  await bubblePatch(`/obj/User/${req.params.userId}`, req.body as Record<string, unknown>);
+  const body = req.body as Record<string, unknown>;
+
+  const allowedFields = ['name', 'langcliffe_connected', 'dealsuite_connected'];
+  const update: Record<string, unknown> = {};
+  for (const field of allowedFields) {
+    if (field in body) update[field] = body[field];
+  }
+
+  if (Object.keys(update).length > 0) {
+    const { error } = await supabase.from('users').update(update).eq('id', req.params.userId);
+    if (error) throw error;
+  }
   res.json({ ok: true });
 }));
 
 router.get('/settings/agent/:userId', wrap(async (req, res) => {
-  const constraints = enc([{ key: 'user_user', constraint_type: 'equals', value: req.params.userId }]);
-  const data = await bubbleGet(`/obj/Agents?constraints=${constraints}`);
-  res.json(data);
+  const { data: agents } = await supabase
+    .from('agents')
+    .select('*')
+    .eq('user_id', req.params.userId);
+
+  res.json({
+    response: {
+      results: agents ?? [],
+    },
+  });
 }));
 
 router.patch('/settings/agent/:agentId', wrap(async (req, res) => {
-  await bubblePatch(`/obj/Agents/${req.params.agentId}`, req.body as Record<string, unknown>);
+  const body = req.body as Record<string, unknown>;
+
+  const allowedFields = ['name', 'email'];
+  const update: Record<string, unknown> = {};
+  for (const field of allowedFields) {
+    if (field in body) update[field] = body[field];
+  }
+
+  if (Object.keys(update).length > 0) {
+    const { error } = await supabase.from('agents').update(update).eq('id', req.params.agentId);
+    if (error) throw error;
+  }
   res.json({ ok: true });
 }));
 
 router.get('/settings/buyer-info/:userId', wrap(async (req, res) => {
-  const constraints = enc([{ key: 'user_user', constraint_type: 'equals', value: req.params.userId }]);
-  const data = await bubbleGet(`/obj/Buyer_Info?constraints=${constraints}`);
-  res.json(data);
+  const { data: infos } = await supabase
+    .from('buyer_info')
+    .select('*')
+    .eq('user_id', req.params.userId);
+
+  res.json({
+    response: {
+      results: infos ?? [],
+    },
+  });
 }));
 
 router.patch('/settings/buyer-info/:buyerInfoId', wrap(async (req, res) => {
-  await bubblePatch(`/obj/Buyer_Info/${req.params.buyerInfoId}`, req.body as Record<string, unknown>);
+  const body = req.body as Record<string, unknown>;
+
+  // Pass through directly — frontend sends clean Supabase column names
+  if (Object.keys(body).length > 0) {
+    const { error } = await supabase.from('buyer_info').update(body).eq('id', req.params.buyerInfoId);
+    if (error) throw error;
+  }
   res.json({ ok: true });
 }));
 
 // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
 
 router.get('/notifications/nda/:outreachId', wrap(async (req, res) => {
-  try {
-    const data = await bubbleGet<{ response?: { nda_file_text?: string } }>(
-      `/obj/LangcliffeOutreach/${req.params.outreachId}`,
-    );
-    res.json({ nda_file_url: data.response?.nda_file_text ?? null });
-  } catch (err) {
-    // Outreach record deleted or never existed — return null rather than 500
-    res.json({ nda_file_url: null });
-  }
+  const { data } = await supabase
+    .from('langcliffe_outreach')
+    .select('nda_file')
+    .eq('id', req.params.outreachId)
+    .single();
+
+  const path = data?.nda_file ?? null;
+  if (!path) { res.json({ nda_file_url: null }); return; }
+
+  // Generate a signed URL (1 hour expiry) for the private file
+  const { data: urlData, error } = await supabase.storage
+    .from('files')
+    .createSignedUrl(path, 3600);
+
+  res.json({ nda_file_url: error ? null : urlData.signedUrl });
 }));
 
 router.get('/notifications/:userId', wrap(async (req, res) => {
-  const constraints = enc([
-    { key: 'user_user', constraint_type: 'equals', value: req.params.userId },
-    { key: 'status_text', constraint_type: 'equals', value: 'unread' },
-  ]);
-  const data = await bubbleGet(
-    `/obj/UserNotification?constraints=${constraints}&sort_field=Created Date&descending=true`,
-  );
-  res.json(data);
+  const { data: notifications } = await supabase
+    .from('user_notification')
+    .select('*')
+    .eq('user_id', req.params.userId)
+    .eq('status', 'unread')
+    .order('created_at', { ascending: false });
+
+  res.json({
+    response: {
+      results: notifications ?? [],
+    },
+  });
 }));
 
 router.patch('/notifications/:notificationId/action', wrap(async (req, res) => {
-  await bubblePatch(`/obj/UserNotification/${req.params.notificationId}`, { status_text: 'actioned' });
+  const { error } = await supabase
+    .from('user_notification')
+    .update({ status: 'actioned' })
+    .eq('id', req.params.notificationId);
+  if (error) throw error;
   res.json({ ok: true });
 }));
 

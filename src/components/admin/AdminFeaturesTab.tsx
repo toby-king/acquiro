@@ -22,7 +22,7 @@ function AnnouncementCard({
   const [loadingStats, setLoadingStats] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createdAt = new Date(announcement['Created Date']).toLocaleDateString('en-GB', {
+  const createdAt = new Date(announcement.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'short', year: 'numeric',
   });
 
@@ -30,8 +30,8 @@ function AnnouncementCard({
     setError(null);
     setToggling(true);
     try {
-      await updateFeatureAnnouncement(announcement._id, {
-        active_boolean: !announcement.active_boolean,
+      await updateFeatureAnnouncement(announcement.id, {
+        active: !announcement.active,
       });
       onUpdate();
     } catch (err) {
@@ -45,7 +45,7 @@ function AnnouncementCard({
     if (stats) return; // already loaded
     setLoadingStats(true);
     try {
-      const data = await getFeatureImpressionStats(announcement._id);
+      const data = await getFeatureImpressionStats(announcement.id);
       setStats(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load stats');
@@ -65,19 +65,19 @@ function AnnouncementCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-[var(--text-primary)] text-sm truncate">
-              {announcement.name_text}
+              {announcement.name}
             </span>
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-              announcement.active_boolean
+              announcement.active
                 ? 'bg-green-500/15 text-green-400 border-green-500/30'
                 : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] border-[var(--border)]'
             }`}>
-              {announcement.active_boolean ? 'Active' : 'Inactive'}
+              {announcement.active ? 'Active' : 'Inactive'}
             </span>
           </div>
           <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{createdAt}</p>
           <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
-            {announcement.headline_text}
+            {announcement.headline}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -86,9 +86,9 @@ function AnnouncementCard({
             onClick={handleToggleActive}
             disabled={toggling}
             className="p-1.5 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors disabled:opacity-50"
-            title={announcement.active_boolean ? 'Deactivate' : 'Activate'}
+            title={announcement.active ? 'Deactivate' : 'Activate'}
           >
-            {toggling ? <Loader2 size={15} className="animate-spin" /> : announcement.active_boolean ? <EyeOff size={15} /> : <Eye size={15} />}
+            {toggling ? <Loader2 size={15} className="animate-spin" /> : announcement.active ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>
           <button
             type="button"
@@ -106,15 +106,15 @@ function AnnouncementCard({
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
               <span className="text-[var(--text-tertiary)]">CTA:</span>{' '}
-              <span className="text-[var(--text-secondary)]">{announcement.cta_text || '—'}</span>
+              <span className="text-[var(--text-secondary)]">{announcement.cta || '—'}</span>
             </div>
             <div>
               <span className="text-[var(--text-tertiary)]">Max impressions:</span>{' '}
-              <span className="text-[var(--text-secondary)]">{announcement.max_impressions_number ?? 3}</span>
+              <span className="text-[var(--text-secondary)]">{announcement.max_impressions ?? 3}</span>
             </div>
             <div>
               <span className="text-[var(--text-tertiary)]">Completion field:</span>{' '}
-              <span className="text-[var(--text-secondary)] font-mono">{announcement.completion_field_text || '—'}</span>
+              <span className="text-[var(--text-secondary)] font-mono">{announcement.completion_field || '—'}</span>
             </div>
           </div>
 
@@ -142,24 +142,24 @@ function CreateAnnouncementForm({ onCreated }: { onCreated: () => void }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
-    name_text: '',
-    headline_text: '',
-    cta_text: '',
-    max_impressions_number: 3,
-    completion_field_text: '',
+    name: '',
+    headline: '',
+    cta: '',
+    max_impressions: 3,
+    completion_field: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name_text.trim() || !form.headline_text.trim()) return;
+    if (!form.name.trim() || !form.headline.trim()) return;
     setSaving(true);
     setError(null);
     try {
       await createFeatureAnnouncement({
         ...form,
-        active_boolean: false,
+        active: false,
       });
-      setForm({ name_text: '', headline_text: '', cta_text: '', max_impressions_number: 3, completion_field_text: '' });
+      setForm({ name: '', headline: '', cta: '', max_impressions: 3, completion_field: '' });
       setOpen(false);
       onCreated();
     } catch (err) {
@@ -189,8 +189,8 @@ function CreateAnnouncementForm({ onCreated }: { onCreated: () => void }) {
           <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">Internal name</label>
           <input
             type="text"
-            value={form.name_text}
-            onChange={(e) => setForm((f) => ({ ...f, name_text: e.target.value }))}
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             className="w-full text-sm bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-accent"
             placeholder="e.g. langcliffe_connect"
             required
@@ -200,18 +200,18 @@ function CreateAnnouncementForm({ onCreated }: { onCreated: () => void }) {
           <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">Completion field (User)</label>
           <input
             type="text"
-            value={form.completion_field_text}
-            onChange={(e) => setForm((f) => ({ ...f, completion_field_text: e.target.value }))}
+            value={form.completion_field}
+            onChange={(e) => setForm((f) => ({ ...f, completion_field: e.target.value }))}
             className="w-full text-sm bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-primary)] font-mono focus:outline-none focus:ring-1 focus:ring-accent"
-            placeholder="e.g. langcliffe_connected_boolean"
+            placeholder="e.g. langcliffe_connected"
           />
         </div>
       </div>
       <div>
         <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">Headline (what the agent tells users)</label>
         <textarea
-          value={form.headline_text}
-          onChange={(e) => setForm((f) => ({ ...f, headline_text: e.target.value }))}
+          value={form.headline}
+          onChange={(e) => setForm((f) => ({ ...f, headline: e.target.value }))}
           rows={2}
           className="w-full text-sm bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-primary)] resize-none focus:outline-none focus:ring-1 focus:ring-accent"
           placeholder="e.g. Acquiro now connects to Langcliffe International's deal flow"
@@ -223,8 +223,8 @@ function CreateAnnouncementForm({ onCreated }: { onCreated: () => void }) {
           <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">CTA</label>
           <input
             type="text"
-            value={form.cta_text}
-            onChange={(e) => setForm((f) => ({ ...f, cta_text: e.target.value }))}
+            value={form.cta}
+            onChange={(e) => setForm((f) => ({ ...f, cta: e.target.value }))}
             className="w-full text-sm bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-accent"
             placeholder="e.g. Head to Settings > Integrations to connect"
           />
@@ -233,8 +233,8 @@ function CreateAnnouncementForm({ onCreated }: { onCreated: () => void }) {
           <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">Max impressions</label>
           <input
             type="number"
-            value={form.max_impressions_number}
-            onChange={(e) => setForm((f) => ({ ...f, max_impressions_number: parseInt(e.target.value) || 3 }))}
+            value={form.max_impressions}
+            onChange={(e) => setForm((f) => ({ ...f, max_impressions: parseInt(e.target.value) || 3 }))}
             min={1}
             max={10}
             className="w-full text-sm bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-accent"
@@ -309,7 +309,7 @@ export function AdminFeaturesTab() {
         <p className="text-sm text-[var(--text-secondary)] py-8 text-center">No feature announcements yet.</p>
       )}
       {!loading && announcements.map((a) => (
-        <AnnouncementCard key={a._id} announcement={a} onUpdate={load} />
+        <AnnouncementCard key={a.id} announcement={a} onUpdate={load} />
       ))}
     </div>
   );

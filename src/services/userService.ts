@@ -55,7 +55,7 @@ export async function updateUser(userId: string, subscriptionId: string): Promis
   const response = await fetch(`${API_URL}/api/bubble/user/${userId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subscription_id_text: subscriptionId, is_subscribed_boolean: true }),
+    body: JSON.stringify({ subscription_id: subscriptionId, is_subscribed: true }),
   });
 
   if (!response.ok) {
@@ -72,7 +72,7 @@ export async function unsubscribeUser(userId: string, cancelAt?: string | null):
 
   const body: Record<string, unknown> = {};
   if (cancelAt != null && cancelAt.trim() !== '') {
-    body.cancel_at_text = cancelAt.trim();
+    body.cancel_at = cancelAt.trim();
   }
 
   const response = await fetch(`${API_URL}/api/bubble/user/${userId}`, {

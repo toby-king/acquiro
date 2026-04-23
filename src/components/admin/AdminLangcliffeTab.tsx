@@ -25,9 +25,9 @@ function DraftCard({
   draft: OutreachDraft;
   onActionComplete: () => void;
 }) {
-  const isReply    = draft.status_text === 'pending_reply';
-  const isNdaAck   = draft.status_text === 'nda_received';
-  const isNdaReturn = draft.status_text === 'nda_signed';
+  const isReply    = draft.status === 'pending_reply';
+  const isNdaAck   = draft.status === 'nda_received';
+  const isNdaReturn = draft.status === 'nda_signed';
   const isNdaCard  = isNdaAck || isNdaReturn;
 
   const [action, setAction]             = useState<CardAction>('idle');
@@ -36,10 +36,10 @@ function DraftCard({
   const [showDelete, setShowDelete]     = useState(false);
   const [expanded, setExpanded]         = useState(false);
   const [currentDraft, setCurrentDraft] = useState(() => {
-    if (isNdaAck)    return draft.acknowledgment_draft_text ?? '';
-    if (isNdaReturn) return draft.nda_return_draft_text ?? '';
-    if (isReply)     return draft.reply_draft_text ?? '';
-    return draft.draft_body_text;
+    if (isNdaAck)    return draft.acknowledgment_draft ?? '';
+    if (isNdaReturn) return draft.nda_return_draft ?? '';
+    if (isReply)     return draft.reply_draft ?? '';
+    return draft.draft_body;
   });
   const [error, setError]               = useState<string | null>(null);
 
@@ -47,15 +47,15 @@ function DraftCard({
   useEffect(() => {
     if (action === 'rewriting') return; // don't overwrite while a local rewrite is in flight
     const fresh = isNdaAck
-      ? (draft.acknowledgment_draft_text ?? '')
+      ? (draft.acknowledgment_draft ?? '')
       : isNdaReturn
-      ? (draft.nda_return_draft_text ?? '')
+      ? (draft.nda_return_draft ?? '')
       : isReply
-      ? (draft.reply_draft_text ?? '')
-      : draft.draft_body_text;
+      ? (draft.reply_draft ?? '')
+      : draft.draft_body;
     setCurrentDraft(fresh);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.acknowledgment_draft_text, draft.nda_return_draft_text, draft.reply_draft_text, draft.draft_body_text]);
+  }, [draft.acknowledgment_draft, draft.nda_return_draft, draft.reply_draft, draft.draft_body]);
 
   const busy = action !== 'idle';
 
@@ -63,10 +63,10 @@ function DraftCard({
     setError(null);
     setAction('approving');
     try {
-      if (isNdaAck)    await approveAcknowledgment(draft._id);
-      else if (isNdaReturn) await approveNDAReturn(draft._id);
-      else if (isReply)     await approveReply(draft._id);
-      else                  await approveOutreach(draft._id);
+      if (isNdaAck)    await approveAcknowledgment(draft.id);
+      else if (isNdaReturn) await approveNDAReturn(draft.id);
+      else if (isReply)     await approveReply(draft.id);
+      else                  await approveOutreach(draft.id);
       onActionComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Approve failed');
@@ -78,7 +78,7 @@ function DraftCard({
     setError(null);
     setAction('deleting');
     try {
-      await deleteOutreach(draft._id);
+      await deleteOutreach(draft.id);
       onActionComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed');
@@ -91,8 +91,8 @@ function DraftCard({
     setAction('rewriting');
     try {
       const newDraft = isReply
-        ? await rejectReply(draft._id, feedback || undefined)
-        : await rejectOutreach(draft._id, feedback || undefined);
+        ? await rejectReply(draft.id, feedback || undefined)
+        : await rejectOutreach(draft.id, feedback || undefined);
       setCurrentDraft(newDraft);
       setFeedback('');
       setShowReject(false);
@@ -103,8 +103,8 @@ function DraftCard({
     }
   };
 
-  const ref = draft.listing_id_text.replace('langcliffe_', '').replace('langcliffe-', '');
-  const createdAt = new Date(draft['Created Date']).toLocaleDateString('en-GB', {
+  const ref = draft.listing_id.replace('langcliffe_', '').replace('langcliffe-', '');
+  const createdAt = new Date(draft.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'numeric', year: '2-digit',
   });
 
@@ -132,21 +132,21 @@ function DraftCard({
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-semibold text-[var(--text-primary)] truncate">
-              {draft.business_name_text}
+              {draft.business_name}
             </p>
             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400 font-medium flex-shrink-0">
               Ref {ref}
             </span>
           </div>
           <div className="flex items-center gap-1.5 mt-1 text-xs text-[var(--text-tertiary)]">
-            {draft.user_email_text && (
+            {draft.user_email && (
               <>
-                <span className="font-medium text-[var(--text-secondary)]">{draft.user_email_text}</span>
+                <span className="font-medium text-[var(--text-secondary)]">{draft.user_email}</span>
                 <span className="mx-0.5">→</span>
               </>
             )}
             <Mail size={11} />
-            <span>{draft.langcliffe_contact_text}</span>
+            <span>{draft.langcliffe_contact}</span>
             <span className="mx-1">·</span>
             <span>{createdAt}</span>
           </div>
@@ -160,37 +160,37 @@ function DraftCard({
       {expanded && (
         <>
           {/* Initial outreach: show original Langcliffe teaser */}
-          {!isReply && !isNdaCard && draft.inbound_email_text && (
+          {!isReply && !isNdaCard && draft.inbound_email && (
             <div className="px-5 py-4 border-b border-[var(--border)]">
               <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
                 Original email
               </p>
               <pre className="whitespace-pre-wrap text-sm text-[var(--text-secondary)] font-sans leading-relaxed bg-[var(--bg-secondary)] rounded-lg p-4 max-h-64 overflow-y-auto">
-                {draft.inbound_email_text}
+                {draft.inbound_email}
               </pre>
             </div>
           )}
 
           {/* Reply: show Langcliffe's message */}
-          {isReply && draft.langcliffe_reply_body_text && (
+          {isReply && draft.langcliffe_reply_body && (
             <div className="px-5 py-4 border-b border-[var(--border)]">
               <p className="text-xs font-medium text-blue-400 uppercase tracking-wider mb-2">
                 Langcliffe's message
               </p>
               <pre className="whitespace-pre-wrap text-sm text-[var(--text-secondary)] font-sans leading-relaxed bg-[var(--bg-secondary)] rounded-lg p-4 max-h-64 overflow-y-auto">
-                {draft.langcliffe_reply_body_text}
+                {draft.langcliffe_reply_body}
               </pre>
             </div>
           )}
 
           {/* NDA received: show NDA download link */}
-          {isNdaAck && draft.nda_file_text && (
+          {isNdaAck && draft.nda_file && (
             <div className="px-5 py-4 border-b border-[var(--border)]">
               <p className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-2">
                 NDA from Langcliffe
               </p>
               <a
-                href={draft.nda_file_text}
+                href={draft.nda_file}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
@@ -202,13 +202,13 @@ function DraftCard({
           )}
 
           {/* NDA signed: show signed NDA download link */}
-          {isNdaReturn && draft.signed_nda_file_text && (
+          {isNdaReturn && draft.signed_nda_file && (
             <div className="px-5 py-4 border-b border-[var(--border)]">
               <p className="text-xs font-medium text-green-400 uppercase tracking-wider mb-2">
                 Signed NDA from user
               </p>
               <a
-                href={draft.signed_nda_file_text}
+                href={draft.signed_nda_file}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
@@ -358,14 +358,14 @@ function MiscCard({ draft, onActionComplete }: { draft: OutreachDraft; onActionC
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createdAt = new Date(draft['Created Date']).toLocaleDateString('en-GB', {
+  const createdAt = new Date(draft.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'numeric', year: '2-digit',
   });
 
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await deleteOutreach(draft._id);
+      await deleteOutreach(draft.id);
       onActionComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed');
@@ -382,14 +382,14 @@ function MiscCard({ draft, onActionComplete }: { draft: OutreachDraft; onActionC
       >
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
-            {draft.user_email_text && (
+            {draft.user_email && (
               <>
-                <span className="font-medium text-[var(--text-secondary)]">{draft.user_email_text}</span>
+                <span className="font-medium text-[var(--text-secondary)]">{draft.user_email}</span>
                 <span className="mx-0.5">→</span>
               </>
             )}
             <Mail size={11} />
-            <span>{draft.langcliffe_contact_text}</span>
+            <span>{draft.langcliffe_contact}</span>
             <span className="mx-1">·</span>
             <span>{createdAt}</span>
           </div>
@@ -399,10 +399,10 @@ function MiscCard({ draft, onActionComplete }: { draft: OutreachDraft; onActionC
         </span>
       </button>
 
-      {expanded && draft.langcliffe_reply_body_text && (
+      {expanded && draft.langcliffe_reply_body && (
         <div className="px-5 py-4 border-b border-[var(--border)]">
           <pre className="whitespace-pre-wrap text-sm text-[var(--text-secondary)] font-sans leading-relaxed bg-[var(--bg-secondary)] rounded-lg p-4 max-h-64 overflow-y-auto">
-            {draft.langcliffe_reply_body_text}
+            {draft.langcliffe_reply_body}
           </pre>
         </div>
       )}
@@ -487,7 +487,7 @@ function QueueSection({
             <p className="text-xs text-[var(--text-tertiary)] text-center py-4">No items in this section.</p>
           ) : (
             items.map((draft) => (
-              <DraftCard key={draft._id} draft={draft} onActionComplete={onActionComplete} />
+              <DraftCard key={draft.id} draft={draft} onActionComplete={onActionComplete} />
             ))
           )}
         </div>
@@ -499,7 +499,7 @@ function QueueSection({
 // ─── Tab root ─────────────────────────────────────────────────────────────────
 
 const SECTIONS: {
-  key: OutreachDraft['status_text'];
+  key: OutreachDraft['status'];
   title: string;
   description: string;
   color: string;
@@ -590,7 +590,7 @@ export function AdminLangcliffeTab({ onCountChange }: { onCountChange?: (count: 
             {totalPending} item{totalPending !== 1 ? 's' : ''} pending approval
           </p>
           {SECTIONS.map((section) => {
-            const items = queue.filter((d) => d.status_text === section.key);
+            const items = queue.filter((d) => d.status === section.key);
             if (items.length === 0) return null;
             return (
               <QueueSection
@@ -604,7 +604,7 @@ export function AdminLangcliffeTab({ onCountChange }: { onCountChange?: (count: 
             );
           })}
           {(() => {
-            const miscItems = queue.filter((d) => d.status_text === 'misc');
+            const miscItems = queue.filter((d) => d.status === 'misc');
             if (miscItems.length === 0) return null;
             return (
               <div className="rounded-xl border border-[var(--border)] overflow-hidden">
@@ -617,7 +617,7 @@ export function AdminLangcliffeTab({ onCountChange }: { onCountChange?: (count: 
                 </div>
                 <div className="p-4 space-y-4 bg-[var(--bg-primary)]">
                   {miscItems.map((draft) => (
-                    <MiscCard key={draft._id} draft={draft} onActionComplete={load} />
+                    <MiscCard key={draft.id} draft={draft} onActionComplete={load} />
                   ))}
                 </div>
               </div>

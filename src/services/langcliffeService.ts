@@ -2,23 +2,23 @@ const SCRAPER_BASE = import.meta.env.VITE_SCRAPER_URL as string;
 const ADMIN_KEY = import.meta.env.VITE_SCRAPER_ADMIN_KEY as string;
 
 export interface OutreachDraft {
-  _id: string;
-  listing_id_text: string;
-  business_name_text: string;
-  langcliffe_contact_text: string;
-  user_email_text?: string;
-  user_user: string;
-  draft_body_text: string;
-  inbound_email_text?: string;
-  reply_draft_text?: string;
-  langcliffe_reply_body_text?: string;
-  conversation_history_text?: string;
-  nda_file_text?: string;
-  signed_nda_file_text?: string;
-  acknowledgment_draft_text?: string;
-  nda_return_draft_text?: string;
-  status_text: 'pending' | 'sent' | 'rejected' | 'pending_reply' | 'nda_received' | 'nda_acknowledged' | 'nda_signed' | 'nda_returned' | 'misc';
-  'Created Date': string;
+  id: string;
+  listing_id: string;
+  business_name: string;
+  langcliffe_contact: string;
+  user_email?: string;
+  user_id: string;
+  draft_body: string;
+  inbound_email?: string;
+  reply_draft?: string;
+  langcliffe_reply_body?: string;
+  conversation_history?: string;
+  nda_file?: string;
+  signed_nda_file?: string;
+  acknowledgment_draft?: string;
+  nda_return_draft?: string;
+  status: 'pending' | 'sent' | 'rejected' | 'pending_reply' | 'nda_received' | 'nda_acknowledged' | 'nda_signed' | 'nda_returned' | 'misc';
+  created_at: string;
 }
 
 function adminHeaders() {

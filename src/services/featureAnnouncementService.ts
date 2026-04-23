@@ -2,14 +2,14 @@ const API_URL = import.meta.env.VITE_SCRAPER_URL as string;
 const ADMIN_KEY = import.meta.env.VITE_SCRAPER_ADMIN_KEY as string;
 
 export interface FeatureAnnouncement {
-  _id: string;
-  name_text: string;
-  headline_text: string;
-  cta_text: string;
-  active_boolean: boolean;
-  max_impressions_number: number;
-  completion_field_text: string;
-  'Created Date': string;
+  id: string;
+  name: string;
+  headline: string;
+  cta: string;
+  active: boolean;
+  max_impressions: number;
+  completion_field: string;
+  created_at: string;
 }
 
 export interface FeatureImpressionStats {
@@ -32,12 +32,12 @@ export async function getFeatureAnnouncements(): Promise<FeatureAnnouncement[]> 
 }
 
 export async function createFeatureAnnouncement(data: {
-  name_text: string;
-  headline_text: string;
-  cta_text?: string;
-  active_boolean?: boolean;
-  max_impressions_number?: number;
-  completion_field_text?: string;
+  name: string;
+  headline: string;
+  cta?: string;
+  active?: boolean;
+  max_impressions?: number;
+  completion_field?: string;
 }): Promise<string> {
   const res = await fetch(`${API_URL}/admin/feature-announcements`, {
     method: 'POST',
