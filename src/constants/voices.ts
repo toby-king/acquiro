@@ -41,12 +41,12 @@ export const VOICE_OPTIONS: VoiceOption[] = [
     sampleQuote: "We should carefully consider all aspects of this acquisition before proceeding.",
     waveformData: [0.42, 0.72, 0.52, 0.82, 0.62, 0.92, 0.72, 0.52, 0.62, 0.82, 0.52, 0.72, 0.62, 0.87, 0.52, 0.77, 0.42, 0.67, 0.52, 0.72]
   },
-  { 
+  /*{ 
     id: 'Jot7IsvC9VkWPLPjLDKw', 
     name: 'Irish Decisive', 
     audioSample: 'irish_male.mp3',
     description: 'Powerful, decisive, commanding', 
     sampleQuote: "Here's the bottom line: we need to evaluate this deal with absolute clarity.",
     waveformData: [0.55, 0.85, 0.65, 0.95, 0.75, 1.0, 0.85, 0.65, 0.75, 0.9, 0.65, 0.85, 0.75, 0.95, 0.65, 0.9, 0.55, 0.8, 0.65, 0.85]
-  },
+  },*/
 ];
