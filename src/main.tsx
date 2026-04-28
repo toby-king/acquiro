@@ -15,6 +15,7 @@ import { SubscriptionPage } from './components/payment/SubscriptionPage.tsx'
 import { PrivacyPolicy } from './pages/PrivacyPolicy.tsx'
 import { TermsOfService } from './pages/TermsOfService.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
+import { ConversationProvider } from '@elevenlabs/react'
 import './index.css'
 
 // Initialize theme before first paint - default to dark unless user explicitly chose light
@@ -26,6 +27,7 @@ import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
+    <ConversationProvider>
     <BrowserRouter>
       <ScrollToTop />
       <Routes>
@@ -53,5 +55,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    </ConversationProvider>
   </React.StrictMode>,
 )
