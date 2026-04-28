@@ -68,11 +68,12 @@ export function AdvisorPanel() {
   }, []);
 
   const conversation = useConversation({
-    onConnect: () => {
+    onConnect: ({ conversationId }: { conversationId: string }) => {
       console.log('Connected to ElevenLabs');
       isConnectingRef.current = false;
       setCallStatus('connected');
       setErrorMessage('');
+      if (conversationId) conversationIdRef.current = conversationId;
     },
     onDisconnect: () => {
       console.log('Disconnected from ElevenLabs');
@@ -302,17 +303,13 @@ export function AdvisorPanel() {
       // Start the conversation with dynamic variables and system prompt override
       try {
         const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_0401kfask9wye6dt9cymkzbcxdg3';
-        const convId = await conversation.startSession({
+        await conversation.startSession({
           agentId,
           connectionType: 'webrtc' as const,
           ...(Object.keys(dynamicVariables).length > 0 && { dynamicVariables }),
           overrides,
         });
-        
-        if (convId) {
-          conversationIdRef.current = convId;
-          console.log('[AdvisorPanel] Conversation started, id:', convId);
-        }
+        console.log('[AdvisorPanel] Conversation session started');
 
         // Stop the test stream after session is established
         // Give the SDK time to set up its own audio pipeline
@@ -406,7 +403,7 @@ export function AdvisorPanel() {
         pulseAnimationRef.current = null;
       }
       if (callStatusRef.current === 'connected' || callStatusRef.current === 'connecting') {
-        conversation.endSession().catch(() => {});
+        try { conversation.endSession(); } catch {}
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on unmount

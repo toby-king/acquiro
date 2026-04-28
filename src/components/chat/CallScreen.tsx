@@ -27,11 +27,12 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
   const textInputRef = useRef<HTMLTextAreaElement>(null);
 
   const conversation = useConversation({
-    onConnect: () => {
+    onConnect: ({ conversationId }: { conversationId: string }) => {
       console.log('Connected to ElevenLabs');
       setCallStatus('connected');
-      setWasConnected(true); // Mark that call was connected
+      setWasConnected(true);
       setErrorMessage('');
+      if (conversationId) setConversationId(conversationId);
     },
     onDisconnect: () => {
       console.log('Disconnected from ElevenLabs');
@@ -183,16 +184,13 @@ export function CallScreen({ onBack, onContinue }: CallScreenProps) {
 
       // Start the conversation with dynamic variables and system prompt override
       const agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID || 'agent_0401kfask9wye6dt9cymkzbcxdg3';
-      const convId = await conversation.startSession({
+      await conversation.startSession({
         agentId,
         connectionType: 'webrtc' as const,
         ...(Object.keys(dynamicVariables).length > 0 && { dynamicVariables }),
         overrides,
       });
-      if (convId) {
-        setConversationId(convId);
-        console.log('[CallScreen] Conversation started, id:', convId);
-      }
+      console.log('[CallScreen] Conversation session started');
     } catch (error) {
       if (error instanceof DOMException && error.name === 'NotAllowedError') {
         setCallStatus('error');
