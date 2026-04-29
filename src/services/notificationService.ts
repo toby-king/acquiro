@@ -1,15 +1,6 @@
 import { getAuthHeaders } from '../utils/authHeaders';
 import { API_URL } from '../utils/apiUrl';
 
-const PRODUCTION_BACKEND = 'https://acquiro-backend.vercel.app';
-function getBackendUrl(): string {
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    if (host !== 'localhost' && host !== '127.0.0.1') return PRODUCTION_BACKEND;
-  }
-  return (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '') || (import.meta.env.PROD ? PRODUCTION_BACKEND : 'http://localhost:3001');
-}
-const BACKEND_URL = getBackendUrl();
 
 export interface UserNotification {
   id: string;
@@ -23,14 +14,14 @@ export interface UserNotification {
 }
 
 export async function getUserNotifications(userId: string): Promise<UserNotification[]> {
-  const res = await fetch(`${BACKEND_URL}/api/bubble/notifications/${userId}`, { headers: getAuthHeaders() });
+  const res = await fetch(`${API_URL}/api/bubble/notifications/${userId}`, { headers: getAuthHeaders() });
   if (!res.ok) throw new Error(`Failed to fetch notifications: ${res.status}`);
   const json = await res.json();
   return json.response?.results ?? [];
 }
 
 export async function markNotificationActioned(notificationId: string): Promise<void> {
-  const res = await fetch(`${BACKEND_URL}/api/bubble/notifications/${notificationId}/action`, {
+  const res = await fetch(`${API_URL}/api/bubble/notifications/${notificationId}/action`, {
     method: 'PATCH',
     headers: getAuthHeaders(),
   });
@@ -38,7 +29,7 @@ export async function markNotificationActioned(notificationId: string): Promise<
 }
 
 export async function getNdaFileUrl(outreachId: string): Promise<string | null> {
-  const res = await fetch(`${BACKEND_URL}/api/bubble/notifications/nda/${outreachId}`, { headers: getAuthHeaders() });
+  const res = await fetch(`${API_URL}/api/bubble/notifications/nda/${outreachId}`, { headers: getAuthHeaders() });
   if (!res.ok) return null;
   const json = await res.json();
   return json.nda_file_url ?? null;

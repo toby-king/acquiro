@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Copy, Check, ExternalLink, Loader2, Sparkles } from 'lucide-react';
 import { useAdvisorStore } from '../../hooks/useAdvisorStore';
 import { getMyAgent, getMyBuyerInfo, updateBuyerInfo, getUserProfile, updateUserProfile } from '../../services/settingsService';
-import { getApiUrl } from '../../services/checkoutService';
+import { API_URL } from '../../utils/apiUrl';
 import langcliffeLogo from '../../assets/langcliffe-logo.png';
 import dealsuitelogo from '../../assets/dealsuite-logo.png';
 
@@ -87,7 +87,7 @@ function LangcliffeSetup({ userId, connected, onMarkConnected, markingConnected 
     setGenerating(true);
     setGenerateError('');
     try {
-      const res = await fetch(`${getApiUrl()}/api/integrations/summarise-website`, {
+      const res = await fetch(`${API_URL}/api/integrations/summarise-website`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: websiteUrl.trim() }),

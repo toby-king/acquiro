@@ -6,29 +6,14 @@
 import { API_URL } from '../utils/apiUrl';
 import { getAuthHeaders } from '../utils/authHeaders';
 
-const PRODUCTION_BACKEND = 'https://acquiro-backend.vercel.app';
-function getBackendUrl(): string {
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    if (host !== 'localhost' && host !== '127.0.0.1') return PRODUCTION_BACKEND;
-  }
-  return API_URL || (import.meta.env.PROD ? PRODUCTION_BACKEND : 'http://localhost:3001');
-}
-const BACKEND_URL = getBackendUrl();
-
-/** Bubble workflow API wraps IDs in braces; strip them for Data API calls. */
-function bareId(id: string): string {
-  return id.replace(/^\{/, '').replace(/\}$/, '');
-}
-
 async function backendGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${BACKEND_URL}${path}`, { headers: getAuthHeaders() });
+  const res = await fetch(`${API_URL}${path}`, { headers: getAuthHeaders() });
   if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
   return res.json() as Promise<T>;
 }
 
 async function backendPatch(path: string, body: Record<string, unknown>): Promise<void> {
-  const res = await fetch(`${BACKEND_URL}${path}`, {
+  const res = await fetch(`${API_URL}${path}`, {
     method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify(body),
@@ -58,7 +43,7 @@ interface RawUserResponse {
 
 export async function getUserProfile(userId: string): Promise<UserProfile> {
   const data = await backendGet<{ response: RawUserResponse }>(
-    `/api/bubble/settings/user/${bareId(userId)}`,
+    `/api/bubble/settings/user/${userId}`,
   );
   const raw = data.response;
   return {
@@ -73,7 +58,7 @@ export async function updateUserProfile(
   userId: string,
   fields: { name?: string; langcliffe_connected?: boolean },
 ): Promise<void> {
-  await backendPatch(`/api/bubble/settings/user/${bareId(userId)}`, fields as Record<string, unknown>);
+  await backendPatch(`/api/bubble/settings/user/${userId}`, fields as Record<string, unknown>);
 }
 
 // ─── Agent ─────────────────────────────────────────────────────────────────────
@@ -86,7 +71,7 @@ export interface AgentRecord {
 
 export async function getMyAgent(userId: string): Promise<AgentRecord | null> {
   const data = await backendGet<{ response: { results: AgentRecord[] } }>(
-    `/api/bubble/settings/agent/${bareId(userId)}`,
+    `/api/bubble/settings/agent/${userId}`,
   );
   return data.response.results[0] ?? null;
 }
@@ -95,7 +80,7 @@ export async function updateAgent(
   agentId: string,
   fields: { name?: string; email?: string },
 ): Promise<void> {
-  await backendPatch(`/api/bubble/settings/agent/${bareId(agentId)}`, fields as Record<string, unknown>);
+  await backendPatch(`/api/bubble/settings/agent/${agentId}`, fields as Record<string, unknown>);
 }
 
 // ─── Buyer info ────────────────────────────────────────────────────────────────
@@ -116,7 +101,7 @@ export interface BuyerInfoRecord {
 
 export async function getMyBuyerInfo(userId: string): Promise<BuyerInfoRecord | null> {
   const data = await backendGet<{ response: { results: BuyerInfoRecord[] } }>(
-    `/api/bubble/settings/buyer-info/${bareId(userId)}`,
+    `/api/bubble/settings/buyer-info/${userId}`,
   );
   return data.response.results[0] ?? null;
 }
@@ -126,7 +111,7 @@ export async function updateBuyerInfo(
   fields: Partial<Omit<BuyerInfoRecord, 'id'>>,
 ): Promise<void> {
   await backendPatch(
-    `/api/bubble/settings/buyer-info/${bareId(buyerInfoId)}`,
+    `/api/bubble/settings/buyer-info/${buyerInfoId}`,
     fields as Record<string, unknown>,
   );
 }
