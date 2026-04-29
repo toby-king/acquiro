@@ -4,6 +4,7 @@
  */
 
 import { API_URL } from '../utils/apiUrl';
+import { getAuthHeaders } from '../utils/authHeaders';
 
 const PRODUCTION_BACKEND = 'https://acquiro-backend.vercel.app';
 function getBackendUrl(): string {
@@ -21,7 +22,7 @@ function bareId(id: string): string {
 }
 
 async function backendGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${BACKEND_URL}${path}`);
+  const res = await fetch(`${BACKEND_URL}${path}`, { headers: getAuthHeaders() });
   if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
   return res.json() as Promise<T>;
 }
@@ -29,7 +30,7 @@ async function backendGet<T>(path: string): Promise<T> {
 async function backendPatch(path: string, body: Record<string, unknown>): Promise<void> {
   const res = await fetch(`${BACKEND_URL}${path}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(body),
   });
   if (!res.ok) {

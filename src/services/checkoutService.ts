@@ -1,3 +1,5 @@
+import { getAuthHeaders } from '../utils/authHeaders';
+
 const PRODUCTION_BACKEND = 'https://acquiro-backend.vercel.app';
 
 export function getApiUrl(): string {
@@ -70,7 +72,7 @@ export async function cancelSubscription(subscriptionId: string): Promise<{
   }
   const response = await fetch(`${API_URL}/api/checkout/cancel-subscription`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ subscriptionId }),
   });
 
