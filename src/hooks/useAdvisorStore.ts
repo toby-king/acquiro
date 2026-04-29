@@ -57,6 +57,7 @@ interface AdvisorStore {
   requestCallWithMatch: (match: Match) => void;
   clearMatchToDiscuss: () => void;
   setConversationId: (id: string) => void;
+  clearConversationId: () => void;
   
   goToStep: (step: WizardStep) => void;
   nextStep: () => void;
@@ -90,6 +91,8 @@ const sessionPartialize = (state: AdvisorStore) => ({
   subscriptionId: state.subscriptionId,
   cancelAt: state.cancelAt,
   isAdmin: state.isAdmin,
+  /** Persisted so it survives the Stripe checkout redirect — cleared after use in CheckoutComplete */
+  conversationId: state.conversationId,
 });
 
 export const useAdvisorStore = create<AdvisorStore>()(
@@ -180,6 +183,7 @@ export const useAdvisorStore = create<AdvisorStore>()(
   requestCallWithMatch: (match) => set({ matchToDiscuss: match }),
   clearMatchToDiscuss: () => set({ matchToDiscuss: null }),
   setConversationId: (id) => set({ conversationId: id }),
+  clearConversationId: () => set({ conversationId: null }),
 
   goToStep: (step) => set({ currentStep: step }),
   

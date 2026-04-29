@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 export function CheckoutComplete() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { userId: storeUserId, leadId: storeLeadId, setUserId, setLeadId, setSubscriptionStatus, userName, config, conversationId } = useAdvisorStore();
+  const { userId: storeUserId, leadId: storeLeadId, setUserId, setLeadId, setSubscriptionStatus, userName, config, conversationId, clearConversationId } = useAdvisorStore();
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'update_error'>('loading');
   const [showWhatsNext, setShowWhatsNext] = useState(false);
   const [retryTrigger, setRetryTrigger] = useState(0);
@@ -86,6 +86,8 @@ export function CheckoutComplete() {
                 }).catch((err) => {
                   console.warn('[CheckoutComplete] Buyer info extraction failed (non-fatal):', err);
                 });
+                // Clear so it is not replayed on future sessions
+                clearConversationId();
               }
             } else {
               console.error('[CheckoutComplete] ❌ No user_id returned from Bubble API');
